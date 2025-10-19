@@ -1,0 +1,21 @@
+description: The following analytic identifies DNS queries to known TOR proxy websites,
+  such as "*.torproject.org" and "www.theonionrouter.com". It leverages Sysmon EventCode
+  22 to detect these queries by monitoring DNS query events from endpoints. This activity
+  is significant because adversaries often use TOR proxies to disguise the source
+  of their malicious traffic, making it harder to trace their actions. If confirmed
+  malicious, this behavior could indicate an attempt to obfuscate network traffic,
+  potentially allowing attackers to exfiltrate data or communicate with command and
+  control servers undetected.
+required_fields:
+- _time
+- Image
+- QueryName
+- QueryStatus
+- ProcessId
+- dest
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=22 QueryName IN ("*.torproject.org",
+  "www.theonionrouter.com") | stats count min(_time) as firstTime max(_time) as lastTime
+  by Image QueryName QueryStatus ProcessId  Computer | rename Computer as dest | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_multi_hop_proxy_tor_website_query_filter`

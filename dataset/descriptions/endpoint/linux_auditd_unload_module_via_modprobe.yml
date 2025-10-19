@@ -1,0 +1,20 @@
+description: The following analytic detects suspicious use of the `modprobe` command
+  to unload kernel modules, which may indicate an attempt to disable critical system
+  components or evade detection. The `modprobe` utility manages kernel modules, and
+  unauthorized unloading of modules can disrupt system security features, remove logging
+  capabilities, or conceal malicious activities. By monitoring for unusual or unauthorized
+  `modprobe` operations involving module unloading, this analytic helps identify potential
+  tampering with kernel functionality, enabling security teams to investigate and
+  address possible threats to system integrity.
+required_fields:
+- _time
+- argc
+- process_exec
+rule: sourcetype="linux:audit" type=EXECVE | eval relevant_fields=if(type="EXECVE",
+  "", relevant_fields) | foreach a* [eval relevant_fields=if(type="EXECVE", mvappend(relevant_fields,
+  '<<FIELD>>'), relevant_fields)] | eval process_exec=if(type="EXECVE", mvjoin(relevant_fields,
+  " "), process_exec) | eval process_exec=if(type="EXECVE", trim(process_exec), process_exec)
+  | rename host as dest | where LIKE (process_exec, "%modprobe%") AND  LIKE (process_exec,
+  "%-r %") | stats count min(_time) as firstTime max(_time) as lastTime by argc process_exec
+  dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$)| `linux_auditd_unload_module_via_modprobe_filter`

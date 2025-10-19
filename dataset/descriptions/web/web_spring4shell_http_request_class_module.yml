@@ -1,0 +1,24 @@
+description: The following analytic detects HTTP requests containing payloads related
+  to the Spring4Shell vulnerability (CVE-2022-22965). It leverages Splunk Stream HTTP
+  data to inspect the HTTP request body and form data for specific fields such as
+  "class.module.classLoader.resources.context.parent.pipeline.first". This activity
+  is significant as it indicates an attempt to exploit a critical vulnerability in
+  Spring Framework, potentially leading to remote code execution. If confirmed malicious,
+  this could allow attackers to gain unauthorized access, execute arbitrary code,
+  and compromise the affected system.
+required_fields:
+- _time
+- http_request_body
+- http_method
+- http_user_agent
+- uri_path
+- url
+- bytes_in
+- bytes_out
+rule: sourcetype=stream:http http_method IN ("POST") | stats values(form_data) as
+  http_request_body min(_time) as firstTime max(_time) as lastTime count by src dest
+  http_method http_user_agent uri_path url bytes_in bytes_out | search http_request_body
+  IN ("*class.module.classLoader.resources.context.parent.pipeline.first.fileDateFormat=_*",
+  "*class.module.classLoader.resources.context.parent.pipeline.first.pattern*","*suffix=.jsp*")
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `web_spring4shell_http_request_class_module_filter`

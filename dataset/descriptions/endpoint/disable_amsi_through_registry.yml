@@ -1,0 +1,25 @@
+description: The following analytic detects modifications to the Windows registry
+  that disable the Antimalware Scan Interface (AMSI) by setting the "AmsiEnable" value
+  to "0x00000000". This detection leverages data from the Endpoint.Registry data model,
+  specifically monitoring changes to the registry path "*\\SOFTWARE\\Microsoft\\Windows
+  Script\\Settings\\AmsiEnable". Disabling AMSI is significant as it is a common technique
+  used by ransomware, Remote Access Trojans (RATs), and Advanced Persistent Threats
+  (APTs) to evade detection and impair defenses. If confirmed malicious, this activity
+  could allow attackers to execute payloads with minimal alerts, leading to potential
+  system compromise and data exfiltration.
+required_fields:
+- _time
+- Registry.dest
+- Registry.registry_value_name
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.registry_value_data
+- Registry.process_guid
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry WHERE (Registry.registry_path= "*\\SOFTWARE\\Microsoft\\Windows
+  Script\\Settings\\AmsiEnable" Registry.registry_value_data = "0x00000000") BY Registry.registry_path
+  Registry.registry_key_name Registry.registry_value_name Registry.registry_value_data
+  Registry.process_guid Registry.dest Registry.user | `drop_dm_object_name(Registry)`
+  | where isnotnull(registry_value_data) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `disable_amsi_through_registry_filter`'

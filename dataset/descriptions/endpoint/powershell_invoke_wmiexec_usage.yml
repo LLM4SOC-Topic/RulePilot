@@ -1,0 +1,17 @@
+description: The following analytic detects the execution of the Invoke-WMIExec utility
+  within PowerShell Script Block Logging (EventCode 4104). This detection leverages
+  PowerShell script block logs to identify instances where the Invoke-WMIExec command
+  is used. Monitoring this activity is crucial as it indicates potential lateral movement
+  using WMI commands with NTLMv2 pass-the-hash authentication. If confirmed malicious,
+  this activity could allow an attacker to execute commands remotely on target systems,
+  potentially leading to further compromise and lateral spread within the network.
+required_fields:
+- _time
+- EventCode
+- ScriptBlockText
+- Computer
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText IN ("*invoke-wmiexec*") | stats count min(_time)
+  as firstTime max(_time) as lastTime by Computer EventCode ScriptBlockText | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `powershell_invoke_wmiexec_usage_filter`

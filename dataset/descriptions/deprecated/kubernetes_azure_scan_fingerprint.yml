@@ -1,0 +1,8 @@
+description: This search provides information of unauthenticated requests via source
+  IP user agent, request URI and response status data against Kubernetes cluster in
+  Azure
+required_fields:
+- _time
+rule: sourcetype=mscs:storage:blob:json category=kube-audit | spath input=properties.log
+  | search responseStatus.code=401 | table  sourceIPs{} userAgent verb requestURI
+  responseStatus.reason |`kubernetes_azure_scan_fingerprint_filter`

@@ -1,0 +1,23 @@
+description: The following analytic detects the execution of a suspicious `bcdedit`
+  command that reconfigures a host from safe mode back to normal boot. This detection
+  leverages Endpoint Detection and Response (EDR) data, focusing on command-line executions
+  involving `bcdedit.exe` with specific parameters. This activity is significant as
+  it may indicate the presence of ransomware, such as BlackMatter, which manipulates
+  boot configurations to facilitate encryption processes. If confirmed malicious,
+  this behavior could allow attackers to maintain control over the boot process, potentially
+  leading to further system compromise and data encryption.
+required_fields:
+- _time
+- Processes.process_name
+- Processes.process
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.dest
+- Processes.user
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where Processes.process_name = bcdedit.exe Processes.process="*/deletevalue*"
+  Processes.process="*{current}*"  Processes.process="*safeboot*" by Processes.process_name
+  Processes.process Processes.parent_process_name Processes.dest Processes.user |`drop_dm_object_name(Processes)`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `bcdedit_command_back_to_normal_mode_boot_filter`'

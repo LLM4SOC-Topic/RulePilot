@@ -1,0 +1,24 @@
+Atomic Test #1 - Enumerate PlugNPlay Camera
+
+Log1
+10/01/2024 02:33:08 PM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=2484
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+Get-CimInstance -Query "SELECT * FROM Win32_PnPEntity WHERE (PNPClass = 'Image' OR PNPClass = 'Camera')"
+
+ScriptBlock ID: 4137023d-be8d-4fe4-83fc-272be491acac
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2\T1592.001\T1592_001_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational

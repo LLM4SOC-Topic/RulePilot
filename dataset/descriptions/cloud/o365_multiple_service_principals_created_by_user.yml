@@ -1,0 +1,22 @@
+description: The following analytic identifies instances where a single user creates
+  more than three unique OAuth applications within a 10-minute window in the Office
+  365 environment. It leverages O365 logs from the Unified Audit Log, focusing on
+  the 'Add service principal' operation in Azure Active Directory. This activity is
+  significant as it may indicate a compromised user account or unauthorized actions,
+  potentially leading to broader network infiltration or privilege escalation. If
+  confirmed malicious, this behavior could allow attackers to gain persistent access,
+  escalate privileges, or exfiltrate sensitive information.
+required_fields:
+- _time
+- Workload
+- Operation
+- Actor{}.ID
+- src_user
+- object
+rule: sourcetype=o365:management:activity  Workload=AzureActiveDirectory Operation="Add
+  service principal."  | bucket span=10m _time | eval len=mvcount('Actor{}.ID') |
+  eval userType = mvindex('Actor{}.ID',len-1) | search userType = "User" | eval displayName
+  = object | stats count earliest(_time) as firstTime latest(_time) as lastTime values(displayName)
+  as displayName dc(displayName) as unique_apps by src_user | where unique_apps >
+  3 | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `o365_multiple_service_principals_created_by_user_filter`

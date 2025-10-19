@@ -1,0 +1,4 @@
+Create a task on a remote system. Upon successful execution, cmd.exe will create a scheduled task to spawn cmd.exe at 20:10 on a remote endpoint.
+
+In some cases, Scheduled Tasks were created remotely with schtasks.exe /S to ensure execution.
+schtasks /create /tn "setup service Management" /tr "c:\windows\temp\rn.bat" /sc ONCE /st 00:00 /F /RU System /S remote_host

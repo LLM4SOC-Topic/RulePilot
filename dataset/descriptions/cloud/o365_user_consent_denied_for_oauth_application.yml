@@ -1,0 +1,19 @@
+description: The following analytic identifies instances where a user has denied consent
+  to an OAuth application seeking permissions within the Office 365 environment. This
+  detection leverages O365 audit logs, focusing on events related to user consent
+  actions. By filtering for denied consent actions associated with OAuth applications,
+  it captures instances where users have actively rejected permission requests. This
+  activity is significant as it may indicate users spotting potentially suspicious
+  or unfamiliar applications. If confirmed malicious, it suggests an attempt by a
+  potentially harmful application to gain unauthorized access, which was proactively
+  blocked by the user.
+required_fields:
+- _time
+- status.errorCode
+- userPrincipalName
+- ipAddress
+- status.failureReason
+rule: sourcetype=o365:graph:api status.errorCode=65004 | rename userPrincipalName
+  as user | rename ipAddress as src_ip | stats max(_time) as lastTime by user src_ip
+  appDisplayName status.failureReason | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | `o365_user_consent_denied_for_oauth_application_filter`

@@ -1,0 +1,24 @@
+description: The following analytic detects attempts to exploit the ConnectWise ScreenConnect
+  CVE-2024-1709 vulnerability, which allows attackers to bypass authentication via
+  alternate paths or channels. It leverages Nginx access logs to identify web requests
+  to the SetupWizard.aspx page, indicating potential exploitation. This activity is
+  significant as it can lead to unauthorized administrative access and remote code
+  execution. If confirmed malicious, attackers could create administrative users and
+  gain full control over the affected ScreenConnect instance, posing severe security
+  risks. Immediate remediation by updating to version 23.9.8 or above is recommended.
+required_fields:
+- _time
+- src
+- dest
+- http_user_agent
+- url
+- uri_path
+- status
+- http_method
+- sourcetype
+- source
+rule: (sourcetype="nginx:plus:kv" OR sourcetype="nginx:plus:access") uri_path IN ("*/SetupWizard.aspx/*","*/SetupWizard/")
+  status=200 http_method=POST  | stats count min(_time) as firstTime max(_time) as
+  lastTime by src, dest, http_user_agent, url, uri_path, status, http_method, sourcetype,
+  source | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `nginx_connectwise_screenconnect_authentication_bypass_filter`

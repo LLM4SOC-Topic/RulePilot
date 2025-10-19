@@ -1,0 +1,27 @@
+description: This search looks for EC2 instances being modified by users who have
+  not previously modified them. This search is deprecated and have been translated
+  to use the latest Change Datamodel.
+required_fields:
+- _time
+- errorCode
+- userIdentity.arn
+rule: sourcetype=aws:cloudtrail (eventName=AssociateAddress OR eventName=AssociateIamInstanceProfile
+  OR eventName=AttachClassicLinkVpc OR eventName=AttachNetworkInterface OR eventName=AttachVolume
+  OR eventName=BundleInstance OR eventName=DetachClassicLinkVpc OR eventName=DetachVolume
+  OR eventName=ModifyInstanceAttribute OR eventName=ModifyInstancePlacement OR eventName=MonitorInstances
+  OR eventName=RebootInstances OR eventName=ResetInstanceAttribute OR eventName=StartInstances
+  OR eventName=StopInstances OR eventName=TerminateInstances OR eventName=UnmonitorInstances)
+  [search sourcetype=aws:cloudtrail (eventName=AssociateAddress OR eventName=AssociateIamInstanceProfile
+  OR eventName=AttachClassicLinkVpc OR eventName=AttachNetworkInterface OR eventName=AttachVolume
+  OR eventName=BundleInstance OR eventName=DetachClassicLinkVpc OR eventName=DetachVolume
+  OR eventName=ModifyInstanceAttribute OR eventName=ModifyInstancePlacement OR eventName=MonitorInstances
+  OR eventName=RebootInstances OR eventName=ResetInstanceAttribute OR eventName=StartInstances
+  OR eventName=StopInstances OR eventName=TerminateInstances OR eventName=UnmonitorInstances)
+  errorCode=success | stats earliest(_time) as firstTime latest(_time) as lastTime
+  by userIdentity.arn | rename userIdentity.arn as arn | inputlookup append=t previously_seen_ec2_modifications_by_user
+  | stats min(firstTime) as firstTime, max(lastTime) as lastTime by arn | outputlookup
+  previously_seen_ec2_modifications_by_user | eval newUser=if(firstTime >= relative_time(now(),
+  "-70m@m"), 1, 0) | where newUser=1 | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | rename arn as userIdentity.arn
+  | table userIdentity.arn] | spath output=dest responseElements.instancesSet.items{}.instanceId
+  | spath output=user userIdentity.arn | table _time, user, dest | `ec2_instance_modified_with_previously_unseen_user_filter`

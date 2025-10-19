@@ -1,0 +1,23 @@
+description: The following analytic detects attempts to disable the memory crash dump
+  feature on Windows systems by setting the registry value to 0. It leverages data
+  from the Endpoint.Registry datamodel, specifically monitoring changes to the CrashDumpEnabled
+  registry key. This activity is significant because disabling crash dumps can hinder
+  forensic analysis and incident response efforts. If confirmed malicious, this action
+  could be part of a broader attack strategy, such as data destruction or system destabilization,
+  as seen with HermeticWiper, potentially leading to significant operational disruptions
+  and data loss.
+required_fields:
+- _time
+- Registry.dest
+- Registry.registry_value_name
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.registry_value_data
+- Registry.process_guid
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count FROM datamodel=Endpoint.Registry where (Registry.registry_path="*\\CurrentControlSet\\Control\\CrashControl\\CrashDumpEnabled")
+  AND Registry.registry_value_data="0x00000000" by _time span=1h Registry.dest Registry.user
+  Registry.registry_path Registry.registry_value_name Registry.registry_value_data
+  Registry.process_guid Registry.registry_key_name  | `drop_dm_object_name(Registry)`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_disable_memory_crash_dump_filter`'

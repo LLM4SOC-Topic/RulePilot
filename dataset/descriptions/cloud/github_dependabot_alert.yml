@@ -1,0 +1,27 @@
+description: The following analytic identifies the creation of GitHub Dependabot alerts,
+  which indicate potential vulnerabilities in the codebase. It detects this activity
+  by searching for logs with the "create" action and analyzing fields such as affected
+  package, severity, and fixed version. This detection is significant for a SOC because
+  it helps identify and address security risks in the codebase proactively. If confirmed
+  malicious, these vulnerabilities could be exploited by attackers to gain unauthorized
+  access or cause breaches, leading to potential data loss or system compromise.
+required_fields:
+- _time
+- alert.id
+- repository.full_name
+- repository.html_url
+- action
+- alert.affected_package_name
+- alert.affected_range
+- alert.created_at
+- alert.external_identifier
+- alert.external_reference
+- alert.fixed_in
+- alert.severity
+rule: sourcetype=aws:firehose:json alert.id=* action=create | rename repository.full_name
+  as repository, repository.html_url as repository_url sender.login as user | stats
+  min(_time) as firstTime max(_time) as lastTime by action alert.affected_package_name
+  alert.affected_range alert.created_at alert.external_identifier alert.external_reference
+  alert.fixed_in alert.severity repository repository_url user | eval phase="code"
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `github_dependabot_alert_filter`

@@ -1,0 +1,19 @@
+description: "The following analytic detects when emails are accessed in Office 365\
+  \ Exchange via the Microsoft Graph API using the client ID '00000003-0000-0000-c000-000000000000'.\
+  \ It leverages the 'MailItemsAccessed' operation within the Exchange workload, focusing\
+  \ on OAuth-authenticated applications. This activity is significant as unauthorized\
+  \ access to emails can lead to data breaches and information theft. If confirmed\
+  \ malicious, attackers could exfiltrate sensitive information, compromise user accounts,\
+  \ and further infiltrate the organization\u2019s network."
+required_fields:
+- _time
+- Workload
+- Operation
+- AppId
+- ClientAppId
+- OperationCount
+rule: sourcetype=o365:management:activity Workload=Exchange Operation=MailItemsAccessed
+  AppId=* AppId=00000003-0000-0000-c000-000000000000 |  stats count earliest(_time)
+  as firstTime latest(_time) as lastTime values(ClientIPAddress) by user ClientAppId
+  OperationCount AppId | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `o365_oauth_app_mailbox_access_via_graph_api_filter`

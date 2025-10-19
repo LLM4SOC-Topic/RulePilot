@@ -1,0 +1,19 @@
+description: The following analytic detects the use of `get-WebConfigurationProperty`
+  and `Set-ItemProperty` commands in PowerShell to disable HTTP logging on Windows
+  systems. This detection leverages PowerShell Script Block Logging, specifically
+  looking for script blocks that reference HTTP logging properties and attempt to
+  set them to "false" or "dontLog". Disabling HTTP logging is significant as it can
+  be used by adversaries to cover their tracks and delete logs, hindering forensic
+  investigations. If confirmed malicious, this activity could allow attackers to evade
+  detection and persist in the environment undetected.
+required_fields:
+- _time
+- ScriptBlockText
+- Computer
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText IN("*get-WebConfigurationProperty*","*Set-ItemProperty*")
+  AND ScriptBlockText IN ("*httpLogging*","*Logfile.enabled*") AND ScriptBlockText
+  IN ("*dontLog*", "*false*")   | stats count min(_time) as firstTime max(_time) as
+  lastTime by EventCode ScriptBlockText Computer user_id | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_powershell_disable_http_logging_filter`

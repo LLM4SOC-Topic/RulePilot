@@ -1,0 +1,14 @@
+description: The following analytic identifies a user attaching a policy to a different
+  role's trust policy in AWS. It leverages CloudWatch logs to detect the `attach policy`
+  event, extracting relevant fields such as `policyArn`, `sourceIPAddress`, and `userIdentity`.
+  This activity is significant as it can indicate attempts at lateral movement or
+  privilege escalation within the AWS environment. If confirmed malicious, an attacker
+  could gain elevated permissions, potentially compromising sensitive resources and
+  data within the AWS infrastructure.
+required_fields:
+- _time
+- requestParameters.policyArn
+rule: sourcetype="aws:cloudwatchlogs:eks" attach policy| spath requestParameters.policyArn
+  | table sourceIPAddress user_access_key userIdentity.arn userIdentity.sessionContext.sessionIssuer.arn
+  eventName errorCode errorMessage status action requestParameters.policyArn userIdentity.sessionContext.attributes.mfaAuthenticated
+  userIdentity.sessionContext.attributes.creationDate  | `aws_detect_attach_to_role_policy_filter`

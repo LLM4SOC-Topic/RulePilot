@@ -1,0 +1,18 @@
+description: The following analytic identifies an O365 account experiencing more than
+  20 failed authentication attempts within 5 minutes. It uses O365 Unified Audit Logs,
+  specifically "UserLoginFailed" events, to monitor and flag accounts exceeding this
+  threshold. This activity is significant as it may indicate a brute force attack
+  or password guessing attempt. If confirmed malicious, an attacker could gain unauthorized
+  access to the O365 environment, potentially compromising sensitive emails, documents,
+  and other data. Prompt investigation and action are crucial to prevent unauthorized
+  access and data breaches.
+required_fields:
+- _time
+- src_ip
+- user
+- Operation
+- record_type
+- Workload
+rule: sourcetype=o365:management:activity Operation=UserLoginFailed  record_type=AzureActiveDirectoryStsLogon
+  Workload=AzureActiveDirectory | bucket span=5m _time | stats  dc(_raw) AS failed_attempts  values(src_ip)
+  as src_ip by user, _time | where failed_attempts > 10 | `o365_high_number_of_failed_authentications_for_user_filter`

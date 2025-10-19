@@ -1,0 +1,20 @@
+description: The following analytic detects an IP address with 20 or more failed authentication
+  attempts to an Azure AD tenant within 10 minutes. It leverages Azure AD SignInLogs
+  to identify repeated failed logins from the same IP. This behavior is significant
+  as it may indicate a brute force attack aimed at gaining unauthorized access or
+  escalating privileges. If confirmed malicious, the attacker could potentially compromise
+  user accounts, leading to unauthorized access to sensitive information and resources
+  within the Azure environment.
+required_fields:
+- _time
+- properties.status.errorCode
+- category
+- properties.authenticationDetails
+- user
+- src_ip
+rule: sourcetype=azure:monitor:aad category= SignInLogs properties.status.errorCode=50126
+  properties.authenticationDetails{}.succeeded=false | rename properties.* as * |
+  bucket span=10m _time | stats count min(_time) as firstTime max(_time) as lastTime
+  dc(user) AS unique_accounts values(user) as user by src_ip _time | where count >
+  20 | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `azure_ad_high_number_of_failed_authentications_from_ip_filter`

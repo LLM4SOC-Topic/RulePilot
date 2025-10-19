@@ -1,0 +1,20 @@
+description: This analytic detects creation, deletion, or modification of the "ESX
+  Admins" group in Active Directory. These events may indicate attempts to exploit
+  the VMware ESXi Active Directory Integration Authentication Bypass vulnerability
+  (CVE-2024-37085).
+required_fields:
+- _time
+- EventCode
+- TargetUserName
+- TargetDomainName
+- SubjectUserName
+- SubjectDomainName
+- Computer
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode IN (4727, 4730, 4737) (TargetUserName="ESX Admins" OR TargetUserName="*ESX
+  Admins*") | stats count min(_time) as firstTime max(_time) as lastTime by EventCode
+  TargetUserName TargetDomainName SubjectUserName SubjectDomainName Computer | rename
+  Computer as dest | eval EventCodeDescription=case( EventCode=4727, "Security Enabled
+  Global Group Created", EventCode=4730, "Security Enabled Global Group Deleted",
+  EventCode=4737, "Security Enabled Global Group Modified" ) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_esx_admins_group_creation_security_event_filter`

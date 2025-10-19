@@ -1,0 +1,19 @@
+description: The following analytic identifies the execution of applications or scripts
+  from uncommon or suspicious file paths, potentially indicating malware or unauthorized
+  activity. It leverages Windows AppLocker event logs and uses statistical analysis
+  to detect anomalies. By calculating the average and standard deviation of execution
+  counts per file path, it flags paths with execution counts significantly higher
+  than expected. This behavior is significant as it can uncover malicious activities
+  or policy violations. If confirmed malicious, this activity could allow attackers
+  to execute unauthorized code, leading to potential system compromise or data breaches.
+required_fields:
+- FullFilePath
+- dest
+- user
+rule: (source="WinEventLog:Microsoft-Windows-AppLocker/*" OR source="XmlWinEventLog:Microsoft-Windows-AppLocker/*")
+  | spath input=UserData_Xml | rename RuleAndFileData.* as *, Computer as dest, TargetUser
+  AS user | stats count min(_time) as firstTime max(_time) as lastTime by dest, PolicyName,
+  RuleId, user, TargetProcessId, FilePath, FullFilePath | eventstats avg(count) as
+  avg, stdev(count) as stdev | eval upperBound=(avg+stdev*2), anomaly=if(count > upperBound,
+  "Yes", "No") | where anomaly="Yes" | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_applocker_execution_from_uncommon_locations_filter`

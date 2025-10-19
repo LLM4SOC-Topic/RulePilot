@@ -1,0 +1,20 @@
+description: The following analytic detects the execution of the PowerView PowerShell
+  cmdlet Get-NetUser with the UACFilter parameter set to NOT_ACCOUNTDISABLE, indicating
+  an attempt to enumerate Active Directory user accounts that are not disabled. This
+  detection leverages PowerShell Script Block Logging (EventCode 4104) to identify
+  the specific script block text. Monitoring this activity is significant as it may
+  indicate reconnaissance efforts by an attacker to identify active user accounts
+  for further exploitation. If confirmed malicious, this activity could lead to unauthorized
+  access, privilege escalation, or lateral movement within the network.
+required_fields:
+- _time
+- ScriptBlockText
+- dest
+- EventCode
+- user
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104  ScriptBlockText = "*Get-NetUser*" ScriptBlockText = "*NOT_ACCOUNTDISABLE*"
+  ScriptBlockText = "*-UACFilter*" | rename Computer as dest, UserID as user | stats
+  count min(_time) as firstTime max(_time) as lastTime by EventCode ScriptBlockText
+  dest user | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_account_discovery_for_none_disable_user_account_filter`

@@ -1,0 +1,21 @@
+description: The following analytic detects the execution of tools commonly exploited
+  by cybercriminals, such as those used for unauthorized access, network scanning,
+  or data exfiltration. It leverages process activity data from Endpoint Detection
+  and Response (EDR) agents, focusing on known attacker tool names. This activity
+  is significant because it serves as an early warning system for potential security
+  incidents, enabling prompt response. If confirmed malicious, this activity could
+  lead to unauthorized access, data theft, or further network compromise, posing a
+  severe threat to the organization's security infrastructure.
+required_fields:
+- Processes.dest
+- Processes.user
+- Processes.process_name
+- Processes.parent_process
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  values(Processes.process) as process values(Processes.parent_process) as parent_process
+  from datamodel=Endpoint.Processes where Processes.dest!=unknown Processes.user!=unknown
+  by Processes.dest Processes.user Processes.process_name Processes.process | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `drop_dm_object_name(Processes)` | lookup attacker_tools attacker_tool_names
+  AS process_name OUTPUT description | search description !=false| `attacker_tools_on_endpoint_filter`'

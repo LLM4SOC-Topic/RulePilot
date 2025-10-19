@@ -1,0 +1,21 @@
+description: The following analytic detects an Azure AD account successfully authenticating
+  from multiple unique IP addresses within a 30-minute window. It leverages Azure
+  AD SignInLogs to identify instances where the same user logs in from different IPs
+  in a short time frame. This behavior is significant as it may indicate compromised
+  credentials being used by an adversary, potentially following a phishing attack.
+  If confirmed malicious, this activity could allow unauthorized access to corporate
+  resources, leading to data breaches or further exploitation within the network.
+required_fields:
+- _time
+- properties.status.errorCode
+- category
+- properties.authenticationDetails
+- user
+- src_ip
+- properties.appDisplayName
+rule: sourcetype=azure:monitor:aad  properties.authenticationDetails{}.succeeded=true
+  category=SignInLogs | rename properties.* as * | bucket span=30m _time | stats count
+  min(_time) as firstTime max(_time) as lastTime dc(src_ip) AS unique_ips values(src_ip)
+  as src_ip values(appDisplayName) as appDisplayName by user | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | where unique_ips  >
+  1 | `azure_ad_successful_authentication_from_different_ips_filter`

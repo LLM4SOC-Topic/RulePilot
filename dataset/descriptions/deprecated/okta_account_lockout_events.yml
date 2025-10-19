@@ -1,0 +1,24 @@
+description: '**DEPRECATION NOTE** - This search has been deprecated and replaced
+  with `Okta Multiple Accounts Locked Out`. The following anomaly will generate based
+  on account lockout events utilizing Okta eventTypes of user.account.lock.limit or
+  user.account.lock. Per the Okta docs site, this event is fired when a user account
+  has reached the lockout limit. The account will not auto-unlock and a user or client
+  cannot gain access to the account. This event indicates an account that will not
+  be able to log in until remedial action is taken by the account admin. This event
+  can be used to understand the specifics of an account lockout. Often this indicates
+  a client application that is repeatedly attempting to authenticate with invalid
+  credentials such as an old password.'
+required_fields:
+- _time
+- displayMessage
+- client.geographicalContext.country
+- client.geographicalContext.state
+- client.geographicalContext.city
+- src_ip
+- src_user
+rule: eventtype=okta_log OR sourcetype = "OktaIM2:log" eventType IN (user.account.lock.limit,user.account.lock)
+  | rename client.geographicalContext.country as country, client.geographicalContext.state
+  as state, client.geographicalContext.city as city | stats count min(_time) as firstTime
+  max(_time) as lastTime values(src_user) by displayMessage, country, state, city,
+  src_ip | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `okta_account_lockout_events_filter`

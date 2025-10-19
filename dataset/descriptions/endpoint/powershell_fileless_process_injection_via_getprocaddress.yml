@@ -1,0 +1,20 @@
+description: The following analytic detects the use of `GetProcAddress` in PowerShell
+  script blocks, leveraging PowerShell Script Block Logging (EventCode=4104). This
+  method captures the full command sent to PowerShell, which is then logged in Windows
+  event logs. The presence of `GetProcAddress` is unusual for typical PowerShell scripts
+  and often indicates malicious activity, as many attack toolkits use it to achieve
+  code execution. If confirmed malicious, this activity could allow an attacker to
+  execute arbitrary code, potentially leading to system compromise. Analysts should
+  review parallel processes and the entire logged script block for further investigation.
+required_fields:
+- _time
+- ScriptBlockText
+- Opcode
+- Computer
+- UserID
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText=*getprocaddress* | stats count min(_time) as firstTime
+  max(_time) as lastTime by Opcode Computer UserID EventCode ScriptBlockText | rename
+  Computer as dest | rename UserID as user | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `powershell_fileless_process_injection_via_getprocaddress_filter`

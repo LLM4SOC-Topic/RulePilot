@@ -1,0 +1,24 @@
+description: The following analytic detects the addition of Service Principal Names
+  (SPNs) HOST and RestrictedKrbHost to a computer account, indicative of KrbRelayUp
+  behavior. This detection leverages Windows Security Event Logs, specifically EventCode
+  4741, to identify changes in SPNs. This activity is significant as it is commonly
+  associated with Kerberos-based attacks, which can be used to escalate privileges
+  or perform lateral movement within a network. If confirmed malicious, this behavior
+  could allow an attacker to impersonate services, potentially leading to unauthorized
+  access to sensitive resources.
+required_fields:
+- _time
+- EventCode
+- MSADChangedAttributes
+- New_UAC_Value
+- Security_ID
+- Account_Domain
+- SAM_Account_Name
+- DNS_Host_Name
+- Logon_Id
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=4741 NewUacValue="0x80" ServicePrincipalNames IN ("*HOST/*","*RestrictedKrbHost/*")
+  | stats count min(_time) as firstTime max(_time) as lastTime values(EventCode),values(TargetDomainName),values(PrimaryGroupId),
+  values(OldUacValue), values(NewUacValue),values(SamAccountName),values(DnsHostName),values(ServicePrincipalNames)
+  by dest Logon_ID subject | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_computer_account_with_spn_filter`

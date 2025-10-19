@@ -1,0 +1,27 @@
+description: The following analytic detects the use of the dnscmd.exe command to enumerate
+  DNS records. It leverages data from Endpoint Detection and Response (EDR) agents,
+  focusing on process command-line executions. This activity is significant as it
+  may indicate an adversary gathering network information, a common precursor to more
+  targeted attacks. If confirmed malicious, this behavior could enable attackers to
+  map the network, identify critical assets, and plan subsequent actions, potentially
+  leading to data exfiltration or further compromise of the network.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where Processes.process_name = "dnscmd.exe" Processes.process
+  = "* /enumrecords *" by Processes.parent_process Processes.process_name Processes.process_id
+  Processes.process_guid Processes.process Processes.user Processes.dest | `drop_dm_object_name("Processes")`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_dns_gather_network_info_filter`'

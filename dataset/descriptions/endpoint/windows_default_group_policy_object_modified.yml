@@ -1,0 +1,26 @@
+description: The following analytic detects modifications to default Group Policy
+  Objects (GPOs) using Event ID 5136. It monitors changes to the `Default Domain Controllers
+  Policy` and `Default Domain Policy`, which are critical for enforcing security settings
+  across domain controllers and all users/computers, respectively. This activity is
+  significant because unauthorized changes to these GPOs can indicate an adversary
+  with privileged access attempting to deploy persistence mechanisms or execute malware
+  across the network. If confirmed malicious, such modifications could lead to widespread
+  compromise, allowing attackers to maintain control and execute arbitrary code on
+  numerous hosts.
+required_fields:
+- EventCode
+- ObjectClass
+- AttributeLDAPDisplayName
+- ObjectDN
+- Computer
+- DSName
+- AttributeValue
+- SubjectUserSid
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=5136 ObjectClass=groupPolicyContainer AttributeLDAPDisplayName=versionNumber
+  (ObjectDN="CN={31B2F340-016D-11D2-945F-00C04FB984F9},CN=POLICIES,CN=SYSTEM,DC=*"
+  OR ObjectDN="CN={6AC1786C-016F-11D2-945F-00C04fB984F9},CN=POLICIES,CN=SYSTEM,DC=*")
+  | stats min(_time) as firstTime max(_time) as lastTime by ObjectDN SubjectUserSid
+  AttributeValue Computer DSName | rename AttributeValue as versionNumber | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_default_group_policy_object_modified_filter`

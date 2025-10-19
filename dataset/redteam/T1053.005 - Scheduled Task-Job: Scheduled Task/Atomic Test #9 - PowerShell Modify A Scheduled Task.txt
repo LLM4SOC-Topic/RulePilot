@@ -1,0 +1,6 @@
+Create a scheduled task with an action and modify the action to do something else. The initial idea is to showcase Microsoft Windows TaskScheduler Operational log modification of an action on a Task already registered. It will first be created to spawn cmd.exe, but modified to run notepad.exe.
+
+Upon successful execution, powershell.exe will create a scheduled task and modify the action.
+
+Cleanup Commands:
+Unregister-ScheduledTask -TaskName "AtomicTaskModifed" -confirm:$false >$null 2>&1

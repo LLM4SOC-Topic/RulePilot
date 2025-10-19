@@ -1,0 +1,28 @@
+description: The following analytic detects the creation of a new API token within
+  an Okta tenant. It uses OktaIm2 logs ingested via the Splunk Add-on for Okta Identity
+  Cloud to identify events where the `system.api_token.create` command is executed.
+  This activity is significant because creating a new API token can indicate potential
+  account takeover attempts or unauthorized access, allowing an adversary to maintain
+  persistence. If confirmed malicious, this could enable attackers to execute API
+  calls, access sensitive data, and perform administrative actions within the Okta
+  environment.
+required_fields:
+- _time
+- signature
+- eventType
+- displayMessage
+- client.device
+- city
+- state
+- country
+- user_agent
+- outcome.reason
+- outcome.result
+- severity
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count max(_time) as lastTime, min(_time) as firstTime
+  from datamodel=Change where All_Changes.action=created AND All_Changes.command=system.api_token.create
+  by _time span=5m All_Changes.user All_Changes.result All_Changes.command sourcetype
+  All_Changes.src All_Changes.action All_Changes.object_category | `drop_dm_object_name("All_Changes")`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `okta_new_api_token_created_filter`'

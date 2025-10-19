@@ -1,0 +1,21 @@
+description: The following analytic detects the execution of the "At" application
+  in Linux, which can be used by attackers to create persistence entries on a compromised
+  host. This detection leverages data from Endpoint Detection and Response (EDR) agents,
+  focusing on process names and parent process names associated with "at" or "atd".
+  This activity is significant because the "At" application can be exploited to maintain
+  unauthorized access or deliver additional malicious payloads. If confirmed malicious,
+  this behavior could lead to data theft, ransomware attacks, or other severe consequences.
+  Immediate investigation is required to determine the legitimacy of the execution
+  and mitigate potential risks.
+required_fields:
+- _time
+- comm
+- exe
+- SYSCALL
+- UID
+- ppid
+- pid
+rule: sourcetype="linux:audit" type=SYSCALL comm IN ("at", "atd") OR exe IN ("/usr/bin/at","/usr/bin/atd")
+  AND NOT (UID IN("daemon")) | rename host as dest | stats count min(_time) as firstTime
+  max(_time) as lastTime by comm exe  SYSCALL UID ppid pid dest | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| `linux_auditd_at_application_execution_filter`

@@ -1,0 +1,30 @@
+description: The following analytic detects when a process other than explorer.exe
+  writes to the Windows Recycle Bin. It leverages the Endpoint.Filesystem and Endpoint.Processes
+  data models in Splunk to identify any process writing to the "*$Recycle.Bin*" file
+  path, excluding explorer.exe. This activity is significant because it may indicate
+  an attacker attempting to hide their actions, potentially leading to data theft,
+  ransomware, or other malicious outcomes. If confirmed malicious, this behavior could
+  allow an attacker to persist in the environment and evade detection by security
+  tools.
+required_fields:
+- _time
+- Filesystem.file_path
+- Filesystem.file_name
+- Filesystem.process_id
+- Filesystem.dest
+- Processes.user
+- Processes.process_name
+- Processes.parent_process_name
+- Processes.process_id
+- Processes.dest
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  values(Filesystem.file_path) as file_path values(Filesystem.file_name) as file_name
+  FROM datamodel=Endpoint.Filesystem where Filesystem.file_path = "*$Recycle.Bin*"
+  by Filesystem.process_name Filesystem.process_id Filesystem.dest | `drop_dm_object_name("Filesystem")`
+  | join  process_id [| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` values(Processes.user) as user values(Processes.process_name)
+  as process_name values(Processes.parent_process_name) as parent_process_name FROM
+  datamodel=Endpoint.Processes where Processes.process_name != "explorer.exe" by Processes.process_id
+  Processes.dest | `drop_dm_object_name("Processes")` | table user process_name process_id
+  dest] | `suspicious_writes_to_windows_recycle_bin_filter`'

@@ -1,0 +1,19 @@
+description: The following analytic detects the addition of new printer drivers by
+  monitoring Windows PrintService operational logs, specifically EventCode 316. This
+  detection leverages log data to identify messages indicating the addition or update
+  of printer drivers, such as "kernelbase.dll" and "UNIDRV.DLL." This activity is
+  significant as it may indicate exploitation attempts related to vulnerabilities
+  like CVE-2021-34527 (PrintNightmare). If confirmed malicious, attackers could gain
+  code execution or escalate privileges, potentially compromising the affected system.
+  Immediate isolation and investigation of the endpoint are recommended.
+required_fields:
+- _time
+- OpCode
+- EventCode
+- ComputerName
+- Message
+rule: source="wineventlog:microsoft-windows-printservice/operational" OR source="WinEventLog:Microsoft-Windows-PrintService/Admin"
+  EventCode=316 category = "Adding a printer driver" Message = "*kernelbase.dll,*"
+  Message = "*UNIDRV.DLL,*" Message = "*.DLL.*" | stats  count min(_time) as firstTime
+  max(_time) as lastTime by OpCode EventCode ComputerName Message | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `print_spooler_adding_a_printer_driver_filter`

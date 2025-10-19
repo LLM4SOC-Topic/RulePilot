@@ -1,0 +1,22 @@
+description: The following analytic detects suspicious attempts to find SSH private
+  keys, which may indicate an attacker's effort to compromise secure access to systems.
+  SSH private keys are essential for secure authentication, and unauthorized access
+  to these keys can enable attackers to gain unauthorized access to servers and other
+  critical infrastructure. By monitoring for unusual or unauthorized searches for
+  SSH private keys, this analytic helps identify potential threats to network security,
+  allowing security teams to quickly respond and safeguard against unauthorized access
+  and potential breaches.
+required_fields:
+- _time
+- argc
+- process_exec
+rule: sourcetype="linux:audit" type=EXECVE | eval relevant_fields=if(type="EXECVE",
+  "", relevant_fields) | foreach a* [eval relevant_fields=if(type="EXECVE", mvappend(relevant_fields,
+  '<<FIELD>>'), relevant_fields)] | eval process_exec=if(type="EXECVE", mvjoin(relevant_fields,
+  " "), process_exec) | eval process_exec=if(type="EXECVE", trim(process_exec), process_exec)
+  | rename host as dest | where  (LIKE (process_exec, "%find%") OR LIKE (process_exec,
+  "%grep%")) AND (LIKE (process_exec, "%id_rsa%") OR LIKE (process_exec, "%id_dsa%")OR
+  LIKE (process_exec, "%.key%") OR LIKE (process_exec, "%ssh_key%")OR LIKE (process_exec,
+  "%authorized_keys%")) | stats count min(_time) as firstTime max(_time) as lastTime
+  by argc process_exec dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| `linux_auditd_find_ssh_private_keys_filter`

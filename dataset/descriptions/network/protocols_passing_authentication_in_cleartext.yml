@@ -1,0 +1,24 @@
+description: The following analytic identifies the use of cleartext protocols that
+  risk leaking sensitive information. It detects network traffic on legacy protocols
+  such as Telnet (port 23), POP3 (port 110), IMAP (port 143), and non-anonymous FTP
+  (port 21). The detection leverages the Network_Traffic data model to identify TCP
+  traffic on these ports. Monitoring this activity is crucial as it can expose credentials
+  and other sensitive data to interception. If confirmed malicious, attackers could
+  capture authentication details, leading to unauthorized access and potential data
+  breaches.
+required_fields:
+- _time
+- All_Traffic.transport
+- All_Traffic.dest_port
+- All_Traffic.user
+- All_Traffic.src
+- All_Traffic.dest
+- All_Traffic.action
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Network_Traffic where All_Traffic.action!=blocked AND All_Traffic.transport="tcp"
+  AND (All_Traffic.dest_port="23" OR All_Traffic.dest_port="143" OR All_Traffic.dest_port="110"
+  OR (All_Traffic.dest_port="21" AND All_Traffic.user != "anonymous")) by All_Traffic.user
+  All_Traffic.src All_Traffic.dest All_Traffic.dest_port | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `drop_dm_object_name("All_Traffic")`
+  | `protocols_passing_authentication_in_cleartext_filter`'

@@ -1,0 +1,23 @@
+description: The following analytic detects any system integrity level process spawned
+  by a non-system account. It leverages Sysmon EventID 1, focusing on process integrity
+  and parent user data. This behavior is significant as it often indicates successful
+  privilege escalation to SYSTEM from a user-controlled process or service. If confirmed
+  malicious, this activity could allow an attacker to gain full control over the system,
+  execute arbitrary code, and potentially compromise the entire environment.
+required_fields:
+- _time
+- dest
+- user
+- ParentUser
+- parent_process_name
+- parent_process_guid
+- IntegrityLevel
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=1 IntegrityLevel="system" ParentUser=*
+  NOT ParentUser IN ("*SYSTEM","*LOCAL SERVICE","*NETWORK SERVICE","*DWM-*","*$","-")
+  | eval src_user = replace(ParentUser,"^[^\\\]+\\\\","") | stats count min(_time)
+  as firstTime max(_time) as lastTime values(process_name) as process_name values(process)
+  as process, values(process_path) as process_path, values(process_current_directory)
+  as process_current_directory values(parent_process) as parent_process by dest, user,
+  src_user, parent_process_name, parent_process_guid | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$)  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_privilege_escalation_system_process_without_system_parent_filter`

@@ -1,0 +1,23 @@
+description: The following analytic detects a suspicious modification to the Windows
+  registry that disables automatic reboot with a logged-on user. This detection leverages
+  the Endpoint data model to identify changes to the registry path `SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU\NoAutoRebootWithLoggedOnUsers`
+  with a value of `0x00000001`. This activity is significant as it is commonly used
+  by adversaries, including malware like RedLine Stealer, to evade detection and maintain
+  persistence. If confirmed malicious, this could allow attackers to bypass security
+  measures and deploy additional payloads without interruption.
+required_fields:
+- _time
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.user
+- Registry.dest
+- Registry.registry_value_name
+- Registry.action
+- Registry.registry_value_data
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Registry where Registry.registry_path="*\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU\\NoAutoRebootWithLoggedOnUsers"
+  AND Registry.registry_value_data="0x00000001" by Registry.dest Registry.user Registry.registry_path
+  Registry.registry_value_data Registry.registry_key_name | `drop_dm_object_name(Registry)`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_modify_registry_no_auto_reboot_with_logon_user_filter`'

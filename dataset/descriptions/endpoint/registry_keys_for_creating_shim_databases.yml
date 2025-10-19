@@ -1,0 +1,24 @@
+description: The following analytic detects registry activity related to the creation
+  of application compatibility shims. It leverages data from the Endpoint.Registry
+  data model, specifically monitoring registry paths associated with AppCompatFlags.
+  This activity is significant because attackers can use shims to bypass security
+  controls, achieve persistence, or escalate privileges. If confirmed malicious, this
+  could allow an attacker to maintain long-term access, execute arbitrary code, or
+  manipulate application behavior, posing a severe risk to the integrity and security
+  of the affected systems.
+required_fields:
+- _time
+- Registry.dest
+- Registry.registry_value_name
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.registry_value_data
+- Registry.process_guid
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry WHERE (Registry.registry_path=*CurrentVersion\\AppCompatFlags\\Custom*
+  OR Registry.registry_path=*CurrentVersion\\AppCompatFlags\\InstalledSDB*) BY Registry.dest
+  Registry.user Registry.registry_path Registry.registry_key_name Registry.registry_value_name
+  Registry.registry_value_data Registry.process_guid | `drop_dm_object_name(Registry)`
+  | where isnotnull(registry_value_data) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `registry_keys_for_creating_shim_databases_filter`'

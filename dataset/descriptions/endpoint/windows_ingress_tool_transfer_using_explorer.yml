@@ -1,0 +1,30 @@
+description: The following analytic identifies instances where the Windows Explorer
+  process (explorer.exe) is executed with a URL in its command line. This detection
+  leverages data from Endpoint Detection and Response (EDR) agents, focusing on process
+  execution logs. This activity is significant because adversaries, such as those
+  using DCRat malware, may abuse explorer.exe to open URLs with the default browser,
+  which is an uncommon and suspicious behavior. If confirmed malicious, this technique
+  could allow attackers to download and execute malicious payloads, leading to potential
+  system compromise and further malicious activities.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where (Processes.process_name = explorer.exe OR
+  Processes.original_file_name = explorer.exe) AND NOT (Processes.parent_process_name
+  IN("userinit.exe", "svchost.exe")) Processes.process IN ("* http://*", "* https://*")
+  by  Processes.parent_process_name Processes.parent_process Processes.process_name
+  Processes.original_file_name Processes.process Processes.process_id Processes.parent_process_id
+  Processes.dest Processes.user | `drop_dm_object_name(Processes)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_ingress_tool_transfer_using_explorer_filter`'

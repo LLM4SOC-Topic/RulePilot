@@ -1,0 +1,22 @@
+description: The following analytic detects the creation of a new Automation Runbook
+  Webhook within an Azure tenant. It leverages Azure Audit events, specifically the
+  "Create or Update an Azure Automation webhook" operation, to identify this activity.
+  This behavior is significant because Webhooks can trigger Automation Runbooks via
+  unauthenticated URLs exposed to the Internet, posing a security risk. If confirmed
+  malicious, an attacker could use this to execute code, create users, or maintain
+  persistence within the environment, potentially leading to unauthorized access and
+  control over Azure resources.
+required_fields:
+- _time
+- operationName.localizedValue
+- status.value
+- object
+- caller
+- claims.ipaddr
+- resourceGroupName
+- object_path
+rule: sourcetype=mscs:azure:audit operationName.localizedValue="Create or Update an
+  Azure Automation webhook" status.value=Succeeded | dedup object | rename claims.ipaddr
+  as src_ip | rename caller as user | stats count min(_time) as firstTime max(_time)
+  as lastTime by object user, src_ip, resourceGroupName, object_path | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `azure_runbook_webhook_created_filter`

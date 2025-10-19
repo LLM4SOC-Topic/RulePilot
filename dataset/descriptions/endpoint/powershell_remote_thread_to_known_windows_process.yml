@@ -1,0 +1,28 @@
+description: The following analytic detects suspicious PowerShell processes attempting
+  to inject code into critical Windows processes using CreateRemoteThread. It leverages
+  Sysmon EventCode 8 to identify instances where PowerShell spawns threads in processes
+  like svchost.exe, csrss.exe, and others. This activity is significant as it is commonly
+  used by malware such as TrickBot and offensive tools like Cobalt Strike to execute
+  malicious payloads, establish reverse shells, or download additional malware. If
+  confirmed malicious, this behavior could lead to unauthorized code execution, privilege
+  escalation, and persistent access within the environment.
+required_fields:
+- _time
+- SourceImage
+- process_name
+- SourceProcessId
+- SourceProcessGuid
+- TargetImage
+- TargetProcessId
+- NewThreadId
+- StartAddress
+- dest
+- EventCode
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode = 8 parent_process_name IN ("powershell_ise.exe",
+  "powershell.exe") TargetImage IN ("*\\svchost.exe","*\\csrss.exe" "*\\gpupdate.exe",
+  "*\\explorer.exe","*\\services.exe","*\\winlogon.exe","*\\smss.exe","*\\wininit.exe","*\\userinit.exe","*\\spoolsv.exe","*\\taskhost.exe")
+  | stats  min(_time) as firstTime max(_time) as lastTime count by SourceImage process_name
+  SourceProcessId SourceProcessGuid TargetImage TargetProcessId NewThreadId StartAddress
+  dest EventCode | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `powershell_remote_thread_to_known_windows_process_filter`

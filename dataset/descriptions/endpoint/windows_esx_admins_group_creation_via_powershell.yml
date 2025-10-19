@@ -1,0 +1,17 @@
+description: This analytic detects attempts to create an "ESX Admins" group using
+  PowerShell commands. This activity may indicate an attempt to exploit the VMware
+  ESXi Active Directory Integration Authentication Bypass vulnerability (CVE-2024-37085).
+  Attackers can use this method to gain unauthorized access to ESXi hosts by recreating
+  the 'ESX Admins' group after its deletion from Active Directory.
+required_fields:
+- _time
+- EventCode
+- ScriptBlockText
+- Computer
+- UserID
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 (ScriptBlockText="*New-ADGroup*" OR ScriptBlockText="*New-LocalGroup*")
+  ScriptBlockText="*ESX Admins*" | stats count min(_time) as firstTime max(_time)
+  as lastTime by EventCode ScriptBlockText Computer UserID | rename Computer as dest
+  | rename UserID as user | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_esx_admins_group_creation_via_powershell_filter`

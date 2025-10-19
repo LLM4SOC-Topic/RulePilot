@@ -1,0 +1,24 @@
+description: The following analytic detects a suspicious registry modification aimed
+  at disabling security audit logs by adding a specific registry entry. It leverages
+  data from the Endpoint.Registry data model, focusing on changes to the "Control\\MiniNt"
+  registry path. This activity is significant because it can prevent Windows from
+  logging any events to the Security Log, effectively blinding security monitoring
+  efforts. If confirmed malicious, this technique could allow an attacker to operate
+  undetected, making it difficult to trace their actions and compromising the integrity
+  of security audits.
+required_fields:
+- _time
+- Registry.dest
+- Registry.registry_value_name
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.registry_value_data
+- Registry.process_guid
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry WHERE (Registry.registry_path="*\\Control\\MiniNt\\*")
+  BY Registry.user Registry.dest Registry.registry_path Registry.registry_key_name
+  Registry.registry_value_name Registry.registry_value_data Registry.process_guid
+  | `drop_dm_object_name(Registry)` | where isnotnull(registry_value_data) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `disable_security_logs_using_minint_registry_filter`'

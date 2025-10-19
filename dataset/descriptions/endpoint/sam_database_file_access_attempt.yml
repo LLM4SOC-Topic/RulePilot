@@ -1,0 +1,18 @@
+description: The following analytic detects attempts to access the SAM, SYSTEM, or
+  SECURITY database files within the `windows\system32\config` directory using Windows
+  Security EventCode 4663. This detection leverages Windows Security Event logs to
+  identify unauthorized access attempts. Monitoring this activity is crucial as it
+  indicates potential credential access attempts, possibly exploiting vulnerabilities
+  like CVE-2021-36934. If confirmed malicious, an attacker could extract user passwords,
+  leading to unauthorized access, privilege escalation, and further compromise of
+  the system.
+required_fields:
+- _time
+- process_name
+- Object_Name
+- dest
+- user
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  (EventCode=4663)  ProcessName!=*\\dllhost.exe ObjectName IN ("*\\Windows\\System32\\config\\SAM*","*\\Windows\\System32\\config\\SYSTEM*","*\\Windows\\System32\\config\\SECURITY*")
+  | stats values(AccessList) count by ProcessName ObjectName dest src_user | rename
+  ProcessName as process_name | `sam_database_file_access_attempt_filter`

@@ -1,0 +1,19 @@
+description: The following analytic detects the assignment of an Azure AD Privileged
+  Identity Management (PIM) role. It leverages Azure Active Directory events to identify
+  when a user is added as an eligible member to a PIM role. This activity is significant
+  because PIM roles grant elevated privileges, and their assignment should be closely
+  monitored to prevent unauthorized access. If confirmed malicious, an attacker could
+  exploit this to gain privileged access, potentially leading to unauthorized actions,
+  data breaches, or further compromise of the environment.
+required_fields:
+- _time
+- properties
+- operationName
+- user
+- initiatedBy.user.userPrincipalName
+- result
+rule: sourcetype=azure:monitor:aad operationName="Add eligible member to role in PIM
+  completed*" | rename properties.* as * | stats count min(_time) as firstTime max(_time)
+  as lastTime values(user) as user values(targetResources{}.displayName) as displayName  by
+  result, operationName, initiatedBy.user.displayName | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `azure_ad_pim_role_assigned_filter`

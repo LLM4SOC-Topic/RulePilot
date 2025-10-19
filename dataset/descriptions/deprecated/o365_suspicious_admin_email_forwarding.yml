@@ -1,0 +1,13 @@
+description: '**DEPRECATION NOTE** - This search has been deprecated and replaced
+  with `O365 Mailbox Email Forwarding Enabled`. This search detects when an admin
+  configured a forwarding rule for multiple mailboxes to the same destination.'
+required_fields:
+- _time
+- Operation
+- Parameters
+rule: sourcetype=o365:management:activity Operation=Set-Mailbox | spath input=Parameters
+  | rename Identity AS src_user | search ForwardingAddress=* | stats dc(src_user)
+  AS count_src_user earliest(_time) as firstTime latest(_time) as lastTime values(src_user)
+  AS src_user values(user) AS user by ForwardingAddress | where count_src_user > 1
+  |convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) |convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) |`o365_suspicious_admin_email_forwarding_filter`

@@ -1,0 +1,29 @@
+description: The following analytic detects the execution of suspicious command-line
+  arguments commonly associated with Conti ransomware, specifically targeting local
+  drives and network shares for encryption. It leverages data from Endpoint Detection
+  and Response (EDR) agents, focusing on process execution logs that include command-line
+  details. This activity is significant because it indicates a potential ransomware
+  attack, which can lead to widespread data encryption and operational disruption.
+  If confirmed malicious, the impact could be severe, resulting in data loss, system
+  downtime, and potential ransom demands.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where Processes.process = "*-m local*" OR Processes.process
+  = "*-m net*" OR Processes.process = "*-m all*" OR Processes.process = "*-nomutex*"
+  by Processes.process_name Processes.process Processes.parent_process_name Processes.parent_process
+  Processes.dest Processes.user Processes.process_id Processes.process_guid | `drop_dm_object_name(Processes)`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `conti_common_exec_parameter_filter`'

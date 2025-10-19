@@ -1,0 +1,23 @@
+description: The following analytic detects suspicious process injection in command
+  shell applications, specifically targeting `cmd.exe` and `powershell.exe`. It leverages
+  Sysmon EventCode 8 to identify the creation of remote threads within these shell
+  processes. This activity is significant because it is a common technique used by
+  malware, such as IcedID, to inject malicious code and execute it within legitimate
+  processes. If confirmed malicious, this behavior could allow an attacker to execute
+  arbitrary code, escalate privileges, or maintain persistence within the environment,
+  posing a severe threat to system security.
+required_fields:
+- _time
+- SourceImage
+- TargetImage
+- TargetProcessId
+- SourceProcessId
+- StartAddress
+- EventCode
+- dest
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=8 TargetImage IN ("*\\cmd.exe",
+  "*\\powershell*", "*\\pwsh.exe") | stats count min(_time) as firstTime max(_time)
+  as lastTime by  TargetImage TargetProcessId SourceProcessId  EventCode StartAddress
+  SourceImage dest |rename SourceImage as process_name| convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `create_remote_thread_in_shell_application_filter`

@@ -1,0 +1,23 @@
+description: The following analytic detects the creation of files typically associated
+  with SharpHound, a reconnaissance tool used for gathering domain and trust data.
+  It leverages file modification events from the Endpoint.Filesystem data model, focusing
+  on default file naming patterns like `*_BloodHound.zip` and various JSON files.
+  This activity is significant as it indicates potential domain enumeration, which
+  is a precursor to more targeted attacks. If confirmed malicious, an attacker could
+  gain detailed insights into the domain structure, facilitating lateral movement
+  and privilege escalation.
+required_fields:
+- _time
+- file_path
+- dest
+- file_name
+- process_id
+- file_create_time
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Filesystem where Filesystem.file_name IN ("*bloodhound.zip",
+  "*_computers.json", "*_gpos.json", "*_domains.json", "*_users.json", "*_groups.json",
+  "*_ous.json", "*_containers.json") by Filesystem.file_create_time Filesystem.process_id  Filesystem.file_name
+  Filesystem.file_path Filesystem.dest Filesystem.user| `drop_dm_object_name(Filesystem)`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `detect_sharphound_file_modifications_filter`'

@@ -1,0 +1,27 @@
+description: The following analytic detects the execution of a renamed `rclone.exe`
+  process, which is commonly used for data exfiltration to remote destinations. This
+  detection leverages Endpoint Detection and Response (EDR) telemetry, focusing on
+  process names and original file names that do not match. This activity is significant
+  because ransomware groups often use RClone to exfiltrate sensitive data. If confirmed
+  malicious, this behavior could indicate an ongoing data exfiltration attempt, potentially
+  leading to significant data loss and further compromise of the affected systems.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where (Processes.original_file_name=rclone.exe
+  AND Processes.process_name!=rclone.exe) by Processes.dest Processes.user Processes.parent_process_name
+  Processes.process_name Processes.process Processes.process_id Processes.parent_process_id
+  Processes.original_file_name | `drop_dm_object_name(Processes)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `detect_renamed_rclone_filter`'

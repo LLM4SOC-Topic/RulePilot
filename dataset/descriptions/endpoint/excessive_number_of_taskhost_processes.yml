@@ -1,0 +1,24 @@
+description: The following analytic identifies an excessive number of taskhost.exe
+  and taskhostex.exe processes running within a short time frame. It leverages data
+  from Endpoint Detection and Response (EDR) agents, focusing on process names and
+  their counts. This behavior is significant as it is commonly associated with post-exploitation
+  tools like Meterpreter and Koadic, which use multiple instances of these processes
+  for actions such as discovery and lateral movement. If confirmed malicious, this
+  activity could indicate an ongoing attack, allowing attackers to execute code, escalate
+  privileges, or move laterally within the network.
+required_fields:
+- _time
+- Processes.process_id
+- Processes.process_name
+- Processes.dest
+- Processes.user
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` values(Processes.process_id) as process_ids  min(_time)
+  as firstTime max(_time) as lastTime FROM datamodel=Endpoint.Processes WHERE Processes.process_name
+  = "taskhost.exe" OR Processes.process_name = "taskhostex.exe" BY Processes.dest
+  Processes.process_name _time span=1h | `drop_dm_object_name(Processes)` | eval pid_count=mvcount(process_ids)
+  | eval taskhost_count_=if(process_name == "taskhost.exe", pid_count, 0) | eval taskhostex_count_=if(process_name
+  == "taskhostex.exe", pid_count, 0) | stats sum(taskhost_count_) as taskhost_count,
+  sum(taskhostex_count_) as taskhostex_count by _time, dest, firstTime, lastTime |
+  where taskhost_count > 10 or taskhostex_count > 10 | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `excessive_number_of_taskhost_processes_filter`'

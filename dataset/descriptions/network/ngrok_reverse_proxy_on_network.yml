@@ -1,0 +1,18 @@
+description: The following analytic detects DNS queries to common Ngrok domains, indicating
+  potential use of the Ngrok reverse proxy tool. It leverages the Network Resolution
+  datamodel to identify queries to domains such as "*.ngrok.com" and "*.ngrok.io".
+  While Ngrok usage is not inherently malicious, it has been increasingly adopted
+  by adversaries for covert communication and data exfiltration. If confirmed malicious,
+  this activity could allow attackers to bypass network defenses, establish persistent
+  connections, and exfiltrate sensitive data, posing a significant threat to the network's
+  security.
+required_fields:
+- DNS.src
+- DNS.query
+- DNS.answer
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime  from
+  datamodel=Network_Resolution where DNS.query IN ("*.ngrok.com","*.ngrok.io", "ngrok.*.tunnel.com",
+  "korgn.*.lennut.com") by DNS.src DNS.query DNS.answer |  `drop_dm_object_name("DNS")`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `ngrok_reverse_proxy_on_network_filter`'

@@ -1,0 +1,21 @@
+description: The following analytic identifies the download of potentially malicious
+  file types, such as .scr, .dll, .bat, and .lnk, within a network. It leverages web
+  proxy logs from Zscaler, focusing on blocked actions and analyzing fields like deviceowner,
+  user, urlcategory, url, dest, and filename. This activity is significant as these
+  file types are often used to spread malware, posing a threat to network security.
+  If confirmed malicious, this activity could lead to malware execution, data compromise,
+  or further network infiltration.
+required_fields:
+- action
+- threatname
+- deviceowner
+- user
+- urlcategory
+- url
+- dest
+- dest_ip
+- action
+rule: source=zscaler sourcetype=zscalernss-web url IN ("*.scr", "*.dll", "*.bat",
+  "*.lnk") | stats count min(_time) as firstTime max(_time) as lastTime by deviceowner
+  user urlcategory url src filename dest | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `zscaler_potentially_abused_file_download_filter`

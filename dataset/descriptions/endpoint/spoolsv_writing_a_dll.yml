@@ -1,0 +1,29 @@
+description: The following analytic detects `spoolsv.exe` writing a `.dll` file, which
+  is unusual behavior and may indicate exploitation of vulnerabilities like CVE-2021-34527
+  (PrintNightmare). This detection leverages the Endpoint datamodel, specifically
+  monitoring process and filesystem events to identify `.dll` file creation within
+  the `\spool\drivers\x64\` path. This activity is significant as it may signify an
+  attacker attempting to execute malicious code via the Print Spooler service. If
+  confirmed malicious, this could lead to unauthorized code execution and potential
+  system compromise. Immediate endpoint isolation and further investigation are recommended.
+required_fields:
+- _time
+- Filesystem.dest
+- Filesystem.file_create_time
+- Filesystem.file_name
+- Filesystem.file_path
+- Processes.process_name
+- Processes.process_id
+- Processes.process_name
+- Processes.dest
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count FROM datamodel=Endpoint.Processes where Processes.process_name=spoolsv.exe
+  by _time Processes.process_guid Processes.process_name Processes.dest | `drop_dm_object_name(Processes)`
+  | join process_guid, _time [| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Filesystem where Filesystem.file_path="*\\spool\\drivers\\x64\\*"
+  Filesystem.file_name="*.dll" by _time Filesystem.dest Filesystem.process_guid Filesystem.file_create_time
+  Filesystem.file_name Filesystem.file_path | `drop_dm_object_name(Filesystem)` |
+  fields _time dest file_create_time file_name file_path process_name process_path
+  process_guid process] | dedup file_create_time | table  dest file_create_time, file_name,
+  file_path, process_name process_guid | `spoolsv_writing_a_dll_filter`'

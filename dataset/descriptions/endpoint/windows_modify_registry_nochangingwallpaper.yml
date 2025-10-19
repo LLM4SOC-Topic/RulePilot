@@ -1,0 +1,23 @@
+description: The following analytic detects modifications to the Windows registry
+  aimed at preventing wallpaper changes. It leverages data from the Endpoint.Registry
+  datamodel, specifically monitoring changes to the "NoChangingWallPaper" registry
+  value. This activity is significant as it is a known tactic used by Rhysida ransomware
+  to enforce a malicious wallpaper, thereby limiting user control over system settings.
+  If confirmed malicious, this registry change could indicate a ransomware infection,
+  leading to further system compromise and user disruption.
+required_fields:
+- _time
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.user
+- Registry.dest
+- Registry.registry_value_name
+- Registry.action
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry WHERE (Registry.registry_path= "*\\Windows\\CurrentVersion\\Policies\\ActiveDesktop\\NoChangingWallPaper"
+  Registry.registry_value_data = 1) BY Registry.dest Registry.user Registry.registry_path
+  Registry.registry_key_name Registry.registry_value_name Registry.registry_value_data
+  Registry.process_guid | `drop_dm_object_name(Registry)` | where isnotnull(registry_value_data)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_modify_registry_nochangingwallpaper_filter`'

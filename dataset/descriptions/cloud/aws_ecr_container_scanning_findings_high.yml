@@ -1,0 +1,29 @@
+description: The following analytic identifies high-severity findings from AWS Elastic
+  Container Registry (ECR) image scans. It detects these activities by analyzing AWS
+  CloudTrail logs for the DescribeImageScanFindings event, specifically filtering
+  for findings with a high severity level. This activity is significant for a SOC
+  because high-severity vulnerabilities in container images can lead to potential
+  exploitation if not addressed. If confirmed malicious, attackers could exploit these
+  vulnerabilities to gain unauthorized access, execute arbitrary code, or escalate
+  privileges within the container environment, posing a significant risk to the overall
+  security posture.
+required_fields:
+- eventSource
+- eventName
+- responseElements.imageScanFindings.findings{}
+- awsRegion
+- requestParameters.imageId.imageDigest
+- requestParameters.repositoryName
+- user
+- userName
+- src_ip
+rule: sourcetype=aws:cloudtrail eventSource=ecr.amazonaws.com eventName=DescribeImageScanFindings
+  | spath path=responseElements.imageScanFindings.findings{} output=findings | mvexpand
+  findings | spath input=findings | search severity=HIGH | rename name as finding_name,
+  description as finding_description, requestParameters.imageId.imageDigest as imageDigest,
+  requestParameters.repositoryName as repository, userIdentity.principalId as user
+  | eval finding = finding_name.", ".finding_description | eval phase="release" |
+  eval severity="high" | stats min(_time) as firstTime max(_time) as lastTime by awsRegion,
+  eventName, eventSource, imageDigest, repository, user, src_ip, finding, phase, severity
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `aws_ecr_container_scanning_findings_high_filter`

@@ -1,0 +1,23 @@
+description: The following analytic identifies multiple failed multi-factor authentication
+  (MFA) requests to an AWS Console for a single user. It leverages AWS CloudTrail
+  logs, specifically the `additionalEventData` field, to detect more than 10 failed
+  MFA prompts within 5 minutes. This activity is significant as it may indicate an
+  adversary attempting to bypass MFA by bombarding the user with repeated authentication
+  requests. If confirmed malicious, this could lead to unauthorized access to the
+  AWS environment, potentially compromising sensitive data and resources.
+required_fields:
+- src
+- eventName
+- eventSource
+- aws_account_id
+- errorCode
+- errorMessage
+- userAgent
+- eventID
+- awsRegion
+- user_name
+- userIdentity.arn
+rule: sourcetype=aws:cloudtrail eventName= ConsoleLogin "additionalEventData.MFAUsed"=Yes
+  errorMessage="Failed authentication" | bucket span=5m _time |  stats dc(_raw) as
+  mfa_prompts values(userAgent) as userAgent values(src) as src by _time user_name
+  user_arn aws_account_id eventName errorMessage | where mfa_prompts > 10| `aws_multiple_failed_mfa_requests_for_user_filter`

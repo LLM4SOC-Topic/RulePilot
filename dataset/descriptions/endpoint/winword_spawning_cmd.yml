@@ -1,0 +1,29 @@
+description: The following analytic identifies instances where Microsoft Word (winword.exe)
+  spawns the command prompt (cmd.exe). This behavior is detected using Endpoint Detection
+  and Response (EDR) telemetry, focusing on process creation events where the parent
+  process is winword.exe. This activity is significant because it is uncommon and
+  often associated with spearphishing attacks, where malicious attachments execute
+  commands via cmd.exe. If confirmed malicious, this could allow an attacker to execute
+  arbitrary commands, potentially leading to further system compromise, data exfiltration,
+  or lateral movement within the network.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where Processes.parent_process_name=winword.exe
+  (Processes.process_name=cmd.exe OR Processes.original_file_name=Cmd.Exe) by Processes.dest
+  Processes.user Processes.parent_process_name Processes.parent_process Processes.original_file_name
+  Processes.process_name Processes.process Processes.process_id Processes.parent_process_id
+  | `drop_dm_object_name(Processes)` | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `winword_spawning_cmd_filter`'

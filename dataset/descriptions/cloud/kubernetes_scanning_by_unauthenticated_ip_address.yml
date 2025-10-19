@@ -1,0 +1,27 @@
+description: The following analytic identifies potential scanning activities within
+  a Kubernetes environment by unauthenticated IP addresses. It leverages Kubernetes
+  audit logs to detect multiple unauthorized access attempts (HTTP 403 responses)
+  from the same source IP. This activity is significant as it may indicate an attacker
+  probing for vulnerabilities or attempting to exploit known issues. If confirmed
+  malicious, such scanning could lead to unauthorized access, data breaches, or further
+  exploitation of the Kubernetes infrastructure, compromising the security and integrity
+  of the environment.
+required_fields:
+- verb
+- requestReceivedTimestamp
+- requestURI
+- responseStatus.code
+- sourceIPs{}
+- user.groups{}
+- user.username
+- userAgent
+- verb
+- responseStatus.reason
+- responseStatus.status
+rule: source="kubernetes" "user.groups{}"="system:unauthenticated" "responseStatus.code"=403
+  | iplocation sourceIPs{} | stats count values(userAgent) as userAgent values(user.username)
+  as user.username values(user.groups{}) as user.groups{} values(verb) as verb values(requestURI)
+  as requestURI values(responseStatus.code) as responseStatus.code values(responseStatus.message)
+  as responseStatus.message values(responseStatus.reason) as responseStatus.reason
+  values(responseStatus.status) as responseStatus.status by sourceIPs{} Country City
+  | where count > 5 | rename sourceIPs{} as src_ip, user.username as user | `kubernetes_scanning_by_unauthenticated_ip_address_filter`

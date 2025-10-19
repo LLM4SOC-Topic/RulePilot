@@ -1,0 +1,11 @@
+description: The search looks for files created with names that have been linked to
+  malicious activity.
+required_fields:
+- _time
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count values(Filesystem.action) as action values(Filesystem.file_path)
+  as file_path min(_time) as firstTime max(_time) as lastTime FROM datamodel=Endpoint.Filesystem
+  by Filesystem.file_name Filesystem.dest | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `drop_dm_object_name(Filesystem)`
+  | lookup suspicious_writes_lookup file as file_name OUTPUT note as "Reference" |
+  search "Reference" != False | `suspicious_file_write_filter`'

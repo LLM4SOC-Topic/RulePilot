@@ -1,0 +1,21 @@
+description: The following analytic detects suspicious discovery of virtual disk files
+  and directories, which may indicate an attacker's attempt to locate and access virtualized
+  storage environments. Virtual disks can contain sensitive data or critical system
+  configurations, and unauthorized discovery attempts could signify preparatory actions
+  for data exfiltration or further compromise. By monitoring for unusual or unauthorized
+  searches for virtual disk files and directories, this analytic helps identify potential
+  reconnaissance activities, enabling security teams to respond promptly and safeguard
+  against unauthorized access and data breaches.
+required_fields:
+- _time
+- argc
+- process_exec
+rule: sourcetype="linux:audit" type=EXECVE | eval relevant_fields=if(type="EXECVE",
+  "", relevant_fields) | foreach a* [eval relevant_fields=if(type="EXECVE", mvappend(relevant_fields,
+  '<<FIELD>>'), relevant_fields)] | eval process_exec=if(type="EXECVE", mvjoin(relevant_fields,
+  " "), process_exec) | eval process_exec=if(type="EXECVE", trim(process_exec), process_exec)
+  | rename host as dest | where  (LIKE (process_exec, "%find%") OR LIKE (process_exec,
+  "%grep%")) AND (LIKE (process_exec, "%.vhd%") OR LIKE (process_exec, "%.vhdx%")
+  OR LIKE (process_exec, "%.vmdk%")) | stats count min(_time) as firstTime max(_time)
+  as lastTime by argc process_exec dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| `linux_auditd_virtual_disk_file_and_directory_discovery_filter`

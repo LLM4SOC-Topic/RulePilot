@@ -1,0 +1,28 @@
+description: The following analytic detects the execution of 7z or 7za processes with
+  command lines pointing to SMB network shares. It leverages data from Endpoint Detection
+  and Response (EDR) agents, focusing on process names and command-line arguments.
+  This activity is significant as it may indicate an attempt to archive and exfiltrate
+  sensitive files to a network share, a technique observed in CONTI LEAK tools. If
+  confirmed malicious, this behavior could lead to data exfiltration, compromising
+  sensitive information and potentially aiding further attacks.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process
+- Processes.parent_process_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where (Processes.process_name ="7z.exe" OR Processes.process_name
+  = "7za.exe" OR Processes.process_name = "7zr.exe" OR Processes.original_file_name
+  = "7z.exe" OR Processes.original_file_name =  "7za.exe" OR Processes.original_file_name
+  =  "7zr.exe") AND (Processes.process="*\\C$\\*" OR Processes.process="*\\Admin$\\*"
+  OR Processes.process="*\\IPC$\\*") by Processes.original_file_name Processes.parent_process_name
+  Processes.parent_process Processes.process_name Processes.process Processes.parent_process_id
+  Processes.process_id  Processes.dest Processes.user | `drop_dm_object_name(Processes)`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `7zip_commandline_to_smb_share_path_filter`'

@@ -1,0 +1,18 @@
+description: The following analytic detects .cab files being written to disk. It leverages
+  data from Endpoint Detection and Response (EDR) agents, focusing on events where
+  the file name is '*.cab' and the action is 'write'. This activity is significant
+  as .cab files can be used to deliver malicious payloads, including embedded .url
+  files that execute harmful code. If confirmed malicious, this behavior could lead
+  to unauthorized code execution and potential system compromise. Analysts should
+  review the file path and associated artifacts for further investigation.
+required_fields:
+- Filesystem.dest
+- Filesystem.action
+- Filesystem.process_id
+- Filesystem.file_name
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count values(Filesystem.file_path) as file_path
+  min(_time) as firstTime max(_time) as lastTime from datamodel=Endpoint.Filesystem
+  where (Filesystem.file_name=*.cab) by Filesystem.dest Filesystem.action Filesystem.process_id
+  Filesystem.file_name | `drop_dm_object_name("Filesystem")` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_cab_file_on_disk_filter`'

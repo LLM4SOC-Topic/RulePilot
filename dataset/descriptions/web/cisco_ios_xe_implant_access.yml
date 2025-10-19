@@ -1,0 +1,20 @@
+description: The following analytic identifies the potential exploitation of a vulnerability
+  (CVE-2023-20198) in the Web User Interface of Cisco IOS XE software. It detects
+  suspicious account creation and subsequent actions, including the deployment of
+  a non-persistent implant configuration file. The detection leverages the Web datamodel,
+  focusing on specific URL patterns and HTTP methods. This activity is significant
+  as it indicates unauthorized administrative access, which can lead to full control
+  of the device. If confirmed malicious, attackers could maintain privileged access,
+  compromising the device's integrity and security.
+required_fields:
+- _time
+- Web.http_method
+- Web.url
+- Web.url_length
+- Web.src
+- Web.dest
+rule: '| tstats count min(_time) as firstTime max(_time) as lastTime from datamodel=Web
+  where Web.url IN ("/webui/logoutconfirm.html?logon_hash=*") Web.http_method=POST
+  Web.status=200 by Web.http_user_agent, Web.status Web.http_method, Web.url, Web.url_length,
+  Web.src, Web.dest, sourcetype | `drop_dm_object_name("Web")` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| `cisco_ios_xe_implant_access_filter`'

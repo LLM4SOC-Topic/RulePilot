@@ -1,0 +1,13 @@
+description: This search provides information of unauthenticated requests via user
+  agent, and authentication data against Kubernetes cluster
+required_fields:
+- _time
+rule: sourcetype="google:gcp:pubsub:message" data.protoPayload.requestMetadata.callerIp!=127.0.0.1
+  data.protoPayload.requestMetadata.callerIp!=::1 "data.labels.authorization.k8s.io/decision"=forbid
+  "data.protoPayload.status.message"=PERMISSION_DENIED data.protoPayload.authenticationInfo.principalEmail="system:anonymous"
+  | rename data.protoPayload.requestMetadata.callerIp as src_ip | stats count min(_time)
+  as firstTime max(_time) as lastTime values(data.protoPayload.methodName) as method_name
+  values(data.protoPayload.resourceName) as resource_name values(data.protoPayload.requestMetadata.callerSuppliedUserAgent)
+  as http_user_agent by src_ip data.resource.labels.cluster_name | rename data.resource.labels.cluster_name
+  as cluster_name| convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)  | `gcp_kubernetes_cluster_scan_detection_filter`

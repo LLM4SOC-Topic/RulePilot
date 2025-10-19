@@ -1,0 +1,18 @@
+description: The following analytic detects the suspicious sysmon service stop. This
+  behavior is critical for a SOC to monitor because it may indicate attempts to gain
+  unauthorized access or maintain control over a system. Such actions could be signs
+  of malicious activity. If confirmed, this could lead to serious consequences, including
+  a compromised system, unauthorized access to sensitive data, or even a wider breach
+  affecting the entire network. Detecting and responding to these signs early is essential
+  to prevent potential security incidents.
+required_fields:
+- _time
+- type
+- pid
+- UID
+- comm
+- exe
+rule: sourcetype="linux:audit" type=SERVICE_STOP unit IN ("sysmon") | rename host
+  as dest | stats count min(_time) as firstTime max(_time) as lastTime by type pid
+  UID comm exe unit dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) |
+  convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| `linux_auditd_sysmon_service_stop_filter`

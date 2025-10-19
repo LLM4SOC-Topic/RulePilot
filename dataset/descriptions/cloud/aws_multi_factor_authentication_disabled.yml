@@ -1,0 +1,24 @@
+description: The following analytic detects attempts to disable multi-factor authentication
+  (MFA) for an AWS IAM user. It leverages AWS CloudTrail logs to identify events where
+  MFA devices are deleted or deactivated. This activity is significant because disabling
+  MFA can indicate an adversary attempting to weaken account security, potentially
+  to maintain persistence using a compromised account. If confirmed malicious, this
+  action could allow attackers to retain access to the AWS environment without detection,
+  posing a significant risk to the security and integrity of the cloud infrastructure.
+required_fields:
+- src
+- eventName
+- eventSource
+- aws_account_id
+- errorCode
+- errorMessage
+- userAgent
+- eventID
+- awsRegion
+- user_name
+- userIdentity.arn
+rule: sourcetype=aws:cloudtrail (eventName= DeleteVirtualMFADevice OR eventName=DeactivateMFADevice)
+  | stats count min(_time) as firstTime max(_time) as lastTime by src eventName eventSource
+  aws_account_id userAgent eventID awsRegion user_name userIdentity.arn status | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `aws_multi_factor_authentication_disabled_filter`

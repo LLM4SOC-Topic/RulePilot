@@ -1,0 +1,84 @@
+name: Detect Large Outbound ICMP Packets
+id: e9c102de-4d43-42a7-b1c8-8062ea297419
+version: 6
+date: '2024-11-06'
+author: Rico Valdez, Dean Luxton, Splunk
+status: production
+type: TTP
+description: The following analytic identifies outbound ICMP packets with a size larger than 1,000 bytes. It leverages the Network_Traffic data model to detect unusually large ICMP packets that are not blocked and are destined for external IP addresses. This activity is significant because threat actors often use ICMP for command and control communication, and large ICMP packets can indicate data exfiltration or other malicious activities. If confirmed malicious, this could allow attackers to maintain covert communication channels, exfiltrate sensitive data, or further compromise the network.
+data_source:
+- Palo Alto Network Traffic
+search: >- 
+  | tstats `security_content_summariesonly` count earliest(_time) as firstTime
+    latest(_time) as lastTime values(All_Traffic.action) as action values(All_Traffic.bytes) as bytes from
+    datamodel=Network_Traffic where All_Traffic.action !=blocked  (All_Traffic.protocol=icmp OR All_Traffic.transport=icmp) All_Traffic.bytes
+    > 1000 AND NOT All_Traffic.dest_ip IN ("10.0.0.0/8","172.16.0.0/12","192.168.0.0/16") by All_Traffic.src_ip  All_Traffic.dest_ip All_Traffic.protocol
+  | `drop_dm_object_name("All_Traffic")` 
+  | iplocation dest_ip 
+  | `security_content_ctime(firstTime)` 
+  | `security_content_ctime(lastTime)` | `detect_large_outbound_icmp_packets_filter`
+how_to_implement: 'In order to run this search effectively, we highly recommend that
+  you leverage the Assets and Identity framework. It is important that you have a
+  good understanding of how your network segments are designed and that you are able
+  to distinguish internal from external address space. Add a category named `internal`
+  to the CIDRs that host the company''s assets in the `assets_by_cidr.csv` lookup
+  file, which is located in `$SPLUNK_HOME/etc/apps/SA-IdentityManagement/lookups/`.
+  More information on updating this lookup can be found here: https://docs.splunk.com/Documentation/ES/5.0.0/Admin/Addassetandidentitydata.
+  This search also requires you to be ingesting your network traffic and populating
+  the Network_Traffic data model'
+known_false_positives: ICMP packets are used in a variety of ways to help troubleshoot
+  networking issues and ensure the proper flow of traffic. As such, it is possible
+  that a large ICMP packet could be perfectly legitimate. If large ICMP packets are
+  associated with Command And Control traffic, there will typically be a large number
+  of these packets observed over time. If the search is providing a large number of
+  false positives, you can modify the macro `detect_large_outbound_icmp_packets_filter`
+  to adjust the byte threshold or add specific IP addresses to an allow list.
+references: []
+drilldown_searches:
+- name: View the detection results for - "$src_ip$" and "$dest_ip$"
+  search: '%original_detection_search% | search  src = "$src_ip$" dest = "$dest_ip$"'
+  earliest_offset: $info_min_time$
+  latest_offset: $info_max_time$
+- name: View risk events for the last 7 days for - "$src_ip$" and "$dest_ip$"
+  search: '| from datamodel Risk.All_Risk | search normalized_risk_object IN ("$src_ip$", "$dest_ip$") starthoursago=168  | stats count min(_time) as firstTime max(_time) as lastTime values(search_name) as "Search Name" values(risk_message) as "Risk Message" values(analyticstories) as "Analytic Stories" values(annotations._all) as "Annotations" values(annotations.mitre_attack.mitre_tactic) as "ATT&CK Tactics" by normalized_risk_object | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`'
+  earliest_offset: $info_min_time$
+  latest_offset: $info_max_time$
+tags:
+  analytic_story:
+  - Command And Control
+  asset_type: Endpoint
+  confidence: 50
+  impact: 50
+  message: Detect Large Outbound ICMP Packets detected from $src_ip$ to $dest_ip$
+  mitre_attack_id:
+  - T1095
+  observable:
+  - name: dest_ip
+    type: IP Address
+    role:
+    - Victim
+  - name: src_ip
+    type: IP Address
+    role:
+    - Victim
+  product:
+  - Splunk Enterprise
+  - Splunk Enterprise Security
+  - Splunk Cloud
+  required_fields:
+  - _time
+  - All_Traffic.action
+  - All_Traffic.bytes
+  - All_Traffic.dest_category
+  - All_Traffic.protocol
+  - All_Traffic.transport
+  - All_Traffic.src_ip
+  - All_Traffic.dest_ip
+  risk_score: 25
+  security_domain: network
+tests:
+- name: True Positive Test
+  attack_data:
+  - data: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1095/palologs/large_icmp.log
+    sourcetype: pan:traffic
+    source: pan:traffic

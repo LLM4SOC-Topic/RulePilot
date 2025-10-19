@@ -1,0 +1,21 @@
+description: The following analytic detects the execution of PowerShell commands used
+  for domain enumeration, such as `get-netdomaintrust` and `get-adgroupmember`. It
+  leverages PowerShell Script Block Logging (EventCode=4104) to capture and analyze
+  the full command sent to PowerShell. This activity is significant as it often indicates
+  reconnaissance efforts by an attacker to map out the domain structure and identify
+  key users and groups. If confirmed malicious, this behavior could lead to further
+  targeted attacks, privilege escalation, and unauthorized access to sensitive information
+  within the domain.
+required_fields:
+- _time
+- ScriptBlockText
+- Opcode
+- Computer
+- UserID
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText IN (*get-netdomaintrust*, *get-netforesttrust*, *get-addomain*,
+  *get-adgroupmember*, *get-domainuser*) | stats count min(_time) as firstTime max(_time)
+  as lastTime by Computer EventCode ScriptBlockText UserID | rename Computer as dest
+  | rename UserID as user | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `powershell_domain_enumeration_filter`

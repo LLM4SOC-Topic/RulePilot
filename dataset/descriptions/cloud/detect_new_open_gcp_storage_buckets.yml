@@ -1,0 +1,27 @@
+description: The following analytic identifies the creation of new open/public GCP
+  Storage buckets. It leverages GCP PubSub events, specifically monitoring for the
+  `storage.setIamPermissions` method and checks if the `allUsers` member is added.
+  This activity is significant because open storage buckets can expose sensitive data
+  to the public, posing a severe security risk. If confirmed malicious, an attacker
+  could access, modify, or delete data within the bucket, leading to data breaches
+  and potential compliance violations.
+required_fields:
+- _time
+- data.resource.type
+- data.protoPayload.methodName
+- data.protoPayload.serviceData.policyDelta.bindingDeltas{}.action
+- data.protoPayload.authenticationInfo.principalEmail
+- data.protoPayload.resourceLocation.currentLocations{}
+- data.protoPayload.requestMetadata.callerIp
+- data.protoPayload.resourceName
+- data.protoPayload.serviceData.policyDelta.bindingDeltas{}.role
+- data.protoPayload.serviceData.policyDelta.bindingDeltas{}.member
+rule: sourcetype="google:gcp:pubsub:message" data.resource.type=gcs_bucket data.protoPayload.methodName=storage.setIamPermissions
+  | spath output=action path=data.protoPayload.serviceData.policyDelta.bindingDeltas{}.action
+  | spath output=user path=data.protoPayload.authenticationInfo.principalEmail | spath
+  output=location path=data.protoPayload.resourceLocation.currentLocations{} | spath
+  output=src path=data.protoPayload.requestMetadata.callerIp | spath output=bucketName
+  path=data.protoPayload.resourceName | spath output=role path=data.protoPayload.serviceData.policyDelta.bindingDeltas{}.role
+  | spath output=member path=data.protoPayload.serviceData.policyDelta.bindingDeltas{}.member
+  | search (member=allUsers AND action=ADD) | table  _time, bucketName, src, user,
+  location, action, role, member | search `detect_new_open_gcp_storage_buckets_filter`

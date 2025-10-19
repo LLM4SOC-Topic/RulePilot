@@ -1,0 +1,32 @@
+description: The following analytic detects the execution of native .NET binaries
+  from non-standard directories within the Windows operating system. It leverages
+  Endpoint Detection and Response (EDR) telemetry, comparing process names and original
+  file names against a predefined lookup using the `is_net_windows_file_macro` macro.
+  This activity is significant because adversaries may move .NET binaries to unconventional
+  paths to evade detection and execute malicious code. If confirmed malicious, this
+  behavior could allow attackers to execute arbitrary code, escalate privileges, or
+  maintain persistence within the environment, posing a significant security risk.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Processes where NOT (Processes.process_path IN ("*\\Windows\\ADWS\\*","*\\Windows\\SysWOW64*",
+  "*\\Windows\\system32*", "*\\Windows\\NetworkController\\*", "*\\Windows\\SystemApps\\*",
+  "*\\WinSxS\\*", "*\\Windows\\Microsoft.NET\\*")) by Processes.dest Processes.user
+  Processes.parent_process_name Processes.parent_process Processes.process_name Processes.process
+  Processes.original_file_name Processes.process_path Processes.process_id Processes.parent_process_id
+  | `drop_dm_object_name("Processes")` | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | lookup update=true is_net_windows_file
+  filename as process_name OUTPUT netFile | lookup update=true is_net_windows_file
+  originalFileName as original_file_name OUTPUT netFile | search netFile=true | `windows_dotnet_binary_in_non_standard_path_filter`'

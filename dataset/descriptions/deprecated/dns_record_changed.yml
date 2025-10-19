@@ -1,0 +1,19 @@
+description: The search takes the DNS records and their answers results of the discovered_dns_records
+  lookup and finds if any records have changed by searching DNS response from the
+  Network_Resolution datamodel across the last day.
+required_fields:
+- _time
+- DNS.record_type
+- DNS.answer
+- DNS.src
+- DNS.message_type
+- DNS.query
+rule: '| inputlookup discovered_dns_records | rename answer as discovered_answer |
+  join domain[|tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count values(DNS.record_type) as type, values(DNS.answer)
+  as current_answer values(DNS.src) as src from datamodel=Network_Resolution where
+  DNS.message_type=RESPONSE DNS.answer!="unknown" DNS.answer!="" by DNS.query | rename
+  DNS.query as query | where query!="unknown" | rex field=query "(?<domain>\w+\.\w+?)(?:$|/)"]
+  | makemv delim=" " answer |  makemv delim=" " type | sort -count | table count,src,domain,type,query,current_answer,discovered_answer
+  | makemv current_answer  | mvexpand current_answer | makemv discovered_answer |
+  eval n=mvfind(discovered_answer, current_answer) | where isnull(n) | `dns_record_changed_filter`'

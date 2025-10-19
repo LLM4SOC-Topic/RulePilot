@@ -1,0 +1,18 @@
+description: The following analytic detects when any Microsoft Safe Links alerting
+  is triggered. This behavior may indicate when user has interacted with a phishing
+  or otherwise malicious link within the Microsoft Office ecosystem.
+required_fields:
+- _time
+- AlertId
+- Operation
+- Name
+- AlertId
+- trc
+- ot
+rule: sourcetype=o365:management:activity Name="*a potentially malicious URL*" Operation=AlertEntityGenerated
+  | fromjson Data | stats count min(_time) as firstTime max(_time) as lastTime values(ObjectId)
+  as url values(od) as desc by AlertId,trc,Operation,Name,ot | rename Name as signature,
+  AlertId as signature_id, trc as user,ot as action | eval action = CASE(action ==
+  "Allowed", "allowed", action=="BlockPageOverride", "allowed", true(),"blocked")
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `o365_safe_links_detection_filter`

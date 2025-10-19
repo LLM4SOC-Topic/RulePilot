@@ -1,0 +1,16 @@
+description: This search looks for reading loaded Images unique to credential dumping
+  with Mimikatz. Deprecated because mimikatz libraries changed and very noisy sysmon
+  Event Code.
+required_fields:
+- _time
+- EventCode
+- ImageLoaded
+- ProcessId
+- dest
+- Image
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=7 | stats values(ImageLoaded)
+  as ImageLoaded values(ProcessId) as ProcessId by dest, Image | search ImageLoaded=*WinSCard.dll
+  ImageLoaded=*cryptdll.dll ImageLoaded=*hid.dll ImageLoaded=*samlib.dll ImageLoaded=*vaultcli.dll
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `detect_mimikatz_using_loaded_images_filter`

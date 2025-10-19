@@ -1,0 +1,20 @@
+description: The following analytic detects the creation of files with names commonly
+  associated with ransomware notes. It leverages file-system activity data from the
+  Endpoint Filesystem data model, typically populated by endpoint detection and response
+  (EDR) tools or Sysmon logs. This activity is significant because ransomware notes
+  indicate a potential ransomware attack, which can lead to data encryption and extortion.
+  If confirmed malicious, this activity could result in significant data loss, operational
+  disruption, and financial impact due to ransom demands.
+required_fields:
+- _time
+- Filesystem.user
+- Filesystem.dest
+- Filesystem.file_path
+- Filesystem.file_name
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  values(Filesystem.user) as user values(Filesystem.dest) as dest values(Filesystem.file_path)
+  as file_path from datamodel=Endpoint.Filesystem by Filesystem.file_name | `drop_dm_object_name(Filesystem)`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | lookup ransomware_notes_lookup ransomware_notes as file_name OUTPUT
+  status as "Known Ransomware Notes" | search "Known Ransomware Notes"=True | `common_ransomware_notes_filter`'

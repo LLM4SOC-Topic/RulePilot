@@ -1,0 +1,23 @@
+description: The following analytic detects API calls to enable S3 bucket replication
+  services. It leverages AWS CloudTrail logs to identify `PutBucketReplication` events,
+  focusing on fields like `bucketName`, `ReplicationConfiguration.Rule.Destination.Bucket`,
+  and user details. This activity is significant as it can indicate unauthorized data
+  replication, potentially leading to data exfiltration. If confirmed malicious, attackers
+  could replicate sensitive data to external accounts, leading to data breaches and
+  compliance violations.
+required_fields:
+- _time
+- eventName
+- user_arn
+- src_ip
+- eventSource
+- requestParameters.*
+- aws_account_id
+- vendor_region
+- user_agent
+- userIdentity.principalId
+rule: sourcetype=aws:cloudtrail  eventName = PutBucketReplication eventSource = s3.amazonaws.com
+  | rename requestParameters.* as * | stats count values(bucketName) as source_bucket
+  values(ReplicationConfiguration.Rule.ID) as rule_id values(ReplicationConfiguration.Rule.Destination.Bucket)
+  as destination_bucket by _time user_arn userName user_type src_ip aws_account_id
+  userIdentity.principalId user_agent | `aws_exfiltration_via_bucket_replication_filter`

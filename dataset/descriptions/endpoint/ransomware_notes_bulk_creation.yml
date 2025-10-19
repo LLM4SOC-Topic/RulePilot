@@ -1,0 +1,22 @@
+description: The following analytic identifies the bulk creation of ransomware notes
+  (e.g., .txt, .html, .hta files) on an infected machine. It leverages Sysmon EventCode
+  11 to detect multiple instances of these file types being created within a short
+  time frame. This activity is significant as it often indicates an active ransomware
+  attack, where the attacker is notifying the victim of the encryption. If confirmed
+  malicious, this behavior could lead to widespread data encryption, rendering critical
+  files inaccessible and potentially causing significant operational disruption.
+required_fields:
+- EventCode
+- file_name
+- _time
+- TargetFilename
+- dest
+- Image
+- user
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=11 file_name IN ("*\.txt","*\.html","*\.hta")
+  |bin _time span=10s | stats min(_time) as firstTime max(_time) as lastTime dc(TargetFilename)
+  as unique_readme_path_count values(TargetFilename) as list_of_readme_path by Computer
+  Image file_name | rename Computer as dest | where unique_readme_path_count >= 15
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `ransomware_notes_bulk_creation_filter`

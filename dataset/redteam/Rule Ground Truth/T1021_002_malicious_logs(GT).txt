@@ -1,0 +1,197 @@
+Atomic Test #1 - Map admin share
+
+Log1
+09/03/2024 02:52:09 PM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=message
+RecordNumber=394917
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=message
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-03 06:52:09.460
+ProcessGuid: {6f6dba56-b219-66d6-793b-2b0000001700}
+ProcessId: 4124
+Image: C:\Windows\System32\net.exe
+FileVersion: 10.0.19041.1 (WinBuild.160101.0800)
+Description: Net Command
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: net.exe
+CommandLine: net  use \\Target\C$ P@ssw0rd1 /u:DOMAIN\Administrator
+CurrentDirectory: C:\Windows\system32\
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=88B101598CC6726B7A57D02B1FA95BE1B272A821,MD5=0BD94A338EEA5A4E1F2830AE326E6D19,SHA256=9F376759BCBCD705F726460FC4A7E2B07F310F52BAA73CAAAAA124FDDBDF993E,IMPHASH=57F0C47AE2A1A2C06C8B987372AB0B07
+ParentProcessGuid: {6f6dba56-b219-66d6-783b-2b0000001700}
+ParentProcessId: 3816
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: cmd.exe  /c "net use \\Target\C$ P@ssw0rd1 /u:DOMAIN\Administrator"
+ParentUser: DESKTOP-43B3OH1\xcy
+Collapse
+host = DESKTOP-43B3OH1source = C:\Users\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1021.002\T1021_002.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Log2
+09/03/2024 02:52:09 PM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=message
+RecordNumber=394897
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=message
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-03 06:52:09.436
+ProcessGuid: {6f6dba56-b219-66d6-783b-2b0000001700}
+ProcessId: 3816
+Image: C:\Windows\System32\cmd.exe
+FileVersion: 10.0.19041.4355 (WinBuild.160101.0800)
+Description: Windows Command Processor
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: Cmd.Exe
+CommandLine: cmd.exe  /c "net use \\Target\C$ P@ssw0rd1 /u:DOMAIN\Administrator"
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=DF79C86FDD11B9CCB89148458E509F879C72566C,MD5=2B40C98ED0F7A1D3B091A3E8353132DC,SHA256=BADF4752413CB0CBDC03FB95820CA167F0CDC63B597CCDB5EF43111180E088B0,IMPHASH=272245E2988E1E430500B852C4FB5E18
+ParentProcessGuid: {6f6dba56-41b7-66d6-4c79-2a0000001700}
+ParentProcessId: 7560
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: "C:\Windows\system32\cmd.exe" 
+ParentUser: DESKTOP-43B3OH1\xcy
+Collapse
+host = DESKTOP-43B3OH1source = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1021.002\T1021_002.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Atomic Test #2 - Map Admin Share PowerShell
+
+Log1
+10/02/2024 11:13:48 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=3034
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+New-PSDrive -name g -psprovider filesystem -root \\Target\C$
+
+ScriptBlock ID: 9e385d2d-2683-4f6a-a714-96d652a24e65
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1021.002\T1021_002_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Atomic Test #3 - Copy and Execute File with PsExec
+
+Log1
+09/03/2024 02:52:56 PM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=message
+RecordNumber=399314
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=message
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-03 06:52:56.156
+ProcessGuid: {6f6dba56-b248-66d6-ce3b-2b0000001700}
+ProcessId: 104932
+Image: E:\PsExec.exe
+FileVersion: 2.43
+Description: Execute processes remotely
+Product: Sysinternals PsExec
+Company: Sysinternals - www.sysinternals.com
+OriginalFileName: psexec.c
+CommandLine: "E:/PsExec.exe"  \\localhost -accepteula -c C:\Windows\System32\cmd.exe
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=3E2272B916DA4BE3C120D17490423230AB62C174,MD5=24A648A48741B1AC809E47B9543C6F12,SHA256=078163D5C16F64CAA5A14784323FD51451B8C831C73396B967B4E35E6879937B,IMPHASH=1193BC223DAD681F22F8248608CBB592
+ParentProcessGuid: {6f6dba56-41b7-66d6-4c79-2a0000001700}
+ParentProcessId: 7560
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: "C:\Windows\system32\cmd.exe" 
+ParentUser: DESKTOP-43B3OH1\xcy
+Collapse
+host = DESKTOP-43B3OH1source = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1021.002\T1021_002.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Atomic Test #4 - Execute command writing output to local Admin Share
+
+Log1
+09/03/2024 02:53:14 PM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=message
+RecordNumber=401116
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=message
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-03 06:53:14.311
+ProcessGuid: {6f6dba56-b25a-66d6-ea3b-2b0000001700}
+ProcessId: 12100
+Image: C:\Windows\System32\cmd.exe
+FileVersion: 10.0.19041.4355 (WinBuild.160101.0800)
+Description: Windows Command Processor
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: Cmd.Exe
+CommandLine: cmd.exe  /Q /c hostname 
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=DF79C86FDD11B9CCB89148458E509F879C72566C,MD5=2B40C98ED0F7A1D3B091A3E8353132DC,SHA256=BADF4752413CB0CBDC03FB95820CA167F0CDC63B597CCDB5EF43111180E088B0,IMPHASH=272245E2988E1E430500B852C4FB5E18
+ParentProcessGuid: {6f6dba56-41b7-66d6-4c79-2a0000001700}
+ParentProcessId: 7560
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: "C:\Windows\system32\cmd.exe" 
+ParentUser: DESKTOP-43B3OH1\xcy
+Collapse
+host = DESKTOP-43B3OH1source = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1021.002\T1021_002.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational

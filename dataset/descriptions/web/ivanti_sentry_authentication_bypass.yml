@@ -1,0 +1,22 @@
+description: The following analytic identifies unauthenticated access attempts to
+  the System Manager Portal in Ivanti Sentry, exploiting CVE-2023-38035. It detects
+  this activity by monitoring HTTP requests to specific endpoints ("/mics/services/configservice/*",
+  "/mics/services/*", "/mics/services/MICSLogService*") with a status code of 200.
+  This behavior is significant for a SOC as it indicates potential unauthorized access,
+  which could lead to OS command execution as root. If confirmed malicious, this activity
+  could result in significant system compromise and data breaches, especially if port
+  8443 is exposed to the internet.
+required_fields:
+- Web.http_user_agent
+- Web.status
+- Web.http_method
+- Web.url
+- Web.url_length
+- Web.src
+- Web.dest
+- sourcetype
+rule: '| tstats count min(_time) as firstTime max(_time) as lastTime from datamodel=Web
+  where Web.url IN ("/mics/services/configservice/*", "/mics/services/*","/mics/services/MICSLogService*")
+  Web.status=200 by Web.http_user_agent, Web.status Web.http_method, Web.url, Web.url_length,
+  Web.src, Web.dest, sourcetype | `drop_dm_object_name("Web")` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `ivanti_sentry_authentication_bypass_filter`'

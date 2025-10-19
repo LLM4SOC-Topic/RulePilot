@@ -1,0 +1,24 @@
+description: The following analytic detects when the risk-based step-up consent security
+  setting in Azure AD is disabled. It monitors Azure Active Directory logs for the
+  "Update authorization policy" operation, specifically changes to the "AllowUserConsentForRiskyApps"
+  setting. This activity is significant because disabling this feature can expose
+  the organization to OAuth phishing threats by allowing users to grant consent to
+  potentially malicious applications. If confirmed malicious, attackers could gain
+  unauthorized access to user data and sensitive information, leading to data breaches
+  and further compromise within the organization.
+required_fields:
+- _time
+- operationName
+- properties.targetResources{}.modifiedProperties{}.displayName
+- properties.targetResources{}.modifiedProperties{}.newValue
+- user
+- src_ip
+rule: sourcetype=azure:monitor:aad operationName="Update authorization policy" | rename
+  properties.* as *  | eval index_number = if(mvfind('targetResources{}.modifiedProperties{}.displayName',
+  "AllowUserConsentForRiskyApps") >= 0, mvfind('targetResources{}.modifiedProperties{}.displayName',
+  "AllowUserConsentForRiskyApps"), -1) | search index_number >= 0  | eval AllowUserConsentForRiskyApps
+  = mvindex('targetResources{}.modifiedProperties{}.newValue',index_number) | search
+  AllowUserConsentForRiskyApps = "[true]" | stats count min(_time) as firstTime max(_time)
+  as lastTime by user, src_ip, operationName, AllowUserConsentForRiskyApps | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `azure_ad_block_user_consent_for_risky_apps_disabled_filter`

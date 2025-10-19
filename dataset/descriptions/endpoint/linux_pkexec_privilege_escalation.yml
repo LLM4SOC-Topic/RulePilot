@@ -1,0 +1,27 @@
+description: The following analytic detects the execution of `pkexec` without any
+  command-line arguments. This behavior leverages data from Endpoint Detection and
+  Response (EDR) agents, focusing on process telemetry. The significance lies in the
+  fact that this pattern is associated with the exploitation of CVE-2021-4034 (PwnKit),
+  a critical vulnerability in Polkit's pkexec component. If confirmed malicious, this
+  activity could allow an attacker to gain full root privileges on the affected Linux
+  system, leading to complete system compromise and potential unauthorized access
+  to sensitive information.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count FROM datamodel=Endpoint.Processes where Processes.process_name=pkexec
+  by _time Processes.dest Processes.user Processes.process_id Processes.parent_process_name
+  Processes.process_name Processes.process Processes.process_path | `drop_dm_object_name(Processes)`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | regex process="(^.{1}$)" | `linux_pkexec_privilege_escalation_filter`'

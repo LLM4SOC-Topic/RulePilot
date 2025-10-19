@@ -1,0 +1,20 @@
+description: The following analytic detects the use of PowerShell to load .NET assemblies
+  into memory via reflection, a technique often used in malicious activities such
+  as those by Empire and Cobalt Strike. It leverages PowerShell Script Block Logging
+  (EventCode=4104) to capture and analyze the full command executed. This behavior
+  is significant as it can indicate advanced attack techniques aiming to execute code
+  in memory, bypassing traditional defenses. If confirmed malicious, this activity
+  could lead to unauthorized code execution, privilege escalation, and persistent
+  access within the environment.
+required_fields:
+- _time
+- ScriptBlockText
+- Opcode
+- Computer
+- UserID
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText IN ("*[system.reflection.assembly]::load(*","*[reflection.assembly]*",
+  "*reflection.assembly*") | stats count min(_time) as firstTime max(_time) as lastTime
+  by Opcode Computer UserID EventCode ScriptBlockText | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `powershell_loading_dotnet_into_memory_via_reflection_filter`

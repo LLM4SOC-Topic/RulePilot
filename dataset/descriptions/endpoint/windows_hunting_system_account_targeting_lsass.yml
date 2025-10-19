@@ -1,0 +1,21 @@
+description: The following analytic identifies processes attempting to access Lsass.exe,
+  which may indicate credential dumping or applications needing credential access.
+  It leverages Sysmon EventCode 10 to detect such activities by analyzing fields like
+  TargetImage, GrantedAccess, and SourceImage. This behavior is significant as unauthorized
+  access to Lsass.exe can lead to credential theft, posing a severe security risk.
+  If confirmed malicious, attackers could gain access to sensitive credentials, potentially
+  leading to privilege escalation and further compromise of the environment.
+required_fields:
+- _time
+- dest
+- TargetImage
+- GrantedAccess
+- SourceImage
+- SourceProcessId
+- SourceUser
+- TargetUser
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=10 TargetImage=*lsass.exe |
+  stats count min(_time) as firstTime max(_time) as lastTime by dest, TargetImage,
+  GrantedAccess, SourceImage, SourceProcessId, SourceUser, TargetUser  | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_hunting_system_account_targeting_lsass_filter`

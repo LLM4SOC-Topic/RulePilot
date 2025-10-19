@@ -1,0 +1,26 @@
+description: The following analytic detects the wermgr.exe process attempting to connect
+  to known IP check web services. It leverages Sysmon EventCode 22 to identify DNS
+  queries made by wermgr.exe to specific IP check services. This activity is significant
+  because wermgr.exe is typically used for Windows error reporting, and its connection
+  to these services may indicate malicious code injection, often associated with malware
+  like Trickbot. If confirmed malicious, this behavior could allow attackers to recon
+  the infected machine's IP address, aiding in further exploitation and evasion tactics.
+required_fields:
+- _time
+- process_path
+- process_name
+- process_id
+- QueryName
+- QueryStatus
+- QueryResults
+- dest
+- EventCode
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode =22 process_name = wermgr.exe
+  QueryName IN ("*wtfismyip.com", "*checkip.amazonaws.com", "*ipecho.net", "*ipinfo.io",
+  "*api.ipify.org", "*icanhazip.com", "*ip.anysrc.com","*api.ip.sb", "ident.me", "www.myexternalip.com",
+  "*zen.spamhaus.org", "*cbl.abuseat.org", "*b.barracudacentral.org","*dnsbl-1.uceprotect.net",
+  "*spam.dnsbl.sorbs.net") |  stats  min(_time) as firstTime max(_time) as lastTime
+  count by Image process_name ProcessId QueryName QueryStatus QueryResults EventCode
+  Computer | rename Computer as dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `wermgr_process_connecting_to_ip_check_web_services_filter`

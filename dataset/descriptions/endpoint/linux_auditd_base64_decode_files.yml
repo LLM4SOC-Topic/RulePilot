@@ -1,0 +1,20 @@
+description: The following analytic detects suspicious Base64 decode operations that
+  may indicate malicious activity, such as data exfiltration or execution of encoded
+  commands. Base64 is commonly used to encode data for safe transmission, but attackers
+  may abuse it to conceal malicious payloads. This detection focuses on identifying
+  unusual or unexpected Base64 decoding processes, particularly when associated with
+  critical files or directories. By monitoring these activities, the analytic helps
+  uncover potential threats, enabling security teams to respond promptly and mitigate
+  risks associated with encoded malware or unauthorized data access.
+required_fields:
+- _time
+- argc
+- process_exec
+rule: sourcetype="linux:audit" type=EXECVE | eval relevant_fields=if(type="EXECVE",
+  "", relevant_fields) | foreach a* [eval relevant_fields=if(type="EXECVE", mvappend(relevant_fields,
+  '<<FIELD>>'), relevant_fields)] | eval process_exec=if(type="EXECVE", mvjoin(relevant_fields,
+  " "), process_exec) | eval process_exec=if(type="EXECVE", trim(process_exec), process_exec)
+  | rename host as dest | where LIKE(process_exec, "%base64%") AND (LIKE(process_exec,
+  "%-d %") OR LIKE(process_exec, "% --d%")) | stats count min(_time) as firstTime
+  max(_time) as lastTime by argc process_exec dest | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$)| convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| `linux_auditd_base64_decode_files_filter`

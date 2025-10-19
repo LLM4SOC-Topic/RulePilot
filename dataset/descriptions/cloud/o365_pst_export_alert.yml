@@ -1,0 +1,21 @@
+description: The following analytic detects instances where a user has initiated an
+  eDiscovery search or exported a PST file in an Office 365 environment. It leverages
+  Office 365 management activity logs, specifically filtering for events under ThreatManagement
+  with the name "eDiscovery search started or exported." This activity is significant
+  as it may indicate data exfiltration attempts or unauthorized access to sensitive
+  information. If confirmed malicious, it suggests an attacker or insider threat is
+  attempting to gather or exfiltrate data, potentially leading to data breaches, loss
+  of intellectual property, or unauthorized access to confidential communications.
+  Immediate investigation is required.
+required_fields:
+- _time
+- Category
+- Name
+- Source
+- Severity
+- AlertEntityId
+- Operation
+rule: sourcetype=o365:management:activity Category=ThreatManagement Name="eDiscovery
+  search started or exported" | stats count earliest(_time) as firstTime latest(_time)
+  as lastTime by Source Severity AlertEntityId Operation Name |convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) |convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `o365_pst_export_alert_filter`

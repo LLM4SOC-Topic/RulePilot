@@ -1,0 +1,19 @@
+description: The following analytic detects a suspicious PowerShell command attempting
+  to delete the Windows Defender directory. It leverages PowerShell Script Block Logging
+  to identify commands containing "rmdir" and targeting the Windows Defender path.
+  This activity is significant as it may indicate an attempt to disable or corrupt
+  Windows Defender, a key security component. If confirmed malicious, this action
+  could allow an attacker to bypass endpoint protection, facilitating further malicious
+  activities without detection.
+required_fields:
+- _time
+- ScriptBlockText
+- Opcode
+- Computer
+- UserID
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText = "*rmdir *" AND ScriptBlockText = "*\\Microsoft\\Windows
+  Defender*" | stats count min(_time) as firstTime max(_time) as lastTime by Opcode
+  Computer UserID EventCode ScriptBlockText | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `powershell_remove_windows_defender_directory_filter`

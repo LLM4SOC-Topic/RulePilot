@@ -1,0 +1,23 @@
+description: The following analytic detects the execution of known MailSniper PowerShell
+  functions on a machine. It leverages PowerShell logs (EventCode 4104) to identify
+  specific script block text associated with MailSniper activities. This behavior
+  is significant as MailSniper is often used by attackers to harvest sensitive emails
+  from compromised Exchange servers. If confirmed malicious, this activity could lead
+  to unauthorized access to sensitive email data, credential theft, and further compromise
+  of the email infrastructure.
+required_fields:
+- _time
+- ScriptBlockText
+- Opcode
+- Computer
+- UserID
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText IN ("*Invoke-GlobalO365MailSearch*", "*Invoke-GlobalMailSearch*",
+  "*Invoke-SelfSearch*", "*Invoke-PasswordSprayOWA*", "*Invoke-PasswordSprayEWS*","*Invoke-DomainHarvestOWA*",
+  "*Invoke-UsernameHarvestOWA*","*Invoke-OpenInboxFinder*","*Invoke-InjectGEventAPI*","*Invoke-InjectGEvent*","*Invoke-SearchGmail*",
+  "*Invoke-MonitorCredSniper*", "*Invoke-AddGmailRule*","*Invoke-PasswordSprayEAS*","*Invoke-UsernameHarvestEAS*")
+  | stats count min(_time) as firstTime max(_time) as lastTime by Opcode Computer
+  UserID EventCode ScriptBlockText | rename Computer as dest | rename UserID as user
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `mailsniper_invoke_functions_filter`

@@ -1,0 +1,19 @@
+description: The following analytic detects suspicious stopping of the `osquery` service,
+  which may indicate an attempt to disable monitoring and evade detection. `Osquery`
+  is a powerful tool used for querying system information and detecting anomalies,
+  and stopping its service can be a sign that an attacker is trying to disrupt security
+  monitoring or hide malicious activities. By monitoring for unusual or unauthorized
+  stops of the `osquery` service, this analytic helps identify potential efforts to
+  bypass security controls, enabling security teams to investigate and respond to
+  possible threats effectively.
+required_fields:
+- _time
+- type
+- pid
+- UID
+- comm
+- exe
+rule: sourcetype="linux:audit" type=SERVICE_STOP unit IN ("osqueryd") | rename host
+  as dest | stats count min(_time) as firstTime max(_time) as lastTime by type pid
+  UID comm exe unit dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) |
+  convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| `linux_auditd_osquery_service_stop_filter`

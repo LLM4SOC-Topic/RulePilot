@@ -1,0 +1,27 @@
+description: The following analytic identifies the suspicious remote thread execution
+  of the wermgr.exe process into known browsers such as firefox.exe, chrome.exe, and
+  others. It leverages Sysmon EventCode 8 logs to detect this behavior by monitoring
+  SourceImage and TargetImage fields. This activity is significant because it is indicative
+  of Qakbot malware, which injects malicious code into legitimate processes to steal
+  information. If confirmed malicious, this activity could allow attackers to execute
+  arbitrary code, escalate privileges, and exfiltrate sensitive data from the compromised
+  host.
+required_fields:
+- _time
+- SourceImage
+- TargetImage
+- SourceProcessGuid
+- SourceProcessId
+- StartAddress
+- StartFunction
+- TargetProcessGuid
+- TargetProcessId
+- EventCode
+- dest
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=8 SourceImage = "*\\wermgr.exe"
+  TargetImage IN ("*\\firefox.exe", "*\\chrome.exe", "*\\iexplore.exe","*\\microsoftedgecp.exe")
+  | stats count min(_time) as firstTime max(_time) as lastTime by SourceImage TargetImage
+  SourceProcessGuid SourceProcessId StartAddress StartFunction TargetProcessGuid TargetProcessId  EventCode
+  dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_process_injection_of_wermgr_to_known_browser_filter`

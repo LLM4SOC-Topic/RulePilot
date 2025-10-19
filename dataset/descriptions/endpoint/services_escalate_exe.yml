@@ -1,0 +1,25 @@
+description: The following analytic identifies the execution of a randomly named binary
+  via `services.exe`, indicative of privilege escalation using Cobalt Strike's `svc-exe`.
+  This detection leverages data from Endpoint Detection and Response (EDR) agents,
+  focusing on process lineage and command-line executions. This activity is significant
+  as it often follows initial access, allowing adversaries to escalate privileges
+  and establish persistence. If confirmed malicious, this behavior could enable attackers
+  to execute arbitrary code, maintain long-term access, and potentially move laterally
+  within the network, posing a severe threat to the organization's security.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where Processes.parent_process_name=services.exe
+  Processes.process_path=*admin$* by Processes.process_path Processes.dest Processes.user
+  Processes.parent_process_name Processes.parent_process Processes.process_name Processes.process
+  Processes.process_id Processes.parent_process_id | `drop_dm_object_name(Processes)`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `services_escalate_exe_filter`'

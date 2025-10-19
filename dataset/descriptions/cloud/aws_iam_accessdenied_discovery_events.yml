@@ -1,0 +1,19 @@
+description: The following analytic identifies excessive AccessDenied events within
+  an hour timeframe for IAM users in AWS. It leverages AWS CloudTrail logs to detect
+  multiple failed access attempts from the same source IP and user identity. This
+  activity is significant as it may indicate that an access key has been compromised
+  and is being misused for unauthorized discovery actions. If confirmed malicious,
+  this could allow attackers to gather information about the AWS environment, potentially
+  leading to further exploitation or privilege escalation.
+required_fields:
+- _time
+- eventName
+- eventSource
+- userAgent
+- errorCode
+- userIdentity.type
+rule: sourcetype=aws:cloudtrail (errorCode = "AccessDenied") user_type=IAMUser (userAgent!=*.amazonaws.com)
+  | bucket _time span=1h | stats count as failures min(_time) as firstTime max(_time)
+  as lastTime, dc(eventName) as methods, dc(eventSource) as sources by src_ip, userIdentity.arn,
+  _time | where failures >= 5 and methods >= 1 and sources >= 1 | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `aws_iam_accessdenied_discovery_events_filter`

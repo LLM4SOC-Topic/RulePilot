@@ -1,0 +1,25 @@
+description: The following analytic identifies potential DLL side-loading instances
+  involving unsigned DLLs mimicking Microsoft signatures. It detects this activity
+  by analyzing Sysmon logs for Event Code 7, where both the `Image` and `ImageLoaded`
+  paths do not match system directories like `system32`, `syswow64`, and `programfiles`.
+  This behavior is significant as adversaries often exploit DLL side-loading to execute
+  malicious code via legitimate processes. If confirmed malicious, this activity could
+  allow attackers to execute arbitrary code, potentially leading to privilege escalation,
+  persistence, and unauthorized access to sensitive information.
+required_fields:
+- Image
+- ImageLoaded
+- user
+- Computer
+- EventCode
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=7 Company="Microsoft Corporation"
+  Signed=false SignatureStatus != Valid NOT (Image IN("C:\\Windows\\System32\\*",
+  "C:\\Windows\\SysWow64\\*", "C:\\Program Files*")) NOT (ImageLoaded IN("C:\\Windows\\System32\\*",
+  "C:\\Windows\\SysWow64\\*", "C:\\Program Files*")) | rex field=Image "(?<ImageFolderPath>.+\\\)"
+  | rex field=ImageLoaded "(?<ImageLoadedFolderPath>.+\\\)" | where ImageFolderPath
+  = ImageLoadedFolderPath | stats count min(_time) as firstTime max(_time) as lastTime
+  by Image ProcessGuid ImageLoaded user Computer EventCode ImageFolderPath ImageLoadedFolderPath
+  Company Description Product Signed SignatureStatus | rename Computer as dest | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_unsigned_ms_dll_side_loading_filter`

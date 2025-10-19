@@ -1,0 +1,24 @@
+description: The following analytic detects a modification to the Windows registry
+  setting "LongPathsEnabled," which allows file paths longer than 260 characters.
+  This detection leverages data from the Endpoint.Registry datamodel, focusing on
+  changes to the specific registry path and value. This activity is significant because
+  adversaries, including malware like BlackByte, exploit this setting to bypass file
+  path limitations, potentially aiding in evasion techniques. If confirmed malicious,
+  this modification could facilitate the execution of long-path payloads, aiding in
+  persistence and further system compromise.
+required_fields:
+- _time
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.user
+- Registry.dest
+- Registry.registry_value_name
+- Registry.action
+- Registry.registry_value_data
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry WHERE (Registry.registry_path= "*\\CurrentControlSet\\Control\\FileSystem\\LongPathsEnabled"
+  Registry.registry_value_data = "0x00000001") BY Registry.registry_path Registry.registry_key_name
+  Registry.registry_value_name Registry.registry_value_data Registry.process_guid
+  Registry.dest | `drop_dm_object_name(Registry)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_modify_registry_longpathsenabled_filter`'

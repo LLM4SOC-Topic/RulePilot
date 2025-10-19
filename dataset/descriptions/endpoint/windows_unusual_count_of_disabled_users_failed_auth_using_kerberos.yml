@@ -1,0 +1,20 @@
+description: The following analytic identifies a source endpoint failing to authenticate
+  with multiple disabled domain users using the Kerberos protocol. It leverages EventCode
+  4768, which is generated when the Key Distribution Center issues a Kerberos Ticket
+  Granting Ticket (TGT) and detects failure code `0x12` (credentials revoked). This
+  behavior is significant as it may indicate a Password Spraying attack targeting
+  disabled accounts, potentially leading to initial access or privilege escalation.
+  If confirmed malicious, attackers could gain unauthorized access or elevate privileges
+  within the Active Directory environment.
+required_fields:
+- _time
+- EventCode
+- Status
+- TargetUserName
+- IpAddress
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=4768 TargetUserName!=*$ Status=0x12 | bucket span=5m _time | stats dc(TargetUserName)
+  AS unique_accounts values(TargetUserName) as user by _time, IpAddress | eventstats
+  avg(unique_accounts) as comp_avg , stdev(unique_accounts) as comp_std by IpAddress
+  | eval upperBound=(comp_avg+comp_std*3) | eval isOutlier=if(unique_accounts > 10
+  and unique_accounts >= upperBound, 1, 0) | search isOutlier=1 | `windows_unusual_count_of_disabled_users_failed_auth_using_kerberos_filter`

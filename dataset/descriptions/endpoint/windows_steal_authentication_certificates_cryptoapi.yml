@@ -1,0 +1,15 @@
+description: The following analytic detects the extraction of authentication certificates
+  using Windows Event Log - CAPI2 (CryptoAPI 2). It leverages EventID 70, which is
+  generated when a certificate's private key is acquired. This detection is significant
+  because it can identify potential misuse of certificates, such as those extracted
+  by tools like Mimikatz or Cobalt Strike. If confirmed malicious, this activity could
+  allow attackers to impersonate users, escalate privileges, or access sensitive information,
+  posing a severe risk to the organization's security.
+required_fields:
+- _time
+- Computer
+- UserData_Xml
+rule: (source=XmlWinEventLog:Microsoft-Windows-CAPI2/Operational) EventCode=70 | xmlkv
+  UserData_Xml | stats count min(_time) as firstTime max(_time) as lastTime by Computer,
+  UserData_Xml | rename Computer as dest | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$)| convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_steal_authentication_certificates_cryptoapi_filter`

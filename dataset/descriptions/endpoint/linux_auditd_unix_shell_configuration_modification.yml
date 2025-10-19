@@ -1,0 +1,22 @@
+description: The following analytic detects suspicious modifications to Unix shell
+  configuration files, which may indicate an attempt to alter system behavior or gain
+  unauthorized access. Unix shell configuration files, such as `.bashrc` or `.profile`,
+  control user environment settings and command execution. Unauthorized changes to
+  these files can be used to execute malicious commands, escalate privileges, or hide
+  malicious activities. By monitoring for unusual or unauthorized modifications to
+  shell configuration files, this analytic helps identify potential security threats,
+  allowing security teams to respond quickly and mitigate risks.
+required_fields:
+- _time
+- name
+- nametype
+- OGID
+rule: sourcetype="linux:audit" type=PATH name IN ("/etc/profile", "/etc/shells", "/etc/profile.d",
+  "/etc/bash.bashrc", "/etc/bashrc", "/etc/zsh/zprofile", "/etc/zsh/zshrc", "/etc/zsh/zlogin",
+  "/etc/zsh/zlogout", "/etc/csh.cshrc", "/etc/csh.login", "/root/.bashrc", "/root/.bash_profile",
+  "root/.profile", "/root/.zshrc", "/root/.zprofile", "/home/*/.bashrc", "/home/*/.zshrc",
+  "/home/*/.bash_profile", "/home/*/.zprofile", "/home/*/.profile", "/home/*/.bash_login",
+  "/home/*/.bash_logout", "/home/*/.zlogin", "/home/*/.zlogout") | rename host as
+  dest | stats count min(_time) as firstTime max(_time) as lastTime by name nametype
+  OGID type dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| `linux_auditd_unix_shell_configuration_modification_filter`

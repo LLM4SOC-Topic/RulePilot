@@ -1,0 +1,28 @@
+description: The following analytic detects the execution of hh.exe (HTML Help) spawning
+  a child process, indicating the use of a Compiled HTML Help (CHM) file to execute
+  Windows script code. This detection leverages data from Endpoint Detection and Response
+  (EDR) agents, focusing on process creation events where hh.exe is the parent process.
+  This activity is significant as it may indicate an attempt to execute malicious
+  scripts via CHM files, a known technique for bypassing security controls. If confirmed
+  malicious, this could lead to unauthorized code execution, potentially compromising
+  the system.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where Processes.parent_process_name=hh.exe by
+  Processes.dest Processes.user Processes.parent_process_name Processes.parent_process
+  Processes.process_name Processes.process Processes.process_id Processes.parent_process_id
+  | `drop_dm_object_name(Processes)` | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `detect_html_help_spawn_child_process_filter`'

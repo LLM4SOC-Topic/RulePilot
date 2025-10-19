@@ -1,0 +1,32 @@
+description: 'This search is used to detect DNS tunneling, by calculating the sum
+  of the length of DNS queries and DNS answers. The search also filters out potential
+  false positives by filtering out queries made to internal systems and the queries
+  originating from internal DNS, Web, and Email servers. Endpoints using DNS as a
+  method of transmission for data exfiltration, Command And Control, or evasion of
+  security controls can often be detected by noting an unusually large volume of DNS
+  traffic.
+
+  NOTE:Deprecated because existing detection is doing the same. This detection is
+  replaced with two other variations, if you are using MLTK then you can use this
+  search `ESCU - DNS Query Length Outliers - MLTK - Rule` or use the standard deviation
+  version `ESCU - DNS Query Length With High Standard Deviation - Rule`, as an alternantive.'
+required_fields:
+- _time
+- DNS.query
+- DNS.message_type
+- DNS.src_category
+- DNS.src
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` dc("DNS.query") as count  from datamodel=Network_Resolution  where
+  nodename=DNS "DNS.message_type"="QUERY" NOT (`cim_corporate_web_domain_search("DNS.query")`)
+  NOT "DNS.query"="*.in-addr.arpa" NOT ("DNS.src_category"="svc_infra_dns" OR "DNS.src_category"="svc_infra_webproxy"
+  OR "DNS.src_category"="svc_infra_email*"   ) by "DNS.src","DNS.query" | rename "DNS.src"
+  as src  "DNS.query" as message | eval length=len(message) | stats sum(length) as
+  length by src | append [ tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` dc("DNS.answer") as count  from datamodel=Network_Resolution  where
+  nodename=DNS "DNS.message_type"="QUERY" NOT (`cim_corporate_web_domain_search("DNS.query")`)
+  NOT "DNS.query"="*.in-addr.arpa" NOT ("DNS.src_category"="svc_infra_dns" OR "DNS.src_category"="svc_infra_webproxy"
+  OR "DNS.src_category"="svc_infra_email*"   ) by "DNS.src","DNS.answer" | rename
+  "DNS.src" as src  "DNS.answer" as message | eval message=if(message=="unknown","",
+  message) | eval length=len(message) | stats sum(length) as length by src ] | stats
+  sum(length) as length by src | where length > 10000 | `detection_of_dns_tunnels_filter`'

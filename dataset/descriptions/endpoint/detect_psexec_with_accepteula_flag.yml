@@ -1,0 +1,29 @@
+description: The following analytic identifies the execution of `PsExec.exe` with
+  the `accepteula` flag in the command line. It leverages data from Endpoint Detection
+  and Response (EDR) agents, focusing on process execution logs and command-line arguments.
+  This activity is significant because PsExec is commonly used by threat actors to
+  execute code on remote systems, and the `accepteula` flag indicates first-time usage,
+  which could signify initial compromise. If confirmed malicious, this activity could
+  allow attackers to gain remote code execution capabilities, potentially leading
+  to further system compromise and lateral movement within the network.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` values(Processes.process) as process min(_time)
+  as firstTime max(_time) as lastTime from datamodel=Endpoint.Processes where (Processes.process_name=psexec.exe
+  OR Processes.process_name=psexec64.exe OR Processes.original_file_name=psexec.c)
+  Processes.process=*accepteula* by Processes.dest Processes.user Processes.parent_process_name
+  Processes.process_name Processes.process Processes.process_id Processes.parent_process_id
+  | `drop_dm_object_name(Processes)`| convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)|
+  convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `detect_psexec_with_accepteula_flag_filter`'

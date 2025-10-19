@@ -1,0 +1,11 @@
+description: This search allows you to identify the endpoints that have connected
+  to more than five DNS servers and made DNS Queries over the time frame of the search.
+required_fields:
+- _time
+- DNS.dest
+- DNS.message_type
+- DNS.src
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count, values(DNS.dest) AS dest dc(DNS.dest) as
+  dest_count from datamodel=Network_Resolution where DNS.message_type=QUERY by DNS.src
+  | `drop_dm_object_name("Network_Resolution")` |where dest_count > 5 | `clients_connecting_to_multiple_dns_servers_filter`'

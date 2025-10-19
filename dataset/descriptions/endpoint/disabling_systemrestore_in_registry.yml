@@ -1,0 +1,27 @@
+description: The following analytic detects the modification of registry keys to disable
+  System Restore on a machine. It leverages data from the Endpoint.Registry data model,
+  specifically monitoring changes to registry paths associated with System Restore
+  settings. This activity is significant because disabling System Restore can hinder
+  recovery efforts and is a tactic often used by Remote Access Trojans (RATs) to maintain
+  persistence on an infected system. If confirmed malicious, this action could prevent
+  system recovery, allowing the attacker to sustain their foothold and potentially
+  cause further damage or data loss.
+required_fields:
+- _time
+- Registry.dest
+- Registry.registry_value_name
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.registry_value_data
+- Registry.process_guid
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry WHERE (Registry.registry_path= "*\\SOFTWARE\\Microsoft\\Windows
+  NT\\CurrentVersion\\SystemRestore\\DisableSR" OR Registry.registry_path= "*\\SOFTWARE\\Microsoft\\Windows
+  NT\\CurrentVersion\\SystemRestore\\DisableConfig" OR Registry.registry_path= "*\\SOFTWARE\\Policies\\Microsoft\\Windows
+  NT\\SystemRestore\\DisableSR" OR Registry.registry_path= "*\\SOFTWARE\\Policies\\Microsoft\\Windows
+  NT\\SystemRestore\\DisableConfig" Registry.registry_value_data = "0x00000001") BY
+  Registry.dest Registry.user Registry.registry_path Registry.registry_key_name Registry.registry_value_name
+  Registry.registry_value_data Registry.process_guid | `drop_dm_object_name(Registry)`|
+  where isnotnull(registry_value_data) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `disabling_systemrestore_in_registry_filter`'

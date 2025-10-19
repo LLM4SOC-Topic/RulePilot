@@ -1,0 +1,20 @@
+description: The following analytic detects the stopping of the Windows Security Account
+  Manager (SAM) service via command-line, typically using the "net stop samss" command.
+  This detection leverages data from Endpoint Detection and Response (EDR) agents,
+  focusing on process names and command-line executions. This activity is significant
+  because stopping the SAM service can disrupt authentication mechanisms and is often
+  associated with ransomware attacks like Ryuk. If confirmed malicious, this action
+  could lead to unauthorized access, privilege escalation, and potential system-wide
+  compromise.
+required_fields:
+- _time
+- Processes.process_name
+- Processes.process
+- Processes.dest
+- Processes.user
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Processes WHERE ("Processes.process_name"="net*.exe" "Processes.process"="*stop
+  \"samss\"*") BY Processes.dest Processes.user Processes.process Processes.process_guid
+  Processes.process_name | `drop_dm_object_name(Processes)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_security_account_manager_stopped_filter`'

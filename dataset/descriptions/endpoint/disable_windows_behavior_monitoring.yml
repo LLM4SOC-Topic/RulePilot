@@ -1,0 +1,31 @@
+description: The following analytic identifies modifications in the registry to disable
+  Windows Defender's real-time behavior monitoring. It leverages data from the Endpoint.Registry
+  data model, specifically monitoring changes to registry paths associated with Windows
+  Defender settings. This activity is significant because disabling real-time protection
+  is a common tactic used by malware such as RATs, bots, or Trojans to evade detection.
+  If confirmed malicious, this action could allow an attacker to execute code, escalate
+  privileges, or persist in the environment without being detected by antivirus software.
+required_fields:
+- _time
+- Registry.dest
+- Registry.registry_value_name
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.registry_value_data
+- Registry.process_guid
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry WHERE (Registry.registry_path= "*\\SOFTWARE\\Policies\\Microsoft\\Windows
+  Defender\\Real-Time Protection\\DisableBehaviorMonitoring" OR Registry.registry_path=
+  "*\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Real-Time Protection\\DisableOnAccessProtection"
+  OR Registry.registry_path= "*\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Real-Time
+  Protection\\DisableScanOnRealtimeEnable" OR Registry.registry_path= "*\\SOFTWARE\\Microsoft\\Windows
+  Defender\\Real-Time Protection\\DisableRealtimeMonitoring" OR Registry.registry_path=
+  "*\\Real-Time Protection\\DisableIntrusionPreventionSystem" OR Registry.registry_path=
+  "*\\Real-Time Protection\\DisableIOAVProtection" OR Registry.registry_path= "*\\Real-Time
+  Protection\\DisableScriptScanning" AND Registry.registry_value_data = "0x00000001")
+  BY Registry.dest Registry.user Registry.registry_path Registry.registry_key_name
+  Registry.registry_value_name Registry.registry_value_data Registry.process_guid
+  | `drop_dm_object_name(Registry)` | where isnotnull(registry_value_data) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `disable_windows_behavior_monitoring_filter`'

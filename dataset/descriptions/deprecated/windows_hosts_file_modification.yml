@@ -1,0 +1,11 @@
+description: The search looks for modifications to the hosts file on all Windows endpoints
+  across your environment.
+required_fields:
+- _time
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Filesystem  by Filesystem.file_name Filesystem.file_path
+  Filesystem.dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | search Filesystem.file_name=hosts
+  AND Filesystem.file_path=*Windows\\System32\\* | `drop_dm_object_name(Filesystem)`
+  | `windows_hosts_file_modification_filter`'

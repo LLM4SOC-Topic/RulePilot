@@ -1,0 +1,27 @@
+description: The following analytic identifies instances where executable files (.exe)
+  are loaded as modules, detected through 'ImageLoaded' events in Sysmon logs. This
+  method leverages Sysmon EventCode 7 to track unusual module loading behavior, which
+  is significant as it deviates from the norm of loading .dll files. This activity
+  is crucial for SOC monitoring because it can indicate the presence of malware like
+  NjRAT, which uses this technique to load malicious modules. If confirmed malicious,
+  this behavior could allow attackers to execute arbitrary code, maintain persistence,
+  and further compromise the host system.
+required_fields:
+- _time
+- Image
+- ImageLoaded
+- Signed
+- SignatureStatus
+- OriginalFileName
+- process_name
+- Computer
+- EventCode
+- ProcessId
+- Hashes
+- IMPHASH
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=7 ImageLoaded= *.exe | stats
+  count min(_time) as firstTime max(_time) as lastTime by Image ImageLoaded Signed
+  SignatureStatus OriginalFileName process_name Computer EventCode ProcessId Hashes
+  IMPHASH | rename Computer as dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_executable_in_loaded_modules_filter`

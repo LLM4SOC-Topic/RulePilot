@@ -1,0 +1,21 @@
+description: The following analytic identifies specific GET or HEAD requests to web
+  servers that indicate reconnaissance attempts to find vulnerable JBoss servers.
+  It leverages data from the Web data model, focusing on HTTP methods and URLs associated
+  with JBoss management interfaces. This activity is significant because it often
+  precedes exploitation attempts using tools like JexBoss, which can compromise the
+  server. If confirmed malicious, attackers could gain unauthorized access, execute
+  arbitrary code, or escalate privileges, leading to potential data breaches and system
+  compromise.
+required_fields:
+- _time
+- Web.http_method
+- Web.url
+- Web.src
+- Web.dest
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Web where (Web.http_method="GET" OR Web.http_method="HEAD") AND (Web.url="*/web-console/ServerInfo.jsp*"
+  OR Web.url="*web-console*" OR Web.url="*jmx-console*" OR Web.url = "*invoker*")
+  by Web.http_method, Web.url, Web.src, Web.dest | `drop_dm_object_name("Web")` |
+  convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `detect_attackers_scanning_for_vulnerable_jboss_servers_filter`'

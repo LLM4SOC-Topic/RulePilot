@@ -1,0 +1,38 @@
+description: The following analytic identifies the creation of Dynamic Link Libraries
+  (DLLs) with a known history of exploitation in atypical locations. It leverages
+  data from Endpoint Detection and Response (EDR) agents, focusing on process and
+  filesystem events. This activity is significant as it may indicate DLL search order
+  hijacking or sideloading, techniques used by attackers to execute arbitrary code,
+  maintain persistence, or escalate privileges. If confirmed malicious, this activity
+  could allow attackers to blend in with legitimate operations, posing a severe threat
+  to system integrity and security.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.process_guid
+- Processes.process_name
+- Processes.process
+- Processes.parent_process
+- Processes.parent_process_name
+- Filesystem.dest
+- Filesystem.file_create_time
+- Filesystem.file_name
+- Filesystem.file_path
+- Filesystem.process_guid
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Processes where Processes.parent_process_name!="unknown"
+  Processes.process_name=* Processes.process_guid!=null by _time span=1h Processes.dest
+  Processes.user Processes.process_guid Processes.process_name Processes.process Processes.parent_process
+  Processes.parent_process_name | `drop_dm_object_name(Processes)` | join max=0 process_guid
+  dest [| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count FROM datamodel=Endpoint.Filesystem where
+  Filesystem.file_path IN ("*\\users\\*","*\\Windows\Temp\\*","*\\programdata\\*")
+  Filesystem.file_name="*.dll" by _time span=1h Filesystem.dest Filesystem.file_create_time
+  Filesystem.file_name Filesystem.file_path Filesystem.process_guid | `drop_dm_object_name(Filesystem)`
+  | lookup hijacklibs_loaded library AS file_name OUTPUT islibrary, ttp, comment as
+  desc | lookup hijacklibs_loaded library AS file_name excludes as file_path OUTPUT
+  islibrary as excluded | search islibrary = TRUE AND excluded != TRUE | stats latest(*)
+  as * by dest process_guid ] | where isnotnull(file_name) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) |  `windows_known_abused_dll_created_filter`'

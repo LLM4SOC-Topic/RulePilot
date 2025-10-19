@@ -1,0 +1,21 @@
+description: The following analytic identifies a successful authentication event against
+  an Azure AD tenant using PowerShell cmdlets. This detection leverages Azure AD SignInLogs
+  to identify successful logins where the appDisplayName is "Microsoft Azure PowerShell."
+  This activity is significant because it is uncommon for regular, non-administrative
+  users to authenticate using PowerShell, and it may indicate enumeration and discovery
+  techniques by an attacker. If confirmed malicious, this activity could allow attackers
+  to perform extensive reconnaissance, potentially leading to privilege escalation
+  or further exploitation within the Azure environment.
+required_fields:
+- _time
+- properties.appDisplayName
+- category
+- user
+- src_ip
+- properties.appDisplayName
+- properties.userAgent
+rule: sourcetype=azure:monitor:aad  category=SignInLogs properties.authenticationDetails{}.succeeded=true
+  properties.appDisplayName="Microsoft Azure PowerShell" | rename properties.*  as
+  * | stats count min(_time) as firstTime max(_time) as lastTime values(user) as user
+  by src_ip, appDisplayName, user_agent | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `azure_ad_successful_powershell_authentication_filter`

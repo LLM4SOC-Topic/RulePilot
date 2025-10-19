@@ -1,0 +1,21 @@
+description: The following analytic identifies modifications to the SafeBoot registry
+  keys, specifically within the Minimal and Network paths. This detection leverages
+  registry activity logs from endpoint data sources like Sysmon or EDR tools. Monitoring
+  these keys is crucial as adversaries can use them to persist drivers or services
+  in Safe Mode, with Network allowing network connections. If confirmed malicious,
+  this activity could enable attackers to maintain persistence even in Safe Mode,
+  potentially bypassing certain security measures and facilitating further malicious
+  actions.
+required_fields:
+- _time
+- Registry.registry_path
+- Registry.registry_key_name
+- Registry.registry_value_name
+- Registry.dest
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry where Registry.registry_path IN ("*SYSTEM\\CurrentControlSet\\Control\\SafeBoot\\Minimal\\*","*SYSTEM\\CurrentControlSet\\Control\\SafeBoot\\Network\\*")
+  by Registry.dest Registry.user Registry.registry_path Registry.registry_value_name
+  Registry.process_guid Registry.registry_key_name Registry.registry_value_data |
+  `drop_dm_object_name(Registry)` | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_registry_modification_for_safe_mode_persistence_filter`'

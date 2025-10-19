@@ -1,0 +1,9 @@
+description: This detection search will help profile user accounts in your environment
+  by identifying newly created accounts that have been added to your network in the
+  past week.
+required_fields:
+- _time
+rule: '| from datamodel Identity_Management.All_Identities  | eval empStatus=case((now()-startDate)<604800,
+  "Accounts created in last week") | search empStatus="Accounts created in last week"|
+  convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$)| table identity empStatus endDate startDate | `identify_new_user_accounts_filter`'

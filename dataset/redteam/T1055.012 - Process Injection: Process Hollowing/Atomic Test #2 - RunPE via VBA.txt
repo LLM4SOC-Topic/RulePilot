@@ -1,0 +1,11 @@
+VBA-RunPE is an implementation of the RunPE technique in VBA. It enables running executables from the memory of Microsoft Word and Microsoft Excel. To evade detection, attackers are increasingly turning to VBA-RunPE and similar tools that achieve process hollowing.
+All of this process hollowing is possible through VBA because it allows for importing functions from the Windows API. The following are some of the API functions called:
+CreateProcess: used to create the new process in a suspended state
+VirtualAllocEx: allocates memory within the new process
+WriteProcessMemory: writes the content of a PE file to the allocated memory
+SetThreadContext: applies the changes set
+ResumeThread: resumes the main thread to allow for the execution of the new PE
+
+This module executes notepad.exe from within the WINWORD.EXE process
+Dependencies: Run with powershell!
+Description: Microsoft #{ms_product} must be installed

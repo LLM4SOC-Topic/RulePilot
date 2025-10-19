@@ -1,0 +1,16 @@
+description: The following analytic detects the creation of the doas.conf file on
+  a Linux host. This file is used by the doas utility to allow standard users to perform
+  tasks as root, similar to sudo. The detection leverages Linux Auditd data, focusing
+  on the creation of the doas.conf file. This activity is significant because it can
+  indicate an attempt to gain elevated privileges, potentially by an adversary. If
+  confirmed malicious, this could allow an attacker to execute commands with root
+  commands with root privileges, leading to full system compromise.
+required_fields:
+- _time
+- name
+- nametype
+- OGID
+rule: sourcetype="linux:audit" type=PATH name ="/etc/doas.conf*" | rename host as
+  dest | stats count min(_time) as firstTime max(_time) as lastTime by name nametype
+  OGID type dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| `linux_auditd_doas_conf_file_creation_filter`

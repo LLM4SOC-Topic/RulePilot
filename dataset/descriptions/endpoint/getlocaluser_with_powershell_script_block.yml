@@ -1,0 +1,19 @@
+description: The following analytic detects the execution of the `Get-LocalUser` PowerShell
+  commandlet using PowerShell Script Block Logging (EventCode=4104). This commandlet
+  lists all local users on a system. The detection leverages script block text from
+  PowerShell logs to identify this activity. Monitoring this behavior is significant
+  as adversaries and Red Teams may use it to enumerate local users for situational
+  awareness and Active Directory discovery. If confirmed malicious, this activity
+  could lead to further reconnaissance, enabling attackers to identify potential targets
+  for privilege escalation or lateral movement.
+required_fields:
+- _time
+- EventCode
+- ScriptBlockText
+- Computer
+- UserID
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 (ScriptBlockText = "*Get-LocalUser*") | stats count min(_time) as
+  firstTime max(_time) as lastTime by EventCode ScriptBlockText Computer user_id |
+  convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `getlocaluser_with_powershell_script_block_filter`

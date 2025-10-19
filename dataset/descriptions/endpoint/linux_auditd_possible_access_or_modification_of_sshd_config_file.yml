@@ -1,0 +1,17 @@
+description: The following analytic detects suspicious access or modification of the
+  sshd_config file on Linux systems. It leverages data from Linux Auditd, focusing
+  on command-line executions involving processes like "cat," "nano," "vim," and "vi"
+  accessing the sshd_config file. This activity is significant because unauthorized
+  changes to sshd_config can allow threat actors to redirect port connections or use
+  unauthorized keys, potentially compromising the system. If confirmed malicious,
+  this could lead to unauthorized access, privilege escalation, or persistent backdoor
+  access, posing a severe security risk.
+required_fields:
+- _time
+- name
+- nametype
+- OGID
+rule: sourcetype="linux:audit" type=PATH name="/etc/ssh/ssh_config*" | rename host
+  as dest | stats count min(_time) as firstTime max(_time) as lastTime by name nametype
+  OGID type dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| `linux_auditd_possible_access_or_modification_of_sshd_config_file_filter`

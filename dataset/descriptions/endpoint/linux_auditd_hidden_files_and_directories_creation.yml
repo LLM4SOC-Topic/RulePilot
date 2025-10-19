@@ -1,0 +1,23 @@
+description: The following analytic detects suspicious creation of hidden files and
+  directories, which may indicate an attacker's attempt to conceal malicious activities
+  or unauthorized data. Hidden files and directories are often used to evade detection
+  by security tools and administrators, providing a stealthy means for storing malware,
+  logs, or sensitive information. By monitoring for unusual or unauthorized creation
+  of hidden files and directories, this analytic helps identify potential attempts
+  to hide or unauthorized creation of hidden files and directories, this analytic
+  helps identify potential attempts to hide malicious operations, enabling security
+  teams to uncover and address hidden threats effectively.
+required_fields:
+- _time
+- argc
+- process_exec
+rule: sourcetype="linux:audit" type=EXECVE | eval relevant_fields=if(type="EXECVE",
+  "", relevant_fields) | foreach a* [eval relevant_fields=if(type="EXECVE", mvappend(relevant_fields,
+  '<<FIELD>>'), relevant_fields)] | eval process_exec=if(type="EXECVE", mvjoin(relevant_fields,
+  " "), process_exec) | eval process_exec=if(type="EXECVE", trim(process_exec), process_exec)
+  | rename host as dest | where (LIKE (process_exec,"%touch %") OR LIKE (process_exec,"%mkdir
+  %")OR LIKE (process_exec,"%vim %") OR LIKE (process_exec,"%vi %") OR LIKE (process_exec,"%nano
+  %")) AND (LIKE (process_exec,"% ./.%")  OR LIKE (process_exec," .%")OR LIKE (process_exec,"
+  /.%")) | stats count min(_time) as firstTime max(_time) as lastTime by argc process_exec
+  dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$)| `linux_auditd_hidden_files_and_directories_creation_filter`

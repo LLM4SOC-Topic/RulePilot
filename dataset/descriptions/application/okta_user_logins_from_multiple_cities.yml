@@ -1,0 +1,29 @@
+description: The following analytic identifies instances where the same Okta user
+  logs in from different cities within a 24-hour period. This detection leverages
+  Okta Identity Management logs, analyzing login events and their geographic locations.
+  Such behavior is significant as it may indicate a compromised account, with an attacker
+  attempting unauthorized access from multiple locations. If confirmed malicious,
+  this activity could lead to account takeovers and data breaches, allowing attackers
+  to access sensitive information and potentially escalate their privileges within
+  the environment.
+required_fields:
+- _time
+- Authentication.app
+- Authentication.action
+- Authentication.user
+- Authentication.reason
+- Authentication.dest
+- Authentication.signature
+- Authentication.method
+- Authentication.src
+rule: '| tstats  summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` values(Authentication.app) as app values(Authentication.action)
+  as action values(Authentication.user) as user values(Authentication.reason) as reason
+  values(Authentication.dest) as dest values(Authentication.signature) as signature  values(Authentication.method)
+  as method  from datamodel=Authentication where  Authentication.signature=user.session.start
+  by _time Authentication.src | `drop_dm_object_name("Authentication")` | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | iplocation src | stats count min(_time) as firstTime max(_time)
+  as lastTime dc(src) as distinct_src dc(City) as distinct_city values(src) as src
+  values(City) as City values(Country) as Country values(action) as action by user
+  | where distinct_city > 1 | `okta_user_logins_from_multiple_cities_filter`'

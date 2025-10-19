@@ -1,0 +1,25 @@
+description: The following analytic detects modifications to the Windows registry
+  that disable the display of hidden files. It leverages data from the Endpoint.Registry
+  data model, specifically monitoring changes to registry paths associated with hidden
+  file settings. This activity is significant because malware, such as worms and trojan
+  spyware, often use hidden files to evade detection. If confirmed malicious, this
+  behavior could allow an attacker to conceal malicious files on the system, making
+  it harder for security tools and analysts to identify and remove the threat.
+required_fields:
+- _time
+- Registry.dest
+- Registry.registry_value_name
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.registry_value_data
+- Registry.process_guid
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry WHERE (Registry.registry_path= "*\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\Hidden"
+  OR (Registry.registry_path= "*\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\HideFileExt"
+  Registry.registry_value_data = "0x00000001") OR (Registry.registry_path= "*\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\ShowSuperHidden"
+  Registry.registry_value_data = "0x00000000" )) BY Registry.user Registry.dest Registry.registry_path
+  Registry.registry_key_name Registry.registry_value_name Registry.registry_value_data
+  Registry.process_guid | `drop_dm_object_name(Registry)` | where isnotnull(registry_value_data)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `disable_show_hidden_files_filter`'

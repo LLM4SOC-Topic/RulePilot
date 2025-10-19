@@ -1,0 +1,24 @@
+description: This analytic detects network share discovery and collection activities
+  performed on Windows systems using the Net command. Attackers often use network
+  share discovery to identify accessible shared resources within a network, which
+  can be a precursor to privilege escalation or data exfiltration. By monitoring Windows
+  Event Logs for the usage of the Net command to list and interact with network shares,
+  this detection helps identify potential reconnaissance and collection activities.
+required_fields:
+- Processes.process_name
+- Processes.user
+- Processes.dest
+- Processes.process_exec
+- Processes.parent_process_exec
+- Processes.process
+- Processes.parent_process
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  values(Processes.user_category) as user_category values(Processes.user_bunit) as
+  user_bunit  FROM datamodel=Endpoint.Processes WHERE (Processes.process_name="net.exe"
+  OR Processes.original_file_name="net.exe" OR Processes.process_name="net1.exe" OR
+  Processes.original_file_name="net1.exe") BY Processes.user Processes.dest Processes.process_exec
+  Processes.parent_process_exec Processes.process Processes.parent_process | `drop_dm_object_name(Processes)`
+  | regex process="net[\s\.ex1]+view|net[\s\.ex1]+share|net[\s\.ex1]+use\s" | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_network_share_interaction_with_net_filter`'

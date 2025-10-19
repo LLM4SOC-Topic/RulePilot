@@ -1,0 +1,19 @@
+description: The following analytic identifies unauthorized devices attempting to
+  connect to the organization's network by inspecting DHCP request packets. It detects
+  this activity by comparing the MAC addresses in DHCP requests against a list of
+  known authorized devices stored in the assets_by_str.csv file. This activity is
+  significant for a SOC because unauthorized devices can pose security risks, including
+  potential data breaches or network disruptions. If confirmed malicious, this activity
+  could allow an attacker to gain unauthorized network access, potentially leading
+  to further exploitation or data exfiltration.
+required_fields:
+- _time
+- All_Sessions.signature
+- All_Sessions.src_ip
+- All_Sessions.dest_mac
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count from datamodel=Network_Sessions where nodename=All_Sessions.DHCP
+  All_Sessions.tag=dhcp by All_Sessions.dest_ip All_Sessions.dest_mac | dedup All_Sessions.dest_mac|
+  `drop_dm_object_name("Network_Sessions")`|`drop_dm_object_name("All_Sessions")`
+  | search NOT [| inputlookup asset_lookup_by_str |rename mac as dest_mac | fields
+  + dest_mac] | `detect_unauthorized_assets_by_mac_address_filter`'

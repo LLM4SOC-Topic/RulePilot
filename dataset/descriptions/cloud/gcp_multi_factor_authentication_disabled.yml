@@ -1,0 +1,18 @@
+description: The following analytic detects an attempt to disable multi-factor authentication
+  (MFA) for a Google Cloud Platform (GCP) user. It leverages Google Workspace Admin
+  log events, specifically the `UNENROLL_USER_FROM_STRONG_AUTH` command. This activity
+  is significant because disabling MFA can allow an adversary to maintain persistence
+  within the environment using a compromised account without raising suspicion. If
+  confirmed malicious, this action could enable attackers to bypass additional security
+  layers, potentially leading to unauthorized access, data exfiltration, or further
+  exploitation of the compromised account.
+required_fields:
+- _time
+- actor.email
+- user
+- command
+- status
+rule: sourcetype=gws:reports:admin command=UNENROLL_USER_FROM_STRONG_AUTH | stats
+  count min(_time) as firstTime max(_time) as lastTime by user, command, actor.email,
+  status, id.applicationName, event.name, vendor_account, action | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| `gcp_multi_factor_authentication_disabled_filter`

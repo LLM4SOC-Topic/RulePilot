@@ -1,0 +1,22 @@
+description: The following analytic detects the creation of hidden scheduled tasks
+  on Windows systems, which are not visible in the UI. It leverages Windows Security
+  EventCode 4698 to identify tasks where the 'Hidden' setting is enabled. This behavior
+  is significant as it may indicate malware activity, such as Industroyer2, or the
+  use of living-off-the-land binaries (LOLBINs) to download additional payloads. If
+  confirmed malicious, this activity could allow attackers to execute code stealthily,
+  maintain persistence, or further compromise the system by downloading additional
+  malicious payloads.
+required_fields:
+- _time
+- dest
+- Task_Name
+- Command
+- Author
+- Enabled
+- Hidden
+- Arguments
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=4698 | xmlkv Message | search Hidden = true | stats count min(_time) as
+  firstTime max(_time) as lastTime by  Task_Name, Command, Author, Hidden, dest |
+  convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_hidden_schedule_task_settings_filter`

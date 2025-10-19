@@ -1,0 +1,25 @@
+description: The following analytic detects when an email submitted to Microsoft using
+  the built-in report button in Outlook is found to be malicious. This capability
+  is an enhanced protection feature that can be used within o365 tenants by users
+  to report potentially malicious emails. This correlation looks for any submission
+  that returns a Phish or Malware verdict upon submission.
+required_fields:
+- _time
+- Workload
+- Operation
+- Name
+- Data
+- AlertId
+- AlertEntityId
+- tsd
+- etps
+rule: sourcetype=o365:management:activity Workload=SecurityComplianceCenter  Operation=AlertEntityGenerated
+  Name="Email reported by user as*" | fromjson Data | rename _raw AS temp etps AS
+  _raw | extract pairdelim=";" kvdelim=":" | rename _raw AS etps temp AS _raw | search
+  RescanVerdict IN (Phish,Malware) | rex field=tsd "\<(?<src_user>.+)\>" | eval src_user
+  = case(isnull(src_user),tsd,true(),src_user) | stats count min(_time) as firstTime
+  max(_time) as lastTime values(ms) as subject values(RescanVerdict) as result values(tsd)
+  as sender values(src_user) as src_user by AlertId,AlertEntityId,Operation,Name |
+  rename Name as signature, AlertId as signature_id, AlertEntityId as user | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `o365_email_reported_by_user_found_malicious_filter`

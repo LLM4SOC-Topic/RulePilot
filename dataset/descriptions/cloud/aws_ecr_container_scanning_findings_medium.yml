@@ -1,0 +1,28 @@
+description: The following analytic identifies medium-severity findings from AWS Elastic
+  Container Registry (ECR) image scans. It leverages AWS CloudTrail logs, specifically
+  the DescribeImageScanFindings event, to detect vulnerabilities in container images.
+  This activity is significant for a SOC as it highlights potential security risks
+  in containerized applications, which could be exploited if not addressed. If confirmed
+  malicious, these vulnerabilities could lead to unauthorized access, data breaches,
+  or further exploitation within the container environment, compromising the overall
+  security posture.
+required_fields:
+- eventSource
+- eventName
+- responseElements.imageScanFindings.findings{}
+- awsRegion
+- requestParameters.imageId.imageDigest
+- requestParameters.repositoryName
+- user
+- userName
+- src_ip
+rule: sourcetype=aws:cloudtrail eventSource=ecr.amazonaws.com eventName=DescribeImageScanFindings
+  | spath path=responseElements.imageScanFindings.findings{} output=findings | mvexpand
+  findings | spath input=findings| search severity=MEDIUM | rename name as finding_name,
+  description as finding_description, requestParameters.imageId.imageDigest as imageDigest,
+  requestParameters.repositoryName as repository, userIdentity.principalId as user|
+  eval finding = finding_name.", ".finding_description | eval phase="release" | eval
+  severity="medium" | stats min(_time) as firstTime max(_time) as lastTime by awsRegion,
+  eventName, eventSource, imageDigest, repository, user, src_ip, finding, phase, severity
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `aws_ecr_container_scanning_findings_medium_filter`

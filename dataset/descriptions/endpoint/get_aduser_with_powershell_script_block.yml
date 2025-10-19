@@ -1,0 +1,19 @@
+description: The following analytic detects the execution of the `Get-AdUser` PowerShell
+  cmdlet, which is used to enumerate all domain users. It leverages PowerShell Script
+  Block Logging (EventCode=4104) to identify instances where this command is executed
+  with a filter. This activity is significant as it may indicate an attempt by adversaries
+  or Red Teams to gather information about domain users for situational awareness
+  and Active Directory discovery. If confirmed malicious, this behavior could lead
+  to further reconnaissance and potential exploitation of user accounts within the
+  domain.
+required_fields:
+- _time
+- EventCode
+- Message
+- ComputerName
+- User
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText = "*get-aduser*" ScriptBlockText = "*-filter*" |
+  stats count min(_time) as firstTime max(_time) as lastTime by EventCode ScriptBlockText
+  Computer UserID | rename Computer as dest, UserID as user| convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `get_aduser_with_powershell_script_block_filter`

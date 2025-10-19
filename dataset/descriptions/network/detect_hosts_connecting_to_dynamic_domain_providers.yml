@@ -1,0 +1,20 @@
+description: The following analytic identifies DNS queries from internal hosts to
+  dynamic domain providers. It leverages DNS query logs from the `Network_Resolution`
+  data model and cross-references them with a lookup file containing known dynamic
+  DNS providers. This activity is significant because attackers often use dynamic
+  DNS services to host malicious payloads or command-and-control servers, making it
+  crucial for security teams to monitor. If confirmed malicious, this activity could
+  allow attackers to bypass firewall blocks, evade detection, and maintain persistent
+  access to the network.
+required_fields:
+- _time
+- DNS.answer
+- DNS.query
+- host
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count values(DNS.answer) as answer min(_time) as
+  firstTime from datamodel=Network_Resolution by DNS.query host | `drop_dm_object_name("DNS")`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | lookup update=true dynamic_dns_providers_default
+  dynamic_dns_domains as query OUTPUTNEW isDynDNS_default | lookup update=true dynamic_dns_providers_local
+  dynamic_dns_domains as query OUTPUTNEW isDynDNS_local| eval isDynDNS = coalesce(isDynDNS_local,isDynDNS_default)
+  |fields - isDynDNS_default, isDynDNS_local| search isDynDNS=True | `detect_hosts_connecting_to_dynamic_domain_providers_filter`'

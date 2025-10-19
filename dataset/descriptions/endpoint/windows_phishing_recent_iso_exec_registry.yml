@@ -1,0 +1,23 @@
+description: The following analytic detects the creation of registry artifacts when
+  an ISO container is opened, clicked, or mounted on a Windows operating system. It
+  leverages data from the Endpoint.Registry data model, specifically monitoring registry
+  keys related to recent ISO or IMG file executions. This activity is significant
+  as adversaries increasingly use container-based phishing campaigns to bypass macro-based
+  document execution controls. If confirmed malicious, this behavior could indicate
+  an initial access attempt, potentially leading to further exploitation, persistence,
+  or data exfiltration within the environment.
+required_fields:
+- _time
+- Registry.registry_key_name
+- Registry.user
+- Registry.registry_path
+- Registry.registry_value_data
+- Registry.action
+- Registry.dest
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry where Registry.registry_key_name= "*\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs\\.iso"
+  OR Registry.registry_key_name= "*\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs\\.img"
+  by Registry.registry_key_name Registry.user Registry.registry_path Registry.registry_value_data
+  Registry.action Registry.dest | `drop_dm_object_name(Registry)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_phishing_recent_iso_exec_registry_filter`'

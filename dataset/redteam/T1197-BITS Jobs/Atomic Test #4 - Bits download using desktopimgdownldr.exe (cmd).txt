@@ -1,0 +1,1 @@
+This test simulates using desktopimgdownldr.exe to download a malicious file instead of a desktop or lockscreen background img. The process that actually makes the TCP connection and creates the file on the disk is a svchost process (“-k netsvc -p -s BITS”) and not desktopimgdownldr.exe.

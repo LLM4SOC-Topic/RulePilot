@@ -1,0 +1,24 @@
+description: The following analytic detects failed attempts to delete AWS IAM groups,
+  triggered by access denial, conflicts, or non-existent groups. It operates by monitoring
+  CloudTrail logs for specific error codes related to deletion failures. This behavior
+  is significant for a SOC as it may indicate unauthorized attempts to modify access
+  controls or disrupt operations by removing groups. Such actions could be part of
+  a larger attack aiming to escalate privileges or impair security protocols. Identifying
+  these attempts allows for timely investigation and mitigation, preventing potential
+  impact on the organizations security posture.
+required_fields:
+- api.operation
+- actor.user.account_uid
+- actor.user.name
+- actor.user.uid
+- http_request.user_agent
+- src_endpoint.ip
+- cloud.region
+rule: sourcetype=aws:cloudtrail:lake api.operation=DeleteGroup api.response.error
+  IN (NoSuchEntityException,DeleteConflictException, AccessDenied) http_request.user_agent!=*.amazonaws.com
+  | fillnull | stats count min(_time) as firstTime max(_time) as lastTime by api.operation
+  actor.user.account_uid actor.user.name actor.user.uid http_request.user_agent src_endpoint.ip
+  cloud.region | rename actor.user.name as user, src_endpoint.ip as src_ip, cloud.region
+  as region, http_request.user_agent as user_agent, actor.user.account_uid as aws_account_id
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `asl_aws_iam_failure_group_deletion_filter`

@@ -1,0 +1,25 @@
+description: The following analytic identifies the creation of new email forwarding
+  rules in an Office 365 environment via the UpdateInboxRules operation. It leverages
+  Office 365 management activity events to detect rules that forward emails to external
+  recipients by examining the OperationProperties for specific forwarding actions.
+  This activity is significant as it may indicate unauthorized email redirection,
+  potentially leading to data exfiltration. If confirmed malicious, attackers could
+  intercept sensitive communications, leading to data breaches and information leakage.
+required_fields:
+- _time
+- Operation
+- Actions
+- Name
+- user
+rule: sourcetype=o365:management:activity Workload=Exchange Operation=UpdateInboxRules  |
+  eval match1=mvfind('OperationProperties{}.Value', "ForwardToRecipientsAction") |
+  eval match2=mvfind('OperationProperties{}.Value', "ForwardAsAttachmentToRecipientsAction")
+  | eval match3=mvfind('OperationProperties{}.Value', "RedirectToRecipientsAction")
+  | eval index = mvfind('OperationProperties{}.Name', "ServerRule") | where match1>=
+  0 OR match2>= 0 OR match3>= 0 | eval ServerRule = mvindex('OperationProperties{}.Value',
+  index-1) | spath input=ServerRule path=Actions{}.Recipients{}.Values{}.Value output=valueExtracted
+  | mvexpand valueExtracted | search valueExtracted="*@*.*" | eval ForwardTo=if(match(valueExtracted,
+  "^[^@]+@[^@]+\\.[^@]+$"), valueExtracted, null) | dedup ForwardTo | where isnotnull(ForwardTo)
+  | stats count min(_time) as firstTime max(_time) as lastTime values(Name) as Name
+  by user Operation ForwardTo | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `o365_new_email_forwarding_rule_enabled_filter`

@@ -1,0 +1,21 @@
+description: The following analytic detects potential data exfiltration using plain
+  HTTP POST requests. It leverages network traffic logs, specifically monitoring the
+  `stream_http` data source for POST methods containing suspicious form data such
+  as "wermgr.exe" or "svchost.exe". This activity is significant because it is commonly
+  associated with malware like Trickbot, trojans, keyloggers, or APT adversaries,
+  which use plain text HTTP POST requests to communicate with remote C2 servers. If
+  confirmed malicious, this activity could lead to unauthorized data exfiltration,
+  compromising sensitive information and potentially leading to further network infiltration.
+required_fields:
+- _time
+- http_method
+- http_user_agent
+- uri_path
+- url
+- bytes_in
+- bytes_out
+rule: sourcetype=stream:http http_method=POST form_data IN ("*wermgr.exe*","*svchost.exe*",
+  "*name=\"proclist\"*","*ipconfig*", "*name=\"sysinfo\"*", "*net view*") |stats values(form_data)
+  as http_request_body min(_time) as firstTime max(_time) as lastTime count by src_ip
+  dest_ip http_method http_user_agent uri_path url bytes_in bytes_out | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `plain_http_post_exfiltrated_data_filter`

@@ -1,0 +1,24 @@
+description: The following analytic detects excessive file deletion events in the
+  Windows Defender folder. It leverages Sysmon EventCodes 23 and 26 to identify processes
+  deleting multiple files within this directory. This behavior is significant as it
+  may indicate an attempt to corrupt or disable Windows Defender, a key security component.
+  If confirmed malicious, this activity could allow an attacker to disable endpoint
+  protection, facilitating further malicious actions without detection.
+required_fields:
+- _time
+- TargetFilename
+- user
+- dest
+- signature
+- signature_id
+- Image
+- process_name
+- process_path
+- process_guid
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode IN ("23","26") TargetFilename
+  = "*\\ProgramData\\Microsoft\\Windows Defender\\*" | stats count, values(TargetFilename)
+  as deleted_files, min(_time) as firstTime, max(_time) as lastTime by user, dest,
+  signature, signature_id, Image, process_name, process_guid | rename Image as process
+  | where count >=50 | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `excessive_file_deletion_in_windefender_folder_filter`

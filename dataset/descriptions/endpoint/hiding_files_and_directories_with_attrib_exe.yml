@@ -1,0 +1,21 @@
+description: The following analytic detects the use of the Windows binary attrib.exe
+  to hide files or directories by marking them with specific flags. It leverages data
+  from Endpoint Detection and Response (EDR) agents, focusing on command-line arguments
+  that include the "+h" flag. This activity is significant because hiding files can
+  be a tactic used by attackers to conceal malicious files or tools from users and
+  security software. If confirmed malicious, this behavior could allow an attacker
+  to persist in the environment undetected, potentially leading to further compromise
+  or data exfiltration.
+required_fields:
+- _time
+- Processes.process
+- Processes.process_name
+- Processes.parent_process
+- Processes.user
+- Processes.dest
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) values(Processes.process) as process
+  max(_time) as lastTime from datamodel=Endpoint.Processes where Processes.process_name=attrib.exe
+  (Processes.process=*+h*) by Processes.parent_process_name Processes.process_name
+  Processes.user Processes.dest | `drop_dm_object_name("Processes")` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$)|convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) |`hiding_files_and_directories_with_attrib_exe_filter`'

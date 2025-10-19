@@ -1,0 +1,34 @@
+description: The following analytic identifies instances where `ipconfig.exe`, `systeminfo.exe`,
+  or similar tools are executed by a non-standard parent process, excluding CMD, PowerShell,
+  or Explorer. This detection leverages Endpoint Detection and Response (EDR) telemetry
+  to monitor process creation events. Such behavior is significant as it may indicate
+  adversaries using injected processes to perform system discovery, a tactic observed
+  in FIN7's JSSLoader. If confirmed malicious, this activity could allow attackers
+  to gather critical host information, aiding in further exploitation or lateral movement
+  within the network.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where (Processes.process_name = "ipconfig.exe"
+  OR Processes.process_name = "systeminfo.exe" OR Processes.process_name = "net.exe"
+  OR Processes.process_name = "net1.exe" OR Processes.process_name = "arp.exe" OR
+  Processes.process_name = "nslookup.exe" OR Processes.process_name = "route.exe"
+  OR Processes.process_name = "netstat.exe" OR Processes.process_name = "whoami.exe")
+  AND NOT (Processes.parent_process_name = "cmd.exe" OR Processes.parent_process_name
+  = "powershell*" OR Processes.parent_process_name="pwsh.exe" OR Processes.parent_process_name
+  = "explorer.exe") by Processes.parent_process_name Processes.parent_process Processes.process_name
+  Processes.original_file_name Processes.process_id Processes.process Processes.dest
+  Processes.user | `drop_dm_object_name(Processes)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `cmdline_tool_not_executed_in_cmd_shell_filter`'

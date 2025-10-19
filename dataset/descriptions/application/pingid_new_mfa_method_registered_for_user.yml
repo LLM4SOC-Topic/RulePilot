@@ -1,0 +1,22 @@
+description: The following analytic detects the registration of a new Multi-Factor
+  Authentication (MFA) method for a PingID (PingOne) account. It leverages JSON logs
+  from PingID, specifically looking for successful device pairing events. This activity
+  is significant as adversaries who gain unauthorized access to a user account may
+  register a new MFA method to maintain persistence. If confirmed malicious, this
+  could allow attackers to bypass existing security measures, maintain long-term access,
+  and potentially escalate their privileges within the compromised environment.
+required_fields:
+- _time
+- resources{}.ipaddress
+- actors{}.name
+- result.message
+- resources{}.devicemodel
+- result.status
+rule: source=PINGID "result.message"="Device Paired*" result.status="SUCCESS"   |
+  rex field=result.message "Device (Unp)?(P)?aired (?<device_extract>.+)" | eval src
+  = coalesce('resources{}.ipaddress','resources{}.devicemodel'), user = upper('actors{}.name'),
+  reason = 'result.message' | eval object=CASE(ISNOTNULL('resources{}.devicemodel'),'resources{}.devicemodel',true(),device_extract)
+  | eval action=CASE(match('result.message',"Device Paired*"),"created",match('result.message',
+  "Device Unpaired*"),"deleted") | stats count min(_time) as firstTime, max(_time)
+  as lastTime by src,user,object,action,reason | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `pingid_new_mfa_method_registered_for_user_filter`

@@ -1,0 +1,9 @@
+description: This search detects writes to the 'System Volume Information' folder
+  by something other than the System process.
+required_fields:
+- _time
+rule: (sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational OR tag=process) EventCode=11 process_id!=4
+  file_path=*System\ Volume Information* | stats count min(_time) as firstTime max(_time)
+  as lastTime by dest, Image, file_path | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)|
+  convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `suspicious_writes_to_system_volume_information_filter`

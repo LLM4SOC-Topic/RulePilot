@@ -1,0 +1,24 @@
+Atomic Test #1 - LLMNR Poisoning with Inveigh (PowerShell)
+
+Log1
+10/02/2024 11:38:59 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=3251
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+Invoke-Inveigh -ConsoleOutput Y -NBNS Y -MDNS Y -HTTPS Y -PROXY Y
+
+ScriptBlock ID: 14e64d68-2936-4c16-935d-f2688c663f6f
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1557.001\T1557_001_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational

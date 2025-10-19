@@ -1,0 +1,23 @@
+description: The following analytic identifies instances where Multi-Factor Authentication
+  (MFA) is disabled for a user within the Office 365 environment. It leverages O365
+  audit logs, specifically focusing on events related to MFA settings. Disabling MFA
+  removes a critical security layer, making accounts more vulnerable to unauthorized
+  access. If confirmed malicious, this activity could indicate an attacker attempting
+  to maintain persistence or an insider threat, significantly increasing the risk
+  of unauthorized access. Immediate investigation is required to validate the reason
+  for disabling MFA, potentially re-enable it, and assess any other suspicious activities
+  related to the affected account.
+required_fields:
+- _time
+- Operation
+- UserType
+- user
+- status
+- signature
+- dest
+- ResultStatus
+rule: sourcetype=o365:management:activity Operation="Disable Strong Authentication."
+  | stats count earliest(_time) as firstTime latest(_time) as lastTime by UserType
+  Operation UserId ResultStatus object | rename UserType AS user_type, Operation AS
+  action, UserId AS src_user, object AS user, ResultStatus AS result | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `o365_disable_mfa_filter`

@@ -1,0 +1,28 @@
+description: The following analytic identifies the use of remote access software within
+  the environment. It leverages data from Endpoint Detection and Response (EDR) agents,
+  focusing on process execution logs. This detection is significant as unauthorized
+  remote access tools can be used by adversaries to maintain persistent access to
+  compromised systems. If confirmed malicious, this activity could allow attackers
+  to remotely control systems, exfiltrate data, or further infiltrate the network.
+  Review the identified software to ensure it is authorized and take action against
+  any unauthorized utilities.
+required_fields:
+- _time
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  values(Processes.process) as process values(Processes.parent_process) as parent_process
+  from datamodel=Endpoint.Processes where Processes.dest!=unknown Processes.user!=unknown
+  by Processes.dest Processes.user Processes.process_name Processes.process | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `drop_dm_object_name(Processes)` | lookup remote_access_software
+  remote_utility AS process_name OUTPUT isutility | search isutility = True | `windows_remote_access_software_hunt_filter`'

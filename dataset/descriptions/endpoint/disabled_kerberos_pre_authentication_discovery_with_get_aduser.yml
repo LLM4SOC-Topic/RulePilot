@@ -1,0 +1,20 @@
+description: The following analytic detects the execution of the `Get-ADUser` PowerShell
+  cmdlet with parameters indicating a search for domain accounts with Kerberos Pre-Authentication
+  disabled. It leverages PowerShell Script Block Logging (EventCode=4104) to identify
+  this specific activity. This behavior is significant because discovering accounts
+  with Kerberos Pre-Authentication disabled can allow adversaries to perform offline
+  password cracking. If confirmed malicious, this activity could lead to unauthorized
+  access to user accounts, potentially compromising sensitive information and escalating
+  privileges within the network.
+required_fields:
+- _time
+- ScriptBlockText
+- Opcode
+- Computer
+- UserID
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 (ScriptBlockText = "*Get-ADUser*" AND ScriptBlockText="*4194304*")
+  | stats count min(_time)  as firstTime max(_time) as lastTime by Opcode Computer
+  UserID EventCode ScriptBlockText | rename Computer as dest | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `disabled_kerberos_pre_authentication_discovery_with_get_aduser_filter`

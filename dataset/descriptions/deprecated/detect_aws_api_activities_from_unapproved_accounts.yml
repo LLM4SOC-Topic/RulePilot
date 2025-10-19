@@ -1,0 +1,17 @@
+description: This search looks for successful AWS CloudTrail activity by user accounts
+  that are not listed in the identity table or `aws_service_accounts.csv`. It returns
+  event names and count, as well as the first and last time a specific user or service
+  is detected, grouped by users. Deprecated because managing this list can be quite
+  hard.
+required_fields:
+- _time
+- errorCode
+- userName
+- eventName
+- user
+rule: sourcetype=aws:cloudtrail errorCode=success | rename userName as identity |
+  search NOT [| inputlookup identity_lookup_expanded | fields identity] | search NOT
+  [| inputlookup aws_service_accounts | fields identity] | rename identity as user
+  | stats count min(_time) as firstTime max(_time) as lastTime values(eventName) as
+  eventName by user | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `detect_aws_api_activities_from_unapproved_accounts_filter`

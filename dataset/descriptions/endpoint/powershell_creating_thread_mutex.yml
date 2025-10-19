@@ -1,0 +1,19 @@
+description: The following analytic detects the execution of PowerShell scripts using
+  the `mutex` function via EventCode 4104. This detection leverages PowerShell Script
+  Block Logging to identify scripts that create thread mutexes, a technique often
+  used in obfuscated scripts to ensure only one instance runs on a compromised machine.
+  This activity is significant as it may indicate the presence of sophisticated malware
+  or persistence mechanisms. If confirmed malicious, the attacker could maintain exclusive
+  control over a process, potentially leading to further exploitation or persistence
+  within the environment.
+required_fields:
+- _time
+- EventCode
+- ScriptBlockText
+- Computer
+- UserID
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText = "*Threading.Mutex*" | stats count min(_time) as
+  firstTime max(_time) as lastTime by EventCode ScriptBlockText Computer UserID |
+  rename Computer as dest |rename UserID as user | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `powershell_creating_thread_mutex_filter`

@@ -1,0 +1,20 @@
+description: The following analytic detects the deletion of AWS Network Access Control
+  Lists (ACLs). It leverages AWS CloudTrail logs to identify events where a user deletes
+  a network ACL entry. This activity is significant because deleting a network ACL
+  can remove critical access restrictions, potentially allowing unauthorized access
+  to cloud instances. If confirmed malicious, this action could enable attackers to
+  bypass network security controls, leading to unauthorized access, data exfiltration,
+  or further compromise of the cloud environment.
+required_fields:
+- _time
+- eventName
+- requestParameters.egress
+- userName
+- userIdentity.principalId
+- src
+- userAgent
+rule: sourcetype=aws:cloudtrail eventName=DeleteNetworkAclEntry requestParameters.egress=false
+  | fillnull | stats count min(_time) as firstTime max(_time) as lastTime by user_arn
+  userIdentity.principalId eventName requestParameters.egress src userAgent | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `aws_network_access_control_list_deleted_filter`

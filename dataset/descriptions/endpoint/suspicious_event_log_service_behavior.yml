@@ -1,0 +1,15 @@
+description: The following analytic detects the shutdown of the Windows Event Log
+  service using Windows Event ID 1100. This event is logged every time the service
+  stops, including during normal system shutdowns. Monitoring this activity is crucial
+  as it can indicate attempts to cover tracks or disable logging. If confirmed malicious,
+  an attacker could hide their activities, making it difficult to trace their actions
+  and investigate further incidents. Analysts should verify if the shutdown was planned
+  and review other alerts and data sources for additional suspicious behavior.
+required_fields:
+- _time
+- EventCode
+- dest
+rule: (eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=1100) | stats count min(_time) as firstTime max(_time) as lastTime by
+  dest name EventCode | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| `suspicious_event_log_service_behavior_filter`

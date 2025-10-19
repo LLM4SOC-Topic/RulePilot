@@ -1,0 +1,21 @@
+description: The following analytic identifies all drivers being loaded on Windows
+  systems using Sysmon EventCode 6 (Driver Load). It leverages fields such as driver
+  path, signature status, and hash to detect potentially suspicious drivers. This
+  activity is significant for a SOC as malicious drivers can be used to gain kernel-level
+  access, bypass security controls, or persist in the environment. If confirmed malicious,
+  this activity could allow an attacker to execute arbitrary code with high privileges,
+  leading to severe system compromise and potential data exfiltration.
+required_fields:
+- _time
+- ImageLoaded
+- dest
+- Signed
+- Signature
+- service_signature_verified
+- service_signature_exists
+- Hashes
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=6 | stats min(_time) as firstTime
+  max(_time) as lastTime values(ImageLoaded) count by dest Signed Signature service_signature_verified
+  service_signature_exists Hashes | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_drivers_loaded_by_signature_filter`

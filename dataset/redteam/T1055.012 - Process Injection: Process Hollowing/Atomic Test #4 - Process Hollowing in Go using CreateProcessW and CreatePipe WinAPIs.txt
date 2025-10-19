@@ -1,0 +1,5 @@
+Once all checks have been passed, the second stage of the loader will extract the SaintBot binary from its resources and decrypt it. From there, it begins loading in different API calls, including VirtualAllocEx, WriteProcessMemory, CreateProcessA and SetThreadContext. These calls are used to spawn MSBuild.exe in a suspended state before injecting the decrypted SaintBot binary into it, modifying the thread context to point to the malicious entry point and resuming the process.
+Create a process in a suspended state, execute shellcode to spawn calc.exe in a child process, and then resume the original process. This test uses the CreatePipe function to create an anonymous pipe that parent and child processes can communicate over. This anonymous pipe allows for the retrieval of output generated from executed shellcode.
+Cleanup Commands:
+Stop-Process -Name CalculatorApp -ErrorAction SilentlyContinue
+Stop-Process -Name "#{hollow_process_name}" -ErrorAction SilentlyContinue

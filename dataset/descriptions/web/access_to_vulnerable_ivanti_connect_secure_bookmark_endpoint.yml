@@ -1,0 +1,18 @@
+description: The following analytic identifies access to the /api/v1/configuration/users/user-roles/user-role/rest-userrole1/web/web-bookmarks/bookmark
+  endpoint, which is associated with CVE-2023-46805 and CVE-2024-21887 vulnerabilities.
+  It detects this activity by monitoring for GET requests that receive a 403 Forbidden
+  response with an empty body. This behavior is significant as it indicates potential
+  exploitation attempts against Ivanti Connect Secure systems. If confirmed malicious,
+  attackers could exploit these vulnerabilities to gain unauthorized access or control
+  over the affected systems, leading to potential data breaches or system compromise.
+required_fields:
+- Web.src
+- Web.dest
+- Web.http_user_agent
+- Web.status
+- Web.url
+rule: '| tstats count min(_time) as firstTime max(_time) as lastTime from datamodel=Web
+  where Web.url="*/api/v1/configuration/users/user-roles/user-role/rest-userrole1/web/web-bookmarks/bookmark*"
+  Web.http_method=GET Web.status=403 by Web.src, Web.dest, Web.http_user_agent, Web.status,
+  Web.url source | `drop_dm_object_name("Web")` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `access_to_vulnerable_ivanti_connect_secure_bookmark_endpoint_filter`'

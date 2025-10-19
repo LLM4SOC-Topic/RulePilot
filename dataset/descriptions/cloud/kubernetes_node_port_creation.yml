@@ -1,0 +1,26 @@
+description: The following analytic detects the creation of a Kubernetes NodePort
+  service, which exposes a service to the external network. It identifies this activity
+  by monitoring Kubernetes Audit logs for the creation of NodePort services. This
+  behavior is significant for a SOC as it could allow an attacker to access internal
+  services, posing a threat to the Kubernetes infrastructure's integrity and security.
+  If confirmed malicious, this activity could lead to data breaches, service disruptions,
+  or unauthorized access to sensitive information.
+required_fields:
+- user.groups{}
+- kind
+- objectRef.name
+- objectRef.namespace
+- objectRef.resource
+- requestObject.kind
+- requestObject.spec.type
+- responseStatus.code
+- sourceIPs{}
+- stage
+- user.username
+- userAgent
+- verb
+rule: source="kubernetes" "objectRef.resource"=services verb=create requestObject.spec.type=NodePort
+  | fillnull | stats count values(user.groups{}) as user_groups by kind objectRef.name
+  objectRef.namespace objectRef.resource requestObject.kind requestObject.spec.type
+  responseStatus.code sourceIPs{} stage user.username userAgent verb | rename sourceIPs{}
+  as src_ip, user.username as user | `kubernetes_node_port_creation_filter`

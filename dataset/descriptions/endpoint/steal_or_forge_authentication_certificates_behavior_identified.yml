@@ -1,0 +1,27 @@
+description: The following analytic identifies potential threats related to the theft
+  or forgery of authentication certificates. It detects when five or more analytics
+  from the Windows Certificate Services story trigger within a specified timeframe.
+  This detection leverages aggregated risk scores and event counts from the Risk data
+  model. This activity is significant as it may indicate an ongoing attack aimed at
+  compromising authentication mechanisms. If confirmed malicious, attackers could
+  gain unauthorized access to sensitive systems and data, potentially leading to severe
+  security breaches.
+required_fields:
+- All_Risk.analyticstories
+- All_Risk.risk_object_type
+- All_Risk.risk_object
+- All_Risk.annotations.mitre_attack.mitre_tactic
+- source
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` min(_time) as firstTime max(_time) as lastTime
+  sum(All_Risk.calculated_risk_score) as risk_score, count(All_Risk.calculated_risk_score)
+  as risk_event_count, values(All_Risk.annotations.mitre_attack.mitre_tactic_id) as
+  annotations.mitre_attack.mitre_tactic_id, dc(All_Risk.annotations.mitre_attack.mitre_tactic_id)
+  as mitre_tactic_id_count, values(All_Risk.annotations.mitre_attack.mitre_technique_id)
+  as annotations.mitre_attack.mitre_technique_id, dc(All_Risk.annotations.mitre_attack.mitre_technique_id)
+  as mitre_technique_id_count, values(All_Risk.tag) as tag, values(source) as source,
+  dc(source) as source_count from datamodel=Risk.All_Risk where All_Risk.analyticstories="Windows
+  Certificate Services" All_Risk.risk_object_type="system" by All_Risk.risk_object
+  All_Risk.risk_object_type All_Risk.annotations.mitre_attack.mitre_tactic | `drop_dm_object_name(All_Risk)`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | where source_count >= 5 | `steal_or_forge_authentication_certificates_behavior_identified_filter`'

@@ -1,0 +1,23 @@
+description: The following analytic detects the use of the ICACLS command to grant
+  additional access permissions to files or directories. It leverages data from Endpoint
+  Detection and Response (EDR) agents, focusing on specific process names and command-line
+  arguments. This activity is significant because it is commonly used by Advanced
+  Persistent Threats (APTs) and coinminer scripts to evade detection and maintain
+  control over compromised systems. If confirmed malicious, this behavior could allow
+  attackers to manipulate file permissions, potentially leading to unauthorized access,
+  data exfiltration, or further system compromise.
+required_fields:
+- _time
+- Processes.parent_process_name
+- Processes.process_name
+- Processes.dest
+- Processes.user
+- Processes.process_id
+- Processes.process
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where Processes.process_name IN( "icacls.exe",
+  "cacls.exe", "xcacls.exe") AND Processes.process IN ("*/grant*", "*/G*") by Processes.parent_process_name
+  Processes.parent_process Processes.process_name Processes.process Processes.process_guid
+  Processes.dest Processes.user | `drop_dm_object_name(Processes)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `icacls_grant_command_filter`'

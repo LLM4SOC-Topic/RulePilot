@@ -1,0 +1,26 @@
+description: The following analytic detects a process attempting to access winlogon.exe
+  to duplicate its handle. This is identified using Sysmon EventCode 10, focusing
+  on processes targeting winlogon.exe with specific access rights. This activity is
+  significant because it is a common technique used by adversaries to escalate privileges
+  by leveraging the high privileges and security tokens associated with winlogon.exe.
+  If confirmed malicious, this could allow an attacker to gain elevated privileges,
+  potentially leading to full system compromise and unauthorized access to sensitive
+  information.
+required_fields:
+- _time
+- SourceImage
+- TargetImage
+- SourceProcessGUID
+- TargetProcessGUID
+- SourceProcessId
+- TargetProcessId
+- GrantedAccess
+- CallTrace
+- dest
+- user_id
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=10 TargetImage IN("*\\system32\\winlogon.exe*",
+  "*\\SysWOW64\\winlogon.exe*") GrantedAccess = 0x1040 | stats count min(_time) as
+  firstTime max(_time) as lastTime by SourceImage TargetImage SourceProcessGUID TargetProcessGUID
+  SourceProcessId TargetProcessId GrantedAccess CallTrace dest user_id | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_access_token_manipulation_winlogon_duplicate_token_handle_filter`

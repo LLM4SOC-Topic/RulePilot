@@ -1,0 +1,20 @@
+description: The following analytic detects the execution of the `Get-DomainPolicy`
+  cmdlet using PowerShell Script Block Logging (EventCode=4104). It leverages logs
+  capturing script block text to identify attempts to obtain the password policy in
+  a Windows domain. This activity is significant as it indicates potential reconnaissance
+  efforts by adversaries or Red Teams to gather domain policy information, which is
+  crucial for planning further attacks. If confirmed malicious, this behavior could
+  lead to detailed knowledge of domain security settings, aiding in privilege escalation
+  or lateral movement within the network.
+required_fields:
+- _time
+- ScriptBlockText
+- Opcode
+- Computer
+- UserID
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText ="*Get-DomainPolicy*" | stats count min(_time) as
+  firstTime max(_time) as lastTime by Opcode Computer UserID EventCode ScriptBlockText
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `get_domainpolicy_with_powershell_script_block_filter`

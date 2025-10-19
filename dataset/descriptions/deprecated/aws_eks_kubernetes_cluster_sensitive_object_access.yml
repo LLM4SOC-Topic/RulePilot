@@ -1,0 +1,8 @@
+description: This search provides information on Kubernetes accounts accessing sensitve
+  objects such as configmaps or secrets
+required_fields:
+- _time
+rule: sourcetype="aws:cloudwatchlogs:eks" objectRef.resource=secrets OR configmaps
+  sourceIPs{}!=::1 sourceIPs{}!=127.0.0.1  |table sourceIPs{} user.username user.groups{}
+  objectRef.resource objectRef.namespace objectRef.name annotations.authorization.k8s.io/reason
+  |dedup user.username user.groups{} |`aws_eks_kubernetes_cluster_sensitive_object_access_filter`

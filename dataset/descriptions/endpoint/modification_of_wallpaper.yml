@@ -1,0 +1,28 @@
+description: The following analytic detects the modification of registry keys related
+  to the desktop wallpaper settings. It leverages Sysmon EventCode 13 to identify
+  changes to the "Control Panel\\Desktop\\Wallpaper" and "Control Panel\\Desktop\\WallpaperStyle"
+  registry keys, especially when the modifying process is not explorer.exe or involves
+  suspicious file paths like temp or public directories. This activity is significant
+  as it can indicate ransomware behavior, such as the REVIL ransomware, which changes
+  the wallpaper to display a ransom note. If confirmed malicious, this could signify
+  a compromised machine and the presence of ransomware, leading to potential data
+  encryption and extortion.
+required_fields:
+- _time
+- EventCode
+- Image
+- TargetObject
+- Details
+- dest
+- process_guid
+- process_id
+- user_id
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode =13  (TargetObject IN ("*\\Control
+  Panel\\Desktop\\Wallpaper","*\\Control Panel\\Desktop\\WallpaperStyle") AND Image
+  != "*\\explorer.exe") OR (TargetObject IN ("*\\Control Panel\\Desktop\\Wallpaper","*\\Control
+  Panel\\Desktop\\WallpaperStyle") AND Details IN ("*\\temp\\*", "*\\users\\public\\*"))
+  | stats count min(_time) as firstTime max(_time) as lastTime by EventCode Image
+  TargetObject Details Computer process_guid process_id user_id | rename Computer
+  as dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `modification_of_wallpaper_filter`

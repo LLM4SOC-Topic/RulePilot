@@ -1,0 +1,25 @@
+description: "The following analytic detects the high-frequency exfiltration of archive\
+  \ files via HTTP POST requests. It leverages HTTP stream logs to identify specific\
+  \ archive file headers within the request body. This activity is significant as\
+  \ it often indicates data exfiltration by APTs or trojan spyware after data collection.\
+  \ If confirmed malicious, this behavior could lead to the unauthorized transfer\
+  \ of sensitive data to an attacker\u2019s command and control server, potentially\
+  \ resulting in severe data breaches and loss of confidential information."
+required_fields:
+- _time
+- http_method
+- http_user_agent
+- uri_path
+- url
+- bytes_in
+- bytes_out
+- archive_hdr1
+- archive_hdr2
+- form_data
+rule: sourcetype=stream:http http_method=POST |eval archive_hdr1=substr(form_data,1,2)
+  | eval archive_hdr2 = substr(form_data,1,4) |stats values(form_data) as http_request_body
+  min(_time) as firstTime max(_time) as lastTime count by src_ip dest_ip http_method
+  http_user_agent uri_path url bytes_in bytes_out archive_hdr1 archive_hdr2 |where
+  count >20 AND (archive_hdr1 = "7z" OR archive_hdr1 = "PK" OR archive_hdr2="Rar!")
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `multiple_archive_files_http_post_traffic_filter`

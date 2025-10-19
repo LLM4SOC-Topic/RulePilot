@@ -1,0 +1,21 @@
+description: The following analytic identifies the addition of a new federated domain
+  in an Office 365 environment. This behavior is detected by analyzing Office 365
+  management activity logs, specifically filtering for Workload=Exchange and Operation="Add-FederatedDomain".
+  The addition of a new federated domain is significant as it may indicate unauthorized
+  changes or potential compromises. If confirmed malicious, attackers could establish
+  a backdoor, bypass security measures, or exfiltrate data, leading to data breaches
+  and unauthorized access to sensitive information. Immediate investigation is required
+  to review the details of the added domain and any concurrent suspicious activities.
+required_fields:
+- _time
+- Workload
+- Operation
+- ModifiedProperties{}.NewValue
+- authentication_service
+- user
+- user_agent
+- action
+rule: sourcetype=o365:management:activity Operation IN ("*add*", "*new*") AND Operation="*domain*"
+  | stats count values(ModifiedProperties{}.NewValue) as new_value by  user user_agent
+  authentication_service action Workload Operation | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `o365_new_federated_domain_added_filter`

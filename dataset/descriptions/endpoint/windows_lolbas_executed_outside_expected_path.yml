@@ -1,0 +1,24 @@
+description: The following analytic identifies a LOLBAS process being executed outside
+  of it's expected location. Processes being executed outside of expected locations
+  may be an indicator that an adversary is attempting to evade defenses or execute
+  malicious code. The LOLBAS project documents Windows native binaries that can be
+  abused by threat actors to perform tasks like executing malicious code.
+required_fields:
+- Processes.user
+- Processes.dest
+- Processes.parent_process_name
+- Processes.process_name
+- Processes.original_file_name
+- Processes.process_path
+rule: '|  tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` latest(Processes.parent_process) as parent_process,
+  latest(Processes.process) as process, latest(Processes.process_guid) as process_guid
+  count, min(_time) AS firstTime, max(_time) AS lastTime FROM datamodel=Endpoint.Processes
+  where Processes.process != "unknown" AND NOT Processes.process_path IN ("*\\Program
+  Files*","*\\PROGRA~*","*\\Windows\\System32\\*","*\\Windows\\Syswow64\\*") BY Processes.user
+  Processes.dest Processes.parent_process_name Processes.process_name Processes.process_path
+  |`drop_dm_object_name(Processes)` | lookup lolbas_file_path lolbas_file_name as
+  process_name OUTPUT description as desc | lookup lolbas_file_path lolbas_file_name
+  as process_name lolbas_file_path as process_path OUTPUT description as is_lolbas_path
+  | search desc!="false" AND is_lolbas_path="false" | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_lolbas_executed_outside_expected_path_filter`'

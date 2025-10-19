@@ -1,0 +1,31 @@
+description: This analytic detects and analyzes PowerShell Web Access (PSWA) usage
+  in Windows environments. It tracks both connection attempts (EventID 4648) and successful
+  logons (EventID 4624) associated with PSWA, providing a comprehensive view of access
+  patterns. The analytic identifies PSWA's operational status, host servers, processes,
+  and connection metrics. It highlights unique target accounts, domains accessed,
+  and verifies logon types. This information is crucial for detecting potential misuse,
+  such as lateral movement, brute force attempts, or unusual access patterns. By offering
+  insights into PSWA activity, it enables security teams to quickly assess and investigate
+  potential security incidents involving this powerful administrative tool.
+required_fields:
+- _time
+- EventCode
+- SubjectUserName
+- TargetUserName
+- dest
+- TargetServerName
+- ProcessName
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  (EventCode=4648 OR EventCode=4624 OR EventCode=4625) SubjectUserName="pswa_pool"
+  | fields EventCode, SubjectUserName, TargetUserName, Computer, TargetDomainName,
+  ProcessName, LogonType | rename Computer as dest | stats count(eval(EventCode=4648))
+  as "Connection Attempts", count(eval(EventCode=4624)) as "Successful Logons", count(eval(EventCode=4625))
+  as "Unsuccessful Logons", dc(TargetUserName) as "Unique Target Accounts", values(dest)
+  as "PSWA Host", dc(TargetDomainName) as "Unique Target Domains", values(ProcessName)
+  as "PSWA Process", values(TargetUserName) as "Target Users List", values(TargetServerName)
+  as "Target Servers List", values(LogonType) as "Logon Types" | eval PSWA_Running
+  = "Yes", "PSWA Process" = mvindex(split(mvindex("PSWA Process", 0), "\\"), -1) |
+  fields PSWA_Running, "PSWA Host", "PSWA Process", "Connection Attempts", "Successful
+  Logons","Unsuccessful Logons", "Unique Target Accounts", "Unique Target Domains",
+  "Target Users List","Target Servers List", "Logon Types" | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) |convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_identify_powershell_web_access_iis_pool_filter`

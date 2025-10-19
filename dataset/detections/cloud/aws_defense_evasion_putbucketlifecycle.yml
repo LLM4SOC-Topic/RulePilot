@@ -1,0 +1,60 @@
+name: AWS Defense Evasion PutBucketLifecycle
+id: ce1c0e2b-9303-4903-818b-0d9002fc6ea4
+version: 3
+date: '2024-10-17'
+author: Bhavin Patel
+status: production
+type: Hunting
+description: The following analytic detects `PutBucketLifecycle` events in AWS CloudTrail logs where a user sets a lifecycle rule for an S3 bucket with an expiration period of fewer than three days. This detection leverages CloudTrail logs to identify suspicious lifecycle configurations. This activity is significant because attackers may use it to delete CloudTrail logs quickly, thereby evading detection and impairing forensic investigations. If confirmed malicious, this could allow attackers to cover their tracks, making it difficult to trace their actions and respond to the breach effectively.
+data_source:
+- AWS CloudTrail PutBucketLifecycle
+search: '`cloudtrail` eventName=PutBucketLifecycle user_type=IAMUser errorCode=success |  spath path=requestParameters{}.LifecycleConfiguration{}.Rule{}.Expiration{}.Days output=expiration_days |  spath path=requestParameters{}.bucketName output=bucket_name | stats count min(_time) as firstTime max(_time) as lastTime  by src region eventName userAgent user_arn aws_account_id expiration_days  bucket_name user_type| `security_content_ctime(firstTime)` |  `security_content_ctime(lastTime)` | where expiration_days < 3 | `aws_defense_evasion_putbucketlifecycle_filter`'
+how_to_implement: You must install Splunk AWS Add on and enable CloudTrail logs in your AWS Environment. We recommend our users to set the expiration days value according to your company's log retention policies.
+known_false_positives: While this search has no known false positives, it is possible that it is a legitimate admin activity. Please consider filtering out these noisy events using userAgent, user_arn field names.
+references:
+- https://stratus-red-team.cloud/attack-techniques/AWS/aws.defense-evasion.cloudtrail-lifecycle-rule/
+tags:
+  analytic_story:
+  - AWS Defense Evasion
+  asset_type: AWS Account
+  confidence: 40
+  impact: 50
+  message: User $user_arn$ has created a new rule to on an S3 bucket $bucket_name$ with short expiration days
+  mitre_attack_id:
+  - T1562.008
+  - T1562
+  - T1485.001
+  - T1485
+  observable:
+  - name: src
+    type: IP Address
+    role:
+    - Attacker
+  - name: user_arn
+    type: User
+    role:
+    - Attacker
+  product:
+  - Splunk Enterprise
+  - Splunk Enterprise Security
+  - Splunk Cloud
+  required_fields:
+  - _time
+  - eventName
+  - eventSource
+  - requestParameters.name
+  - userAgent
+  - aws_account_id
+  - src
+  - region
+  - requestParameters{}.LifecycleConfiguration{}.Rule{}.Expiration{}.Days
+  - requestParameters{}.bucketName
+  risk_score: 20
+  security_domain: threat
+tests:
+- name: True Positive Test
+  attack_data:
+  - data: https://media.githubusercontent.com/media/splunk/attack_data/master/datasets/attack_techniques/T1562.008/put_bucketlifecycle/aws_cloudtrail_events.json
+    sourcetype: aws:cloudtrail
+    source: aws_cloudtrail
+    update_timestamp: true

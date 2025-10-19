@@ -1,0 +1,23 @@
+description: The following analytic identifies instances where admin consent is granted
+  to an application within an Azure AD tenant. It leverages Azure AD audit logs, specifically
+  events related to the admin consent action within the ApplicationManagement category.
+  This activity is significant because admin consent allows applications to access
+  data across the entire tenant, potentially exposing vast amounts of organizational
+  data. If confirmed malicious, an attacker could gain extensive and persistent access
+  to sensitive data, leading to data exfiltration, espionage, further malicious activities,
+  and potential compliance violations.
+required_fields:
+- _time
+- operationName
+- user
+- properties.targetResources{}.modifiedProperties{}.newValue
+- properties.targetResources{}.displayName
+- properties.targetResources{}.id
+rule: 'sourcetype=azure:monitor:aad operationName="Consent to application" | eval
+  new_field=mvindex(''properties.targetResources{}.modifiedProperties{}.newValue'',
+  4) | rename properties.* as *  | rex field=new_field "ConsentType: (?<ConsentType>[^\,]+)"
+  | rex field=new_field "Scope: (?<Scope>[^\,]+)"  | search  ConsentType = "AllPrincipals"  |
+  stats count min(_time) as firstTime max(_time) as lastTime by operationName, user,
+  targetResources{}.displayName, targetResources{}.id, ConsentType, Scope | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)  | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `azure_ad_tenant_wide_admin_consent_granted_filter`'

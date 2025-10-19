@@ -1,0 +1,20 @@
+description: The following analytic identifies a suspicious process that deletes the
+  Mark-of-the-Web (MOTW) data stream. It leverages Sysmon EventCode 23 to detect when
+  a file's Zone.Identifier stream is removed. This activity is significant because
+  it is a common technique used by malware, such as Ave Maria RAT, to bypass security
+  restrictions on files downloaded from the internet. If confirmed malicious, this
+  behavior could allow an attacker to execute potentially harmful files without triggering
+  security warnings, leading to further compromise of the system.
+required_fields:
+- EventCode
+- TargetFilename
+- dest
+- user
+- Image
+- ProcessID
+- _time
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=23 TargetFilename = "*:Zone.Identifier"
+  | stats  min(_time) as firstTime max(_time) as lastTime count by user EventCode
+  Image TargetFilename ProcessID dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_mark_of_the_web_bypass_filter`

@@ -1,0 +1,25 @@
+description: The following analytic detects the modification of the registry to disable
+  Windows Defender SpyNet reporting. It leverages data from the Endpoint.Registry
+  data model, specifically monitoring changes to the registry path associated with
+  Windows Defender SpyNet settings. This activity is significant because disabling
+  SpyNet reporting can prevent Windows Defender from sending telemetry data, potentially
+  allowing malicious activities to go undetected. If confirmed malicious, this action
+  could enable an attacker to evade detection, maintain persistence, and carry out
+  further attacks without being flagged by Windows Defender.
+required_fields:
+- _time
+- Registry.dest
+- Registry.registry_value_name
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.registry_value_data
+- Registry.process_guid
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry WHERE (Registry.registry_path = "*\\Microsoft\\Windows
+  Defender\\SpyNet*" Registry.registry_value_name = SpynetReporting Registry.registry_value_data
+  = 0x00000000) BY  Registry.registry_path Registry.registry_key_name Registry.registry_value_name
+  Registry.registry_value_data Registry.process_guid Registry.user Registry.dest  |
+  `drop_dm_object_name(Registry)` | where isnotnull(registry_value_data) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `disable_defender_spynet_reporting_filter`'

@@ -1,0 +1,9 @@
+description: This search provides detection of possible GCP Oauth token abuse. GCP
+  Oauth token without time limit can be exfiltrated and reused for keeping access
+  sessions alive without further control of authentication, allowing attackers to
+  access and move laterally.
+required_fields:
+- _time
+rule: sourcetype="google:gcp:pubsub:message" type.googleapis.com/google.cloud.audit.AuditLog
+  |table protoPayload.@type protoPayload.status.details{}.@type protoPayload.status.details{}.violations{}.callerIp
+  protoPayload.status.details{}.violations{}.type protoPayload.status.message  | `gcp_detect_oauth_token_abuse_filter`

@@ -1,0 +1,21 @@
+description: The following analytic detects the creation of the "sudoers.tmp" file,
+  which occurs when editing the /etc/sudoers file using visudo or another editor on
+  a Linux platform. This detection leverages filesystem data to identify the presence
+  of "sudoers.tmp" files. Monitoring this activity is crucial as adversaries may exploit
+  it to gain elevated privileges on a compromised host. If confirmed malicious, this
+  activity could allow attackers to modify sudoers configurations, potentially granting
+  them unauthorized access to execute commands as other users, including root, thereby
+  compromising the system's security.
+required_fields:
+- _time
+- Filesystem.dest
+- Filesystem.file_create_time
+- Filesystem.file_name
+- Filesystem.process_guid
+- Filesystem.file_path
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Filesystem where Filesystem.file_path IN ("*sudoers.tmp*")
+  by Filesystem.dest Filesystem.file_name Filesystem.process_guid Filesystem.file_path
+  | `drop_dm_object_name(Filesystem)` | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `linux_sudoers_tmp_file_creation_filter`'

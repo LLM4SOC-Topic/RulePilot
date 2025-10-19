@@ -1,0 +1,8 @@
+How to Enable or Disable System Restore in Windows 7, Windows 8, and Windows 10
+
+System protection is a feature that allows you to undo unwanted system changes by being able to do a System Restore. System Restore enables users, in the event of a problem, to restore their computers to a previous state (restore point) without losing personal data files.
+System Restore is enabled by default in Windows. If disabled, System Restore is turned off, and the System Restore Wizard cannot be accessed. The option to configure System Restore or create a restore point through System Protection is also disabled.
+See also:
+System Restore | Microsoft Docs
+Monitored File Name Extensions | Microsoft Docs (Files with these extensions are monitored by System Restore.)
+Restoring the System | Microsoft Docs ("To restore a system, System Restore undoes file changes made to monitored files, recapturing the file state at the time of the selected restore point.")

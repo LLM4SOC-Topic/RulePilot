@@ -1,0 +1,32 @@
+description: This analytic detects the use of Plink (including renamed versions like
+  pvhost.exe) for protocol tunneling, which may be used for egress or lateral movement
+  within an organization. It identifies specific command-line options (-R, -L, -D,
+  -l, -N, -P, -pw) commonly used for port forwarding and tunneling by analyzing process
+  execution logs from Endpoint Detection and Response (EDR) agents. This activity
+  is significant as it may indicate an attempt to bypass network security controls
+  or establish unauthorized connections. If confirmed malicious, this could allow
+  an attacker to exfiltrate data, move laterally across the network, or maintain persistent
+  access, posing a severe threat to the organization's security. The detection covers
+  both the original Plink executable and potential renamed versions, enhancing its
+  ability to catch evasion attempts.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where (Processes.process_name=plink.exe OR Processes.process_name=pvhost.exe
+  OR Processes.original_file_name=Plink) AND Processes.process IN ("*-R *", "*-L *",
+  "*-D *", "*-l *", "*-N *", "*-P *", "*-pw *") by Processes.dest Processes.user Processes.parent_process_name
+  Processes.process_name Processes.original_file_name Processes.process Processes.process_id
+  Processes.parent_process_id | `drop_dm_object_name(Processes)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| `windows_protocol_tunneling_with_plink_filter`'

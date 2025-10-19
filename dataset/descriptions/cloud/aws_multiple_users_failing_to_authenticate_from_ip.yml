@@ -1,0 +1,17 @@
+description: The following analytic identifies a single source IP failing to authenticate
+  into the AWS Console with 30 unique valid users within 10 minutes. It leverages
+  CloudTrail logs to detect multiple failed login attempts from the same IP address.
+  This behavior is significant as it may indicate a Password Spraying attack, where
+  an adversary attempts to gain unauthorized access or elevate privileges by trying
+  common passwords across many accounts. If confirmed malicious, this activity could
+  lead to unauthorized access, data breaches, or further exploitation within the AWS
+  environment.
+required_fields:
+- _time
+- user
+- action
+- eventName
+- src_ip
+rule: sourcetype=aws:cloudtrail eventName=ConsoleLogin action=failure | bucket span=10m
+  _time | stats  dc(user_name) AS unique_accounts values(user_name) as tried_accounts
+  by _time, src_ip | where unique_accounts>30 | `aws_multiple_users_failing_to_authenticate_from_ip_filter`

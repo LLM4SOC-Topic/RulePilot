@@ -1,0 +1,20 @@
+description: The following analytic detects the use of the 'chown' command to change
+  a file owner to 'root' on a Linux system. It leverages Linux Auditd telemetry, specifically
+  monitoring command-line executions and process details. This activity is significant
+  as it may indicate an attempt to escalate privileges by adversaries, malware, or
+  red teamers. If confirmed malicious, this action could allow an attacker to gain
+  root-level access, leading to full control over the compromised host and potential
+  persistence within the environment.
+required_fields:
+- _time
+- proctitle
+rule: sourcetype="linux:audit" type=PROCTITLE | eval normalized_proctitle_delimiter
+  = if(type=="PROCTITLE" AND isnotnull(proctitle), if(match(proctitle,"^[0-9A-F]+$"),
+  replace(proctitle, "000", "020"),proctitle),null()) | eval normalized_proctitle_delimiter  =
+  if(type=="PROCTITLE" AND isnotnull(proctitle), if(match(normalized_proctitle_delimiter,"^[0-9A-F]+$"),
+  replace(normalized_proctitle_delimiter, "00", "20"),normalized_proctitle_delimiter),null())
+  | eval process_exec = if(match(normalized_proctitle_delimiter,"^[0-9A-F]+$"),urldecode(replace(normalized_proctitle_delimiter,"([0-9A-F]{2})","%\1")),normalized_proctitle_delimiter)|
+  rename host as dest | where LIKE (process_exec, "%chown %root%") | stats count min(_time)
+  as firstTime max(_time) as lastTime by process_exec proctitle normalized_proctitle_delimiter
+  dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$)| `linux_auditd_change_file_owner_to_root_filter`

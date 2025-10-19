@@ -1,0 +1,17 @@
+description: The following analytic detects the launch of rarely used applications
+  within the environment, which may indicate the use of potentially malicious software
+  or tools by attackers. It leverages Windows AppLocker event logs, aggregating application
+  launch counts over time and flagging those that significantly deviate from the norm.
+  This behavior is significant as it helps identify unusual application activity that
+  could signal a security threat. If confirmed malicious, this activity could allow
+  attackers to execute unauthorized code, potentially leading to further compromise
+  of the system.
+required_fields:
+- FullFilePath
+- dest
+- user
+rule: (source="WinEventLog:Microsoft-Windows-AppLocker/*" OR source="XmlWinEventLog:Microsoft-Windows-AppLocker/*")
+  | spath input=UserData_Xml | rename RuleAndFileData.* as *, Computer as dest, TargetUser
+  AS user | stats dc(_time) as days, count by FullFilePath dest user | eventstats
+  avg(count) as avg, stdev(count) as stdev | eval upperBound=(avg+stdev*3), lowerBound=(avg-stdev*3)
+  | where count > upperBound OR count < lowerBound | `windows_applocker_rare_application_launch_detection_filter`

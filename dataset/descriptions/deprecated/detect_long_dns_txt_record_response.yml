@@ -1,0 +1,22 @@
+description: This search is used to detect attempts to use DNS tunneling, by calculating
+  the length of responses to DNS TXT queries. Endpoints using DNS as a method of transmission
+  for data exfiltration, Command And Control, or evasion of security controls can
+  often be detected by noting unusually large volumes of DNS traffic. Deprecated because
+  this detection should focus on DNS queries instead of DNS responses.
+required_fields:
+- _time
+- DNS.message_type
+- DNS.record_type
+- DNS.src
+- DNS.dest
+- DNS.answer
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Network_Resolution where DNS.message_type=response AND DNS.record_type=TXT
+  by DNS.src DNS.dest DNS.answer DNS.record_type |  `drop_dm_object_name("DNS")` |
+  eval anslen=len(answer) | search anslen>100 | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | rename
+  src as "Source IP", dest as "Destination IP", answer as "DNS Answer" anslen as "Answer
+  Length" record_type as "DNS Record Type" firstTime as "First Time" lastTime as "Last
+  Time" count as Count | table "Source IP" "Destination IP" "DNS Answer" "DNS Record
+  Type"  "Answer Length" Count "First Time" "Last Time" | `detect_long_dns_txt_record_response_filter`'

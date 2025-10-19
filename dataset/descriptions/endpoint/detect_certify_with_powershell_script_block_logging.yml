@@ -1,0 +1,27 @@
+description: The following analytic detects the use of the Certify tool via an in-memory
+  PowerShell function to enumerate Active Directory Certificate Services (AD CS) environments.
+  It leverages PowerShell Script Block Logging (EventCode 4104) to identify specific
+  command patterns associated with Certify's enumeration and exploitation functions.
+  This activity is significant as it indicates potential reconnaissance or exploitation
+  attempts against AD CS, which could lead to unauthorized certificate issuance. If
+  confirmed malicious, attackers could leverage this to escalate privileges, persist
+  in the environment, or access sensitive information by abusing AD CS.
+required_fields:
+- _time
+- ScriptBlockText
+- OpCode
+- Path
+- user
+- Computer
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 (ScriptBlockText IN ("*find *") AND ScriptBlockText IN ("* /vulnerable*","*
+  -vulnerable*","* /enrolleeSuppliesSubject *","* /json /outfile*")) OR (ScriptBlockText
+  IN (,"*auth *","*req *",) AND ScriptBlockText IN ("* -ca *","* -username *","* -u
+  *")) OR (ScriptBlockText IN ("*request *","*download *") AND ScriptBlockText IN
+  ("* /ca:*")) | stats count min(_time) as firstTime max(_time) as lastTime list(ScriptBlockText)
+  as command Values(OpCode) as reason values(Path) as file_name values(UserID) as
+  user by _time Computer EventCode | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | eval file_name = case(isnotnull(file_name),file_name,true(),"unknown")
+  | eval signature = substr(command,0,256) | rename Computer as dest,EventCode as
+  signature_id | `detect_certify_with_powershell_script_block_logging_filter`

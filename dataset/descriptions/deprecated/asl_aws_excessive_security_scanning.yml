@@ -1,0 +1,16 @@
+description: This search looks for AWS CloudTrail events and analyse the amount of
+  eventNames which starts with Describe by a single user. This indicates that this
+  user scans the configuration of your AWS cloud environment.
+required_fields:
+- api.operation
+- identity.user.account_uid
+- identity.user.name
+- http_request.user_agent
+- src_endpoint.ip
+rule: sourcetype=aws:cloudtrail:lake api.operation=Describe* OR api.operation=List*
+  OR api.operation=Get* | stats dc(api.operation) as dc_api_operations min(_time)
+  as firstTime max(_time) as lastTime values(http_request.user_agent) as http_request.user_agent
+  values(src_endpoint.ip) as src_endpoint.ip values(cloud.region) as cloud.region
+  values(identity.user.account_uid) as identity.user.account_uid by identity.user.name
+  | where dc_api_operations > 50 | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)|`asl_aws_excessive_security_scanning_filter`

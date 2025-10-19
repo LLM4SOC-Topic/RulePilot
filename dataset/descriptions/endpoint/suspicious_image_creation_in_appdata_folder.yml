@@ -1,0 +1,30 @@
+description: The following analytic detects the creation of image files in the AppData
+  folder by processes that also have a file reference in the same folder. It leverages
+  data from the Endpoint.Processes and Endpoint.Filesystem datamodels to identify
+  this behavior. This activity is significant because it is commonly associated with
+  malware, such as the Remcos RAT, which captures screenshots and stores them in the
+  AppData folder before exfiltrating them to a command-and-control server. If confirmed
+  malicious, this activity could indicate unauthorized data capture and exfiltration,
+  compromising sensitive information and user privacy.
+required_fields:
+- _time
+- dest
+- file_create_time
+- file_name
+- file_path
+- process_name
+- process_path
+- process
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count FROM datamodel=Endpoint.Processes where Processes.process_name=*.exe
+  Processes.process_path="*\\appdata\\Roaming\\*" by _time span=1h Processes.process_id
+  Processes.process_name Processes.process Processes.dest Processes.process_guid |
+  `drop_dm_object_name(Processes)` |rename process_guid as proc_guid |join proc_guid,
+  _time [| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Filesystem where Filesystem.file_name IN ("*.png","*.jpg","*.bmp","*.gif","*.tiff")
+  Filesystem.file_path= "*\\appdata\\Roaming\\*" by _time span=1h Filesystem.dest
+  Filesystem.file_create_time Filesystem.file_name Filesystem.file_path Filesystem.process_guid
+  | `drop_dm_object_name(Filesystem)` |rename process_guid as proc_guid | fields _time
+  dest file_create_time file_name file_path process_name process_path process proc_guid]
+  | `suspicious_image_creation_in_appdata_folder_filter`'

@@ -1,0 +1,29 @@
+description: The following analytic detects the creation of Alternate Data Streams
+  (ADS) with Base64 content on Windows systems. It leverages Sysmon EventID 15, which
+  captures file creation events, including the content of named streams. ADS can conceal
+  malicious payloads, making them significant for SOC monitoring. This detection identifies
+  hidden streams that may contain executables, scripts, or configuration data, often
+  used by malware to evade detection. If confirmed malicious, this activity could
+  allow attackers to hide and execute payloads, persist in the environment, or access
+  sensitive information without being easily detected.
+required_fields:
+- _time
+- TargetFilename
+- Image
+- Contents
+- file_hash
+- process_guid
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=15 NOT Contents IN ("-","[ZoneTransfer]*")
+  | regex TargetFilename="(?<!\/)\b\w+(\.\w+)?:\w+(\.\w+)?$" | regex Contents="(?:[A-Za-z0-9+/]{128,})(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
+  | eval file_name = replace(TargetFilename,"(.*\\\)",""), process = Image , file_path
+  = TargetFilename , base64 = Contents, file_hash = coalesce(SHA256,SHA1,MD5,Hash)
+  | stats count min(_time) as firstTime max(_time) as lastTime values(user) as user
+  by dest, process, process_guid, file_name, file_path, file_hash, base64 | eval b64x_split=split($b64in$,"")
+  | lookup char_conversion_matrix base64char as b64x_split OUTPUT base64bin as b64x_bin
+  | eval b64x_join=mvjoin(b64x_bin,"") | rex field=b64x_join "(?<b64x_by8>.{8})" max_match=0
+  | lookup char_conversion_matrix bin as b64x_by8 output ascii as b64x_out | eval
+  $b64in$_decode=mvjoin(b64x_out,"") | fields - b64x_* | eval $b64in$_decode = replace(replace($b64in$_decode,":NUL:",""),":SPACE:","
+  ") | rex field=$b64in$_decode mode=sed "s/\x00//g" | fields - base64 | rename base64_decode
+  as command | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_alternate_datastream___base64_content_filter`

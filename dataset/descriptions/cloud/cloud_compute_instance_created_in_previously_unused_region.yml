@@ -1,0 +1,22 @@
+description: The following analytic detects the creation of a cloud compute instance
+  in a region that has not been previously used within the last hour. It leverages
+  cloud infrastructure logs and compares the regions of newly created instances against
+  a lookup file of historically used regions. This activity is significant because
+  the creation of instances in new regions can indicate unauthorized or suspicious
+  activity, such as an attacker attempting to evade detection or establish a foothold
+  in a less monitored area. If confirmed malicious, this could lead to unauthorized
+  resource usage, data exfiltration, or further compromise of the cloud environment.
+required_fields:
+- _time
+- All_Changes.object_id
+- All_Changes.action
+- All_Changes.vendor_region
+- All_Changes.user
+rule: '| tstats earliest(_time) as firstTime latest(_time) as lastTime values(All_Changes.object_id)
+  as dest, count from datamodel=Change where All_Changes.action=created by All_Changes.vendor_region,
+  All_Changes.user | `drop_dm_object_name("All_Changes")` | lookup previously_seen_cloud_regions
+  vendor_region as vendor_region OUTPUTNEW firstTimeSeen, enough_data | eventstats
+  max(enough_data) as enough_data | where enough_data=1 | eval firstTimeSeenRegion=min(firstTimeSeen)
+  | where isnull(firstTimeSeenRegion) OR firstTimeSeenRegion > relative_time(now(),
+  "-24h@h") | table firstTime, user, dest, count , vendor_region | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `cloud_compute_instance_created_in_previously_unused_region_filter`'

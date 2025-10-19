@@ -1,0 +1,30 @@
+description: The following analytic identifies the creation of new IAM roles by users
+  in AWS. It leverages CloudWatch logs to detect events where the `CreateRole` action
+  is performed, focusing on roles with specific trust policies. This activity is significant
+  as unauthorized role creation can facilitate lateral movement and privilege escalation
+  within the AWS environment. If confirmed malicious, attackers could gain elevated
+  permissions, potentially compromising sensitive resources and data.
+required_fields:
+- _time
+- event_name
+- action
+- userIdentity.type
+- requestParameters.description
+- sourceIPAddress
+- userIdentity.principalId
+- userIdentity.arn
+- action
+- event_name
+- awsRegion
+- http_user_agent
+- mfa_auth
+- msg
+- requestParameters.roleName
+- requestParameters.description
+- responseElements.role.arn
+- responseElements.role.createDate
+rule: sourcetype="aws:cloudwatchlogs:eks" event_name=CreateRole action=created userIdentity.type=AssumedRole
+  requestParameters.description=Allows* | table sourceIPAddress userIdentity.principalId
+  userIdentity.arn action event_name awsRegion http_user_agent mfa_auth msg requestParameters.roleName
+  requestParameters.description responseElements.role.arn responseElements.role.createDate
+  | `aws_detect_role_creation_filter`

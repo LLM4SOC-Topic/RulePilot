@@ -1,0 +1,22 @@
+description: The following analytic identifies instances where email forwarding has
+  been enabled on mailboxes within an Office 365 environment. It detects this activity
+  by monitoring the Set-Mailbox operation within the o365_management_activity logs,
+  specifically looking for changes to the ForwardingAddress or ForwardingSmtpAddress
+  parameters. This activity is significant as unauthorized email forwarding can lead
+  to data exfiltration and unauthorized access to sensitive information. If confirmed
+  malicious, attackers could intercept and redirect emails, potentially compromising
+  confidential communications and leading to data breaches.
+required_fields:
+- _time
+- Operation
+- Parameters{}.Name
+- src_user
+- DeliverToMailboxAndForward
+- ObjectId
+rule: sourcetype=o365:management:activity Operation=Set-Mailbox  | eval match1=mvfind('Parameters{}.Name',
+  "ForwardingAddress") | eval match2=mvfind('Parameters{}.Name', "ForwardingSmtpAddress")
+  | where match1>= 0 OR match2>= 0 | eval ForwardTo=coalesce(ForwardingAddress, ForwardingSmtpAddress)
+  | search ForwardTo!=""  | rename user_id as user | stats count earliest(_time) as
+  firstTime latest(_time) as lastTime values(ForwardTo) as ForwardTo by user ObjectId
+  |convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)  |convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `o365_mailbox_email_forwarding_enabled_filter`

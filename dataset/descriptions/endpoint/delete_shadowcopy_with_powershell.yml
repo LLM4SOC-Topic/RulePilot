@@ -1,0 +1,20 @@
+description: The following analytic detects the use of PowerShell to delete shadow
+  copies via the WMIC PowerShell module. It leverages EventCode 4104 and searches
+  for specific keywords like "ShadowCopy," "Delete," or "Remove" within the ScriptBlockText.
+  This activity is significant because deleting shadow copies is a common tactic used
+  by ransomware, such as DarkSide, to prevent data recovery. If confirmed malicious,
+  this action could lead to irreversible data loss and hinder recovery efforts, significantly
+  impacting business continuity and data integrity.
+required_fields:
+- _time
+- ScriptBlockText
+- Opcode
+- Computer
+- UserID
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText= "*ShadowCopy*" (ScriptBlockText = "*Delete*" OR
+  ScriptBlockText = "*Remove*") | stats count min(_time) as firstTime max(_time) as
+  lastTime by Opcode Computer UserID EventCode ScriptBlockText |rename Computer as
+  dest |rename UserID as user | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `delete_shadowcopy_with_powershell_filter`

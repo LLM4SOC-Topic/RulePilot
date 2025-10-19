@@ -1,0 +1,39 @@
+description: The following analytic detects the Java process writing a .jsp file to
+  disk, which may indicate a web shell being deployed. It leverages data from the
+  Endpoint datamodel, specifically monitoring process and filesystem activities. This
+  activity is significant because web shells can provide attackers with remote control
+  over the compromised server, leading to further exploitation. If confirmed malicious,
+  this could allow unauthorized access, data exfiltration, or further compromise of
+  the affected system, posing a severe security risk.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+- Filesystem.dest
+- Filesystem.file_create_time
+- Filesystem.file_name
+- Filesystem.file_path
+- Filesystem.process_guid
+- Filesystem.user
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count FROM datamodel=Endpoint.Processes where Processes.process_name
+  IN ("java","java.exe", "javaw.exe") by _time Processes.process_id Processes.process_name
+  Processes.dest Processes.process_guid Processes.user | `drop_dm_object_name(Processes)`
+  | join process_guid [| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count FROM datamodel=Endpoint.Filesystem where
+  Filesystem.file_name="*.jsp*" by _time Filesystem.dest Filesystem.file_create_time
+  Filesystem.file_name Filesystem.file_path Filesystem.process_guid Filesystem.user
+  | `drop_dm_object_name(Filesystem)` | fields _time process_guid file_path file_name
+  file_create_time user dest process_name] | stats count min(_time) as firstTime max(_time)
+  as lastTime by dest process_name process_guid file_name file_path file_create_time
+  user | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `java_writing_jsp_file_filter`'

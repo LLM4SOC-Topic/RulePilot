@@ -1,0 +1,13 @@
+description: This search will detect DNS requests resolved by unauthorized DNS servers.
+  Legitimate DNS servers should be identified in the Enterprise Security Assets and
+  Identity Framework.
+required_fields:
+- _time
+- DNS.dest_category
+- DNS.src_category
+- DNS.src
+- DNS.dest
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count from datamodel=Network_Resolution where DNS.dest_category
+  != dns_server AND DNS.src_category != dns_server by DNS.src DNS.dest | `drop_dm_object_name("DNS")`
+  | `dns_query_requests_resolved_by_unauthorized_dns_servers_filter`'

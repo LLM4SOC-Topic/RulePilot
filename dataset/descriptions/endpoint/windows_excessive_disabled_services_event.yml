@@ -1,0 +1,21 @@
+description: The following analytic identifies an excessive number of system events
+  where services are modified from start to disabled. It leverages Windows Event Logs
+  (EventCode 7040) to detect multiple service state changes on a single host. This
+  activity is significant as it may indicate an adversary attempting to disable security
+  applications or other critical services, potentially leading to defense evasion
+  or destructive actions. If confirmed malicious, this behavior could allow attackers
+  to disable security defenses, disrupt system operations, and achieve their objectives
+  on the compromised system.
+required_fields:
+- _time
+- src
+- ComputerName
+- EventCode
+- Message
+- User
+- Sid
+rule: eventtype=wineventlog_system EventCode=7040 "disabled" | stats count values(EventData_Xml)
+  as MessageList dc(EventData_Xml) as MessageCount min(_time) as firstTime max(_time)
+  as lastTime by Computer EventCode UserID | rename Computer as dest | where count
+  >=10 | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_excessive_disabled_services_event_filter`

@@ -1,0 +1,22 @@
+description: The following analytic detects an application attempting to connect and
+  create an ADSI object to perform an LDAP query. It leverages Sysmon EventCode 11
+  to identify changes in the Active Directory Schema cache files located in %LOCALAPPDATA%\Microsoft\Windows\SchCache
+  or %systemroot%\SchCache. This activity is significant as it can indicate the presence
+  of suspicious applications, such as ransomware, using ADSI object APIs for LDAP
+  queries. If confirmed malicious, this behavior could allow attackers to gather sensitive
+  directory information, potentially leading to further exploitation or lateral movement
+  within the network.
+required_fields:
+- _time
+- Image
+- TargetFilename
+- EventCode
+- process_id
+- process_name
+- dest
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=11  TargetFilename = "*\\Windows\\SchCache\\*"
+  TargetFilename = "*.sch*" NOT (Image IN ("*\\Windows\\system32\\mmc.exe")) |stats
+  count min(_time) as firstTime max(_time) as lastTime by Image TargetFilename EventCode
+  process_id  process_name dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `schcache_change_by_app_connect_and_create_adsi_object_filter`

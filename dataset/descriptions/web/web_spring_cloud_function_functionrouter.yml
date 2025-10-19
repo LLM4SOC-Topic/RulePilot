@@ -1,0 +1,20 @@
+description: The following analytic identifies HTTP POST requests to the Spring Cloud
+  Function endpoint containing "functionRouter" in the URL. It leverages the Web data
+  model to detect these requests based on specific fields such as http_method, url,
+  and http_user_agent. This activity is significant because it targets CVE-2022-22963,
+  a known vulnerability in Spring Cloud Function, which has multiple proof-of-concept
+  exploits available. If confirmed malicious, this activity could allow attackers
+  to execute arbitrary code, potentially leading to unauthorized access, data exfiltration,
+  or further compromise of the affected system.
+required_fields:
+- _time
+- Web.http_method
+- Web.url
+- Web.url_length
+- Web.src
+- Web.dest
+- Web.http_user_agent
+rule: '| tstats count from datamodel=Web where Web.http_method IN ("POST") Web.url="*/functionRouter*"
+  by Web.http_user_agent Web.http_method, Web.url,Web.url_length Web.src, Web.dest
+  Web.status sourcetype | `drop_dm_object_name("Web")` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `web_spring_cloud_function_functionrouter_filter`'

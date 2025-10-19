@@ -1,0 +1,21 @@
+description: The following analytic identifies attempts to access the Remote ShellServlet
+  on a web server, specifically targeting Confluence servers vulnerable to CVE-2023-22518
+  and CVE-2023-22515. It leverages web data to detect URLs containing "*plugins/servlet/com.jsos.shell/*"
+  with a status code of 200. This activity is significant as it is commonly associated
+  with web shells and other malicious behaviors, potentially leading to unauthorized
+  command execution. If confirmed malicious, attackers could gain remote code execution
+  capabilities, compromising the server and potentially the entire network.
+required_fields:
+- Web.http_user_agent
+- Web.status
+- Web.http_method
+- Web.url
+- Web.url_length
+- Web.src
+- Web.dest
+- sourcetype
+rule: '| tstats count min(_time) as firstTime max(_time) as lastTime from datamodel=Web
+  where Web.url IN ("*plugins/servlet/com.jsos.shell/*") Web.status=200 by Web.http_user_agent,
+  Web.status Web.http_method, Web.url, Web.url_length, Web.src, Web.dest, sourcetype
+  | `drop_dm_object_name("Web")` | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `web_remote_shellservlet_access_filter`'

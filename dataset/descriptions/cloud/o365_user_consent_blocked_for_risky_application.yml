@@ -1,0 +1,23 @@
+description: The following analytic identifies instances where Office 365 has blocked
+  a user's attempt to grant consent to an application deemed risky or potentially
+  malicious. This detection leverages O365 audit logs, specifically focusing on failed
+  user consent actions due to system-driven blocks. Monitoring these blocked consent
+  attempts is crucial as it highlights potential threats early on, indicating that
+  a user might be targeted or that malicious applications are attempting to infiltrate
+  the organization. If confirmed malicious, this activity suggests that O365's security
+  measures successfully prevented a harmful application from accessing organizational
+  data, warranting immediate investigation.
+required_fields:
+- _time
+- Workload
+- Operation
+- ResultStatus
+- ModifiedProperties{}.NewValue
+- object
+- ObjectId
+rule: 'sourcetype=o365:management:activity Workload=AzureActiveDirectory Operation="Consent
+  to application." ResultStatus=Failure | eval permissions =mvindex(''ModifiedProperties{}.NewValue'',
+  4) | eval reason =mvindex(''ModifiedProperties{}.NewValue'', 5) |  search reason
+  = "Risky application detected" | rex field=permissions "Scope: (?<Scope>[^,]+)"
+  |  stats max(_time) as lastTime by Operation, user, reason, object, Scope | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `o365_user_consent_blocked_for_risky_application_filter`'

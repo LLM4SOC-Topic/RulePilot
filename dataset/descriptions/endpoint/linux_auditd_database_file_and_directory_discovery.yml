@@ -1,0 +1,26 @@
+description: The following analytic detects suspicious database file and directory
+  discovery activities, which may signal an attacker attempt to locate and assess
+  critical database assets on a compromised system. This behavior is often a precursor
+  to data theft, unauthorized access, or privilege escalation, as attackers seek to
+  identify valuable information stored in databases. By monitoring for unusual or
+  unauthorized attempts to locate database files and directories, this analytic aids
+  in early detection of potential reconnaissance or data breach efforts, enabling
+  security teams to respond swiftly and mitigate the risk of further compromise.
+required_fields:
+- _time
+- argc
+- process_exec
+rule: sourcetype="linux:audit" type=EXECVE | eval relevant_fields=if(type="EXECVE",
+  "", relevant_fields) | foreach a* [eval relevant_fields=if(type="EXECVE", mvappend(relevant_fields,
+  '<<FIELD>>'), relevant_fields)] | eval process_exec=if(type="EXECVE", mvjoin(relevant_fields,
+  " "), process_exec) | eval process_exec=if(type="EXECVE", trim(process_exec), process_exec)
+  | rename host as dest | where  (LIKE (process_exec, "%find%") OR LIKE (process_exec,
+  "%grep%")) AND (LIKE (process_exec, "%.db%") OR LIKE (process_exec, "%.sql%") OR
+  LIKE (process_exec, "%.sqlite%") OR LIKE (process_exec, "%.mdb%")OR LIKE (process_exec,
+  "%.accdb%")OR LIKE (process_exec, "%.mdf%")OR LIKE (process_exec, "%.ndf%")OR LIKE
+  (process_exec, "%.ldf%")OR LIKE (process_exec, "%.frm%")OR LIKE (process_exec, "%.idb%")OR
+  LIKE (process_exec, "%.myd%")OR LIKE (process_exec, "%.myi%")OR LIKE (process_exec,
+  "%.dbf%")OR LIKE (process_exec, "%.db2%")OR LIKE (process_exec, "%.dbc%")OR LIKE
+  (process_exec, "%.fpt%")OR LIKE (process_exec, "%.ora%")) | stats count min(_time)
+  as firstTime max(_time) as lastTime by argc process_exec dest | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| `linux_auditd_database_file_and_directory_discovery_filter`

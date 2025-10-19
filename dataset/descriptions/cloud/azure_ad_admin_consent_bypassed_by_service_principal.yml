@@ -1,0 +1,24 @@
+description: The following analytic identifies instances where a service principal
+  in Azure Active Directory assigns app roles without standard admin consent. It uses
+  Entra ID logs from the `azure_monitor_aad` data source, focusing on the "Add app
+  role assignment to service principal" operation. This detection is significant as
+  it highlights potential bypasses of critical administrative consent processes, which
+  could lead to unauthorized privileges being granted. If confirmed malicious, this
+  activity could allow attackers to exploit automation to assign sensitive permissions
+  without proper oversight, potentially compromising the security of the Azure AD
+  environment.
+required_fields:
+- _time
+- operationName
+- targetResources{}.modifiedProperties{}.newValue
+- targetResources{}.id
+rule: sourcetype=azure:monitor:aad (operationName="Add app role assignment to service
+  principal" OR operationName="Add member to role*") src_user_type=servicePrincipal  |
+  rename properties.* as *   | eval roleId = mvindex('targetResources{}.modifiedProperties{}.newValue',
+  0)  | eval roleValue = mvindex('targetResources{}.modifiedProperties{}.newValue',
+  1)  | eval roleDescription = mvindex('targetResources{}.modifiedProperties{}.newValue',
+  2)  | eval user_id = mvindex('targetResources{}.id', 0), user=coalesce(user,mvindex('targetResources{}.displayName',
+  0)) | rename initiatedBy.app.displayName as src_user  | stats count earliest(_time)
+  as firstTime latest(_time) as lastTime by src_user user user_id roleId roleValue
+  roleDescription | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)  | `azure_ad_admin_consent_bypassed_by_service_principal_filter`

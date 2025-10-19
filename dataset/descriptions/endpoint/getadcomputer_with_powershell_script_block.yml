@@ -1,0 +1,19 @@
+description: The following analytic detects the execution of the `Get-AdComputer`
+  PowerShell commandlet using PowerShell Script Block Logging (EventCode=4104). This
+  detection leverages script block text to identify when this commandlet is run. The
+  `Get-AdComputer` commandlet is significant as it can be used by adversaries to enumerate
+  all domain computers, aiding in situational awareness and Active Directory discovery.
+  If confirmed malicious, this activity could allow attackers to map the network,
+  identify targets, and plan further attacks, potentially leading to unauthorized
+  access and data exfiltration.
+required_fields:
+- _time
+- ScriptBlockText
+- Opcode
+- Computer
+- UserID
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 (ScriptBlockText = "*Get-AdComputer*") | stats count min(_time) as
+  firstTime max(_time) as lastTime by Opcode Computer UserID EventCode ScriptBlockText
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `getadcomputer_with_powershell_script_block_filter`

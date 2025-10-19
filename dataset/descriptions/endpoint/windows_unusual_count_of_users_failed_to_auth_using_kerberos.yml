@@ -1,0 +1,20 @@
+description: The following analytic identifies a source endpoint failing to authenticate
+  multiple valid users using the Kerberos protocol, potentially indicating a Password
+  Spraying attack. It leverages Event 4771, which is generated when the Key Distribution
+  Center fails to issue a Kerberos Ticket Granting Ticket (TGT) due to a wrong password
+  (failure code 0x18). This detection uses statistical analysis, specifically the
+  3-sigma rule, to identify unusual authentication failures. If confirmed malicious,
+  this activity could allow an attacker to gain initial access or elevate privileges
+  within an Active Directory environment.
+required_fields:
+- _time
+- EventCode
+- Status
+- TargetUserName
+- IpAddress
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=4771 TargetUserName!="*$" Status=0x18 | bucket span=5m _time | stats dc(TargetUserName)
+  AS unique_accounts values(TargetUserName) as user by _time, IpAddress | eventstats
+  avg(unique_accounts) as comp_avg , stdev(unique_accounts) as comp_std by IpAddress
+  | eval upperBound=(comp_avg+comp_std*3) | eval isOutlier=if(unique_accounts > 10
+  and unique_accounts >= upperBound, 1, 0) | search isOutlier=1 | `windows_unusual_count_of_users_failed_to_auth_using_kerberos_filter`

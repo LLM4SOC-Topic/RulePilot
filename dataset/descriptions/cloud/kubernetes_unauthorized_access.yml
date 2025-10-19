@@ -1,0 +1,24 @@
+description: The following analytic detects unauthorized access attempts to Kubernetes
+  by analyzing Kubernetes audit logs. It identifies anomalies in access patterns by
+  examining the source of requests and their response statuses. This activity is significant
+  for a SOC as it may indicate an attacker attempting to infiltrate the Kubernetes
+  environment. If confirmed malicious, such access could lead to unauthorized control
+  over Kubernetes resources, potentially compromising sensitive systems or data within
+  the cluster.
+required_fields:
+- verb
+- requestReceivedTimestamp
+- requestURI
+- responseStatus.code
+- sourceIPs{}
+- user.groups{}
+- user.username
+- userAgent
+- verb
+- responseStatus.reason
+- responseStatus.status
+rule: source="kubernetes" verb=create responseStatus.reason=Forbidden | fillnull |
+  stats count by objectRef.namespace objectRef.resource requestReceivedTimestamp requestURI
+  responseStatus.code responseStatus.message sourceIPs{} stage user.groups{} user.uid
+  user.username userAgent verb | rename sourceIPs{} as src_ip, user.username as user
+  | `kubernetes_unauthorized_access_filter`

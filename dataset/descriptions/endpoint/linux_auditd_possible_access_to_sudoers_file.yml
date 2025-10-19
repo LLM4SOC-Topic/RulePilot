@@ -1,0 +1,16 @@
+description: The following analytic detects potential access or modification of the
+  /etc/sudoers file on a Linux system. It leverages data from Linux Auditd, focusing
+  on processes like "cat," "nano," "vim," and "vi" accessing the /etc/sudoers file.
+  This activity is significant because the sudoers file controls user permissions
+  for executing commands with elevated privileges. If confirmed malicious, an attacker
+  could gain persistence or escalate privileges, compromising the security of the
+  targeted host.
+required_fields:
+- _time
+- name
+- nametype
+- OGID
+rule: sourcetype="linux:audit" type=PATH name="/etc/sudoers*" | rename host as dest
+  | stats count min(_time) as firstTime max(_time) as lastTime by name nametype OGID
+  type dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$)| `linux_auditd_possible_access_to_sudoers_file_filter`

@@ -1,0 +1,20 @@
+description: The following analytic detects the suspicious editing of cron jobs in
+  Linux using the crontab command-line parameter (-e). It identifies this activity
+  by monitoring command-line executions involving 'crontab' and the edit parameter.
+  This behavior is significant for a SOC as cron job manipulations can indicate unauthorized
+  persistence attempts or scheduled malicious actions. If confirmed malicious, this
+  activity could lead to system compromise, unauthorized access, or broader network
+  compromise.
+required_fields:
+- _time
+- comm
+- exe
+- SYSCALL
+- UID
+- ppid
+- pid
+rule: sourcetype="linux:audit" type=SYSCALL SYSCALL=rename (comm IN ("crontab") OR
+  exe IN ("*/crontab")) success=yes AND NOT (UID IN("daemon")) | rename host as dest
+  | stats count min(_time) as firstTime max(_time) as lastTime by comm exe  SYSCALL
+  UID ppid pid dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| `linux_auditd_edit_cron_table_parameter_filter`

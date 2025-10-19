@@ -1,0 +1,20 @@
+description: The following analytic detects emails containing attachments with suspicious
+  file extensions. It leverages the Email data model in Splunk, using the tstats command
+  to identify emails where the attachment filename is not empty. This detection is
+  significant for SOC analysts as it highlights potential phishing or malware delivery
+  attempts, which are common vectors for data breaches and malware infections. If
+  confirmed malicious, this activity could lead to unauthorized access to sensitive
+  information, system compromise, or data exfiltration. Immediate review and analysis
+  of the identified emails and attachments are crucial to mitigate these risks.
+required_fields:
+- _time
+- All_Email.file_name
+- All_Email.src_user
+- All_Email.message_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Email where All_Email.file_name="*" by All_Email.src_user, All_Email.file_name
+  All_Email.message_id | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `drop_dm_object_name("All_Email")`
+  | lookup update=true is_suspicious_file_extension_lookup file_name OUTPUT suspicious
+  | search suspicious=true | `suspicious_email_attachment_extensions_filter`'

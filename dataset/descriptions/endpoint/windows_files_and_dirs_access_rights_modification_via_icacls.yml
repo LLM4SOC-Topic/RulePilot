@@ -1,0 +1,27 @@
+description: The following analytic identifies the modification of security permissions
+  on files or directories using tools like icacls.exe, cacls.exe, or xcacls.exe. It
+  leverages data from Endpoint Detection and Response (EDR) agents, focusing on specific
+  command-line executions. This activity is significant as it is commonly used by
+  Advanced Persistent Threats (APTs) and coinminer scripts to evade detection and
+  maintain control over compromised systems. If confirmed malicious, this behavior
+  could allow attackers to hinder investigation, impede remediation efforts, and maintain
+  persistent access to the compromised environment.
+required_fields:
+- _time
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.process_name
+- Processes.process
+- Processes.process_guid
+- Processes.dest
+- Processes.user
+- Processes.process_id
+- Processes.process
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where Processes.process_name IN( "icacls.exe",
+  "cacls.exe","xcacls.exe") AND Processes.process IN ("*:R*", "*:W*", "*:F*", "*:C*",,
+  "*:N*","*/P*", "*/E*") by Processes.parent_process_name Processes.parent_process
+  Processes.process_name Processes.process Processes.process_guid Processes.dest Processes.user
+  | `drop_dm_object_name(Processes)` | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_files_and_dirs_access_rights_modification_via_icacls_filter`'

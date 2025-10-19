@@ -1,0 +1,28 @@
+description: The following analytic detects the loading of DLL modules associated
+  with the GraphicalProton backdoor implant, commonly used by SVR in targeted attacks.
+  It leverages Sysmon EventCode 7 to identify specific DLLs loaded by processes. This
+  activity is significant as it may indicate the presence of a sophisticated backdoor,
+  warranting immediate investigation. If confirmed malicious, the attacker could gain
+  persistent access to the compromised host, potentially leading to further exploitation
+  and data exfiltration.
+required_fields:
+- _time
+- Image
+- ImageLoaded
+- process_name
+- dest
+- EventCode
+- Signed
+- ProcessId
+- Hashes
+- IMPHASH
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=7 ImageLoaded IN ("*\\AclNumsInvertHost.dll",
+  "*\\ModeBitmapNumericAnimate.dll", "*\\UnregisterAncestorAppendAuto.dll", "*\\DeregisterSeekUsers.dll",
+  "*\\ScrollbarHandleGet.dll", "*\\PerformanceCaptionApi.dll", "*\\WowIcmpRemoveReg.dll",
+  "*\\BlendMonitorStringBuild.dll", "*\\HandleFrequencyAll.dll", "*\\HardSwapColor.dll",
+  "*\\LengthInMemoryActivate.dll", "*\\ParametersNamesPopup.dll", "*\\ModeFolderSignMove.dll",
+  "*\\ChildPaletteConnected.dll", "*\\AddressResourcesSpec.dll") | stats count min(_time)
+  as firstTime max(_time) as lastTime by Image ImageLoaded process_name dest EventCode
+  Signed ProcessId Hashes IMPHASH | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_known_graphicalproton_loaded_modules_filter`

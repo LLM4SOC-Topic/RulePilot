@@ -1,0 +1,22 @@
+description: The following analytic detects the usage of specific Exchange PowerShell
+  modules, such as New-MailboxExportRequest, New-ManagementRoleAssignment, New-MailboxSearch,
+  and Get-Recipient. It leverages PowerShell Script Block Logging (EventCode 4104)
+  to identify these commands. This activity is significant because these modules can
+  be exploited by adversaries who have gained access via ProxyShell or ProxyNotShell
+  vulnerabilities. If confirmed malicious, attackers could export mailbox contents,
+  assign management roles, conduct mailbox searches, or view recipient objects, potentially
+  leading to data exfiltration, privilege escalation, or unauthorized access to sensitive
+  information.
+required_fields:
+- _time
+- ScriptBlockText
+- Opcode
+- Computer
+- UserID
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText IN ("*New-MailboxExportRequest*", "*New-ManagementRoleAssignment*",
+  "*New-MailboxSearch*", "*Get-Recipient*", "Search-Mailbox") | stats count min(_time)
+  as firstTime max(_time) as lastTime by Opcode Computer UserID EventCode ScriptBlockText
+  | rename Computer as dest |rename UserID as user | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `exchange_powershell_module_usage_filter`

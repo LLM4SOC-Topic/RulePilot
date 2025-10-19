@@ -1,0 +1,19 @@
+description: The following analytic detects an unusual number of Kerberos Ticket Granting
+  Ticket (TGT) requests for non-existing users from a single source endpoint. It leverages
+  Event ID 4768 and identifies anomalies using the 3-sigma statistical rule. This
+  behavior is significant as it may indicate an adversary performing a user enumeration
+  attack against Active Directory. If confirmed malicious, the attacker could validate
+  a list of usernames, potentially leading to further attacks such as brute force
+  or credential stuffing, compromising the security of the environment.
+required_fields:
+- _time
+- EventCode
+- Result_Code
+- Account_Name
+- Client_Address
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=4768 Status=0x6 TargetUserName!="*$" | bucket span=2m _time | stats dc(TargetUserName)
+  AS unique_accounts values(TargetUserName) as tried_accounts by _time, src_ip | eventstats
+  avg(unique_accounts) as comp_avg , stdev(unique_accounts) as comp_std by src_ip
+  | eval upperBound=(comp_avg+comp_std*3) | eval isOutlier=if(unique_accounts > 10
+  and unique_accounts >= upperBound, 1, 0) | search isOutlier=1| `kerberos_user_enumeration_filter`

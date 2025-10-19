@@ -1,0 +1,6 @@
+description: This search looks for ColdRoot events from the osx-attacks osquery pack.
+required_fields:
+- _time
+rule: '| from datamodel Alerts.Alerts | search app=osquery:results (name=pack_osx-attacks_OSX_ColdRoot_RAT_Launchd
+  OR name=pack_osx-attacks_OSX_ColdRoot_RAT_Files) | rename columns.path as path |
+  bucket _time span=30s | stats count(path) by _time, host, user, path | `osquery_pack___coldroot_detection_filter`'

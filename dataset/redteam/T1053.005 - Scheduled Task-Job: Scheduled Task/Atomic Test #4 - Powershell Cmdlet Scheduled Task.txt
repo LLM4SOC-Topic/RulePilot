@@ -1,0 +1,10 @@
+Create an atomic scheduled task that leverages native powershell cmdlets.
+
+By default, MCMD does not maintain persistence on an infected device. It must be manually instructed to persist by the threat actor or the C2 server, or it will not survive a reboot or a change of user. MCMD utilizes one of two persistence mechanisms depending on the compilation date of the malware:
+
+Pre-2018 variants use the registry for persistence and create the following entry:
+Key: HKCU\Microsoft\Windows\CurrentVersion\Run
+Value: MSBuild
+Data: %APPDATA%\MSConsole\MSBuild.exe
+Variants compiled in 2018 use scheduled tasks to persist and execute the following command:
+cmd.exe /c ver && schtasks /create /sc ONEVENT /EC System /MO "[System/EventID=7036] or [System/EventID=7040] or [System/EventID=16]" /tn MSService /tr "%LOCALAPPDATA%\MSService\msserv.exe" /f

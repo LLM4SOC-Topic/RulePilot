@@ -1,0 +1,23 @@
+description: The following analytic detects suspicious system network configuration
+  discovery activities, which may indicate an adversary's attempt to gather information
+  about the network environment. Such actions typically involve commands or tools
+  used to identify network interfaces, routing tables, and active connections. Detecting
+  these activities is crucial, as they often precede more targeted attacks like lateral
+  movement or data exfiltration. By identifying unusual or unauthorized network discovery
+  efforts, this analytic helps security teams to swiftly detect and respond to potential
+  reconnaissance operations, mitigating the risk of further compromise.
+required_fields:
+- _time
+- comm
+- exe
+- SYSCALL
+- UID
+- ppid
+- pid
+rule: sourcetype="linux:audit" type=SYSCALL comm IN ("arp", "ifconfig", "ip", "netstat",
+  "firewall-cmd", "ufw", "iptables", "ss", "route") | bucket _time span=15m | rename
+  host as dest | stats dc(comm) as unique_commands, values(comm) as comm, values(exe)
+  as exe, values(SYSCALL) as SYSCALL, values(UID) as UID, values(ppid) as ppid, values(pid)
+  as pid, count, min(_time) as firstTime, max(_time) as lastTime by success dest |
+  where unique_commands >= 4 | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `linux_auditd_system_network_configuration_discovery_filter`

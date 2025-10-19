@@ -1,0 +1,17 @@
+description: The following analytic detects the export of a certificate from the Windows
+  Certificate Store. It leverages the Certificates Lifecycle log channel, specifically
+  event ID 1007, to identify this activity. Monitoring certificate exports is crucial
+  as certificates can be used for authentication to VPNs or private resources. If
+  malicious actors export certificates, they could potentially gain unauthorized access
+  to sensitive systems or data, leading to significant security breaches.
+required_fields:
+- _time
+- dest
+- SubjectName
+- UserData_Xml
+rule: (source=XmlWinEventLog:Microsoft-Windows-CertificateServicesClient-Lifecycle-System/Operational
+  OR source=XmlWinEventLog:Microsoft-Windows-CertificateServicesClient-Lifecycle-User/Operational)
+  EventCode=1007 | xmlkv UserData_Xml | stats count min(_time) as firstTime max(_time)
+  as lastTime by Computer, SubjectName, UserData_Xml | rename Computer as dest | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_export_certificate_filter`

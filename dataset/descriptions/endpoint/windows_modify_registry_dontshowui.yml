@@ -1,0 +1,24 @@
+description: The following analytic detects modifications to the Windows Error Reporting
+  registry key "DontShowUI" to suppress error reporting dialogs. It leverages data
+  from the Endpoint datamodel's Registry node to identify changes where the registry
+  value is set to 0x00000001. This activity is significant as it is commonly associated
+  with DarkGate malware, which uses this modification to avoid detection during its
+  installation. If confirmed malicious, this behavior could allow attackers to maintain
+  a low profile, avoiding user alerts and potentially enabling further malicious activities
+  without user intervention.
+required_fields:
+- _time
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.user
+- Registry.dest
+- Registry.registry_value_name
+- Registry.action
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Registry where Registry.registry_path = "*\\SOFTWARE\\Microsoft\\Windows\\Windows
+  Error Reporting\\DontShowUI"  Registry.registry_value_data = 0x00000001 by  Registry.registry_path
+  Registry.registry_value_name Registry.registry_value_data Registry.process_guid
+  Registry.action Registry.user Registry.dest | `drop_dm_object_name(Registry)` |
+  convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_modify_registry_dontshowui_filter`'

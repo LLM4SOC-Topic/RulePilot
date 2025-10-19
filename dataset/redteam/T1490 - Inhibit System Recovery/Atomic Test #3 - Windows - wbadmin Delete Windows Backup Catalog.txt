@@ -1,0 +1,4 @@
+Next, again leveraging cmd.exe execution on the host we can see the author using wbadmin.exe, for those not familiar with wbadmin, this is the replacement for ntbackup on modern operating systems.
+
+C:\Windows\system32\cmd.exe /c wbadmin.exe delete catalog -quiet
+This step is executed to ensure that file recovery is not trivial - WBAdmin can be used to recover individual files, folders and also whole drives so this would be a very convenient tool for a sysadmin to use in order to aid recovery.

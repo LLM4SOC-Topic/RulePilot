@@ -1,0 +1,27 @@
+description: The following analytic identifies the execution of `powershell.exe` with
+  the `Get-NetTcpConnection` command, which lists current TCP connections on a system.
+  This detection leverages data from Endpoint Detection and Response (EDR) agents,
+  focusing on process names and command-line executions. Monitoring this activity
+  is significant as it may indicate an adversary or Red Team performing network reconnaissance
+  or situational awareness. If confirmed malicious, this activity could allow attackers
+  to map network connections, aiding in lateral movement or further exploitation within
+  the network.
+required_fields:
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where (Processes.process_name="powershell.exe")
+  (Processes.process=*Get-NetTcpConnection*) by Processes.dest Processes.user Processes.parent_process
+  Processes.process_name Processes.process Processes.process_id Processes.parent_process_id
+  | `drop_dm_object_name(Processes)` | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `getnettcpconnection_with_powershell_filter`'

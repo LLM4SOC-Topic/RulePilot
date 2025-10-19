@@ -1,0 +1,16 @@
+description: The following analytic detects failed trust validation attempts using
+  Windows Event Log - CAPI2 (CryptoAPI 2). It specifically triggers on EventID 81,
+  which indicates that "The digital signature of the object did not verify." This
+  detection leverages the CAPI2 Operational log to identify instances where digital
+  signatures fail to validate. Monitoring this activity is crucial as it can indicate
+  attempts to execute untrusted or potentially malicious binaries. If confirmed malicious,
+  this activity could allow attackers to bypass security controls and execute unauthorized
+  code, leading to potential system compromise.
+required_fields:
+- _time
+- Computer
+- UserData_Xml
+rule: (source=XmlWinEventLog:Microsoft-Windows-CAPI2/Operational) EventID=81 "The
+  digital signature of the object did not verify." | xmlkv UserData_Xml | stats count
+  min(_time) as firstTime max(_time) as lastTime by Computer, UserData_Xml | rename
+  Computer as dest | `windows_sip_winverifytrust_failed_trust_validation_filter`

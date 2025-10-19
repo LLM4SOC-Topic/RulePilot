@@ -1,0 +1,26 @@
+description: The following analytic identifies when a Windows Defender ASR rule disabled
+  events. ASR is a feature of Windows Defender Exploit Guard that prevents actions
+  and apps that are typically used by exploit-seeking malware to infect machines.
+  ASR rules are applied to processes and applications. When a process or application
+  attempts to perform an action that is blocked by an ASR rule, an event is generated.
+  This detection searches for ASR rule disabled events that are generated when an
+  ASR rule is disabled.
+required_fields:
+- host
+- New_Value
+- Old_Value
+- Old_Registry_Value
+- New_Registry_Value
+- ASR_Rule
+rule: source="WinEventLog:Microsoft-Windows-Windows Defender/Operational" EventCode
+  IN (5007) | rex field=New_Value "0x(?<New_Registry_Value>\\d+)$" | rex field=Old_Value
+  "0x(?<Old_Registry_Value>\\d+)$" | rex field=New_Value "Rules\\\\(?<ASR_ID>[A-Fa-f0-9\\-]+)\\s*="
+  | eval New_Registry_Value=case(New_Registry_Value=="0", "Disabled", New_Registry_Value=="1",
+  "Block", New_Registry_Value=="2", "Audit", New_Registry_Value=="6", "Warn") | eval
+  Old_Registry_Value=case(Old_Registry_Value=="0", "Disabled", Old_Registry_Value=="1",
+  "Block", Old_Registry_Value=="2", "Audit", Old_Registry_Value=="6", "Warn") | search
+  New_Registry_Value="Disabled" | stats count min(_time) as firstTime max(_time) as
+  lastTime by host, New_Value, Old_Value, Old_Registry_Value, New_Registry_Value,
+  ASR_ID | lookup asr_rules ID AS ASR_ID OUTPUT ASR_Rule | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| rename host
+  as dest | `windows_defender_asr_rule_disabled_filter`

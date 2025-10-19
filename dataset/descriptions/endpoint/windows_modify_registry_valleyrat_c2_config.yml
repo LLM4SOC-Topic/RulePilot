@@ -1,0 +1,24 @@
+description: "The following analytic detects modifications to theregistry related\
+  \ to ValleyRAT C2 configuration. Specifically,  it monitors changes in registry\
+  \ keys where ValleyRAT saves the IP address and port information of its command-and-control\
+  \ (C2) server. This activity is a key indicator of ValleyRAT attempting to establish\
+  \ persistent communication with its C2 infrastructure. By identifying these unauthorized\
+  \ registry modifications, security analysts can quickly detect malicious configurations\
+  \ and investigate the associated threats. Early detection of these changes helps\
+  \ prevent further exploitation and limits the malware\u2019s ability to exfiltrate\
+  \ data or control infected systems."
+required_fields:
+- Registry.dest
+- Registry.registry_value_name
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.registry_value_data
+- Registry.process_guid
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count FROM datamodel=Endpoint.Registry WHERE (Registry.registry_path=
+  "*\\Console\\IpDateInfo" AND Registry.registry_value_data="Binary Data") OR (Registry.registry_path=
+  "*\\Console\\SelfPath" AND Registry.registry_value_data="*.exe") BY Registry.dest
+  Registry.user Registry.registry_path Registry.registry_key_name Registry.registry_value_name
+  Registry.registry_value_data Registry.registry_hive Registry.process_guid | `drop_dm_object_name(Registry)`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_modify_registry_valleyrat_c2_config_filter`'

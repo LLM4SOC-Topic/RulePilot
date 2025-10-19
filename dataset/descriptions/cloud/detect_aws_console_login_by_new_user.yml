@@ -1,0 +1,18 @@
+description: The following analytic detects AWS console login events by new users.
+  It leverages AWS CloudTrail events and compares them against a lookup file of previously
+  seen users based on ARN values. This detection is significant because a new user
+  logging into the AWS console could indicate the creation of new accounts or potential
+  unauthorized access. If confirmed malicious, this activity could lead to unauthorized
+  access to AWS resources, data exfiltration, or further exploitation within the cloud
+  environment.
+required_fields:
+- _time
+- Authentication.signature
+- Authentication.user
+rule: '| tstats earliest(_time) as firstTime latest(_time) as lastTime from datamodel=Authentication
+  where Authentication.signature=ConsoleLogin by Authentication.user | `drop_dm_object_name(Authentication)`
+  | join user type=outer [ | inputlookup previously_seen_users_console_logins | stats
+  min(firstTime) as earliestseen by user] | eval userStatus=if(earliestseen >= relative_time(now(),
+  "-24h@h") OR isnull(earliestseen), "First Time Logging into AWS Console", "Previously
+  Seen User") | where userStatus="First Time Logging into AWS Console" | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `detect_aws_console_login_by_new_user_filter`'

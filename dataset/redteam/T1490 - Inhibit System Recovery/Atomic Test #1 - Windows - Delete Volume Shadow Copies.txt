@@ -1,0 +1,2 @@
+Shadow Files Removal
+Before encryption, both variants of BitPaymer attempt to remove the backup shadow files from the host, making it impossible to restore encrypted files. This is achieved by launching the vssadmin.exe process with the following command vssadmin.exe Delete Shadows /All /Quiet.

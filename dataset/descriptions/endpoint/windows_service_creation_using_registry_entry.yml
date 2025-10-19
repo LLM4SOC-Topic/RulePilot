@@ -1,0 +1,23 @@
+description: The following analytic detects the modification of registry keys that
+  define Windows services using reg.exe. This detection leverages Splunk to search
+  for specific keywords in the registry path, value name, and value data fields. This
+  activity is significant because it indicates potential unauthorized changes to service
+  configurations, a common persistence technique used by attackers. If confirmed malicious,
+  this could allow an attacker to maintain access, escalate privileges, or move laterally
+  within the network, leading to data theft, ransomware, or other damaging outcomes.
+required_fields:
+- _time
+- Registry.dest
+- Registry.registry_value_name
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.registry_value_data
+- Registry.process_guid
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry WHERE (Registry.registry_path="*\\SYSTEM\\CurrentControlSet\\Services*"
+  Registry.registry_value_name = ImagePath) BY Registry.dest Registry.user Registry.registry_path
+  Registry.registry_key_name Registry.registry_value_name Registry.registry_value_data
+  Registry.process_guid | `drop_dm_object_name(Registry)` | where isnotnull(registry_value_data)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_service_creation_using_registry_entry_filter`'

@@ -1,0 +1,23 @@
+description: The following analytic identifies an unusual number of computer service
+  ticket requests from a single source, leveraging Event ID 4769, "A Kerberos service
+  ticket was requested." It uses statistical analysis, including standard deviation
+  and the 3-sigma rule, to detect anomalies in service ticket requests. This activity
+  is significant as it may indicate malicious behavior such as lateral movement, malware
+  staging, or reconnaissance. If confirmed malicious, an attacker could gain unauthorized
+  access to multiple endpoints, facilitating further compromise and potential data
+  exfiltration.
+required_fields:
+- _time
+- EventCode
+- Ticket_Options
+- Ticket_Encryption_Type
+- dest
+- service
+- service_id
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=4769 Service_Name="*$" Account_Name!="*$*" | bucket span=2m _time | stats
+  dc(Service_Name) AS unique_targets values(Service_Name) as host_targets by _time,
+  Client_Address, Account_Name | eventstats avg(unique_targets) as comp_avg , stdev(unique_targets)
+  as comp_std by Client_Address, Account_Name | eval upperBound=(comp_avg+comp_std*3)
+  | eval isOutlier=if(unique_targets >10 and unique_targets >= upperBound, 1, 0) |
+  `unusual_number_of_computer_service_tickets_requested_filter`

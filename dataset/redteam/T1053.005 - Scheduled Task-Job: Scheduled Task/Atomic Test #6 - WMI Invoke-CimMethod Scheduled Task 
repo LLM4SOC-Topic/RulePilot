@@ -1,0 +1,12 @@
+Create an scheduled task that executes notepad.exe after user login from XML by leveraging WMI class PS_ScheduledTask. Does the same thing as Register-ScheduledTask cmdlet behind the scenes.
+
+Supported Platforms: Windows
+
+Inputs:
+Name	Description	Type	Default Value
+xml_path	path of vbs to use when creating masquerading files	path	PathToAtomicsFolder\T1053.005\src\T1053_005_WMI.xml
+Attack Commands: Run with powershell! Elevation Required (e.g. root or admin)
+$xml = [System.IO.File]::ReadAllText("#{xml_path}")
+Invoke-CimMethod -ClassName PS_ScheduledTask -NameSpace "Root\Microsoft\Windows\TaskScheduler" -MethodName "RegisterByXml" -Arguments @{ Force = $true; Xml =$xml; }
+Cleanup Commands:
+Unregister-ScheduledTask -TaskName "T1053_005_WMI" -confirm:$false >$null 2>&1

@@ -1,0 +1,23 @@
+description: 'Detect a renamed instance of procdump.exe dumping the lsass process.
+  This query looks for both -mm and -ma usage. -mm will produce a mini dump file and
+  -ma will write a dump file with all process memory. Both are highly suspect and
+  should be reviewed. Modify the query as needed.
+
+  During triage, confirm this is procdump.exe executing. If it is the first time a
+  Sysinternals utility has been ran, it is possible there will be a -accepteula on
+  the command line. Review other endpoint data sources for cross process (injection)
+  into lsass.exe.'
+required_fields:
+- _time
+- OriginalFileName
+- process_name
+- EventID
+- CommandLine
+- dest
+- parent_process_name
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational OriginalFileName=procdump  process_name!=procdump*.exe  EventID=1
+  (CommandLine=*-ma* OR CommandLine=*-mm*) CommandLine=*lsass* |  stats count min(_time)
+  as firstTime max(_time) as lastTime by dest, parent_process_name, process_name,
+  OriginalFileName, CommandLine | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `dump_lsass_via_procdump_rename_filter`

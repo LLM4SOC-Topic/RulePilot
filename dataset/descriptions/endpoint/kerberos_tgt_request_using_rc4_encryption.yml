@@ -1,0 +1,16 @@
+description: The following analytic detects a Kerberos Ticket Granting Ticket (TGT)
+  request using RC4-HMAC encryption (type 0x17) by leveraging Event 4768. This encryption
+  type is outdated and its presence may indicate an OverPass The Hash attack. Monitoring
+  this activity is crucial as it can signify credential theft, allowing adversaries
+  to authenticate to the Kerberos Distribution Center (KDC) using a stolen NTLM hash.
+  If confirmed malicious, this could enable unauthorized access to systems and resources,
+  potentially leading to lateral movement and further compromise within the network.
+required_fields:
+- _time
+- EventCode
+- TicketEncryptionType
+- ServiceName
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=4768 TicketEncryptionType=0x17 ServiceName!=*$ | stats count min(_time)
+  as firstTime max(_time) as lastTime by ServiceName src_ip dest | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `kerberos_tgt_request_using_rc4_encryption_filter`

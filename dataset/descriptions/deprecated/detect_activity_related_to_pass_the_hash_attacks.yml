@@ -1,0 +1,20 @@
+description: This search looks for specific authentication events from the Windows
+  Security Event logs to detect potential attempts at using the Pass-the-Hash technique.
+  This search is DEPRECATED as it is possible for event code 4624 to generate a high
+  level of noise, as legitimate logon events may also trigger this event code. This
+  can be especially true in environments with high levels of user activity, such as
+  those with many concurrent logons or frequent logon attempts.
+required_fields:
+- _time
+- EventCode
+- Logon_Type
+- Logon_Process
+- WorkstationName
+- user
+- dest
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=4624 (Logon_Type=3 Logon_Process=NtLmSsp NOT AccountName="ANONYMOUS LOGON")
+  OR (Logon_Type=9 Logon_Process=seclogo) | fillnull | stats count min(_time) as firstTime
+  max(_time) as lastTime by EventCode, Logon_Type, WorkstationName, user, dest | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `detect_activity_related_to_pass_the_hash_attacks_filter`

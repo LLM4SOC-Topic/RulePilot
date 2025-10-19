@@ -1,0 +1,29 @@
+description: The following analytic detects the execution of MOFComp.exe loading a
+  MOF file, often triggered by cmd.exe or powershell.exe, or from unusual paths like
+  User Profile directories. It leverages Endpoint Detection and Response (EDR) data,
+  focusing on process names, parent processes, and command-line executions. This activity
+  is significant as it may indicate an attacker using WMI for persistence or lateral
+  movement. If confirmed malicious, it could allow the attacker to execute arbitrary
+  code, maintain persistence, or escalate privileges within the environment.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where (Processes.parent_process_name IN ("cmd.exe",
+  "powershell.exe") Processes.process_name=mofcomp.exe) OR (Processes.process_name=mofcomp.exe
+  Processes.process IN ("*\\AppData\\Local\\*","*\\Users\\Public\\*")) by Processes.dest
+  Processes.user Processes.parent_process_name Processes.process_name Processes.process
+  Processes.process_id Processes.parent_process_id | `drop_dm_object_name(Processes)`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_mof_event_triggered_execution_via_wmi_filter`'

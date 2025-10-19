@@ -1,0 +1,22 @@
+description: The following analytic detects the creation of permanent access keys
+  in AWS accounts. It leverages CloudWatch logs to identify events where the `CreateAccessKey`
+  action is performed by IAM users. Monitoring the creation of permanent keys is crucial
+  as they are not created by default and are typically used for programmatic access.
+  If confirmed malicious, this activity could allow attackers to gain persistent access
+  to AWS resources, potentially leading to unauthorized actions and data exfiltration.
+required_fields:
+- _time
+- eventName
+- userIdentity.type
+- sourceIPAddress
+- userName userIdentity.type
+- userAgent
+- action
+- status
+- responseElements.accessKey.createDate
+- esponseElements.accessKey.status
+- responseElements.accessKey.accessKeyId
+rule: sourcetype="aws:cloudwatchlogs:eks" CreateAccessKey | spath eventName | search
+  eventName=CreateAccessKey "userIdentity.type"=IAMUser | table sourceIPAddress userName
+  userIdentity.type userAgent action status responseElements.accessKey.createDate
+  responseElements.accessKey.status responseElements.accessKey.accessKeyId |`aws_detect_permanent_key_creation_filter`

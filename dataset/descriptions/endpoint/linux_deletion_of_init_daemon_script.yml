@@ -1,0 +1,22 @@
+description: The following analytic detects the deletion of init daemon scripts on
+  a Linux machine. It leverages filesystem event logs to identify when files within
+  the /etc/init.d/ directory are deleted. This activity is significant because init
+  daemon scripts control the start and stop of critical services, and their deletion
+  can indicate an attempt to impair security features or evade defenses. If confirmed
+  malicious, this behavior could allow an attacker to disrupt essential services,
+  execute destructive payloads, or persist undetected in the environment.
+required_fields:
+- _time
+- Filesystem.dest
+- Filesystem.file_create_time
+- Filesystem.file_name
+- Filesystem.process_guid
+- Filesystem.file_path
+- Filesystem.action
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Filesystem where Filesystem.action=deleted Filesystem.file_path
+  IN ( "/etc/init.d/*") by _time span=1h Filesystem.file_name Filesystem.file_path
+  Filesystem.dest Filesystem.process_guid Filesystem.action | `drop_dm_object_name(Filesystem)`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$)| `linux_deletion_of_init_daemon_script_filter`'

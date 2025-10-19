@@ -1,0 +1,22 @@
+description: The following analytic detects updates to the SAML provider in AWS. It
+  leverages AWS CloudTrail logs to identify the `UpdateSAMLProvider` event, analyzing
+  fields such as `sAMLProviderArn`, `sourceIPAddress`, and `userIdentity` details.
+  Monitoring updates to the SAML provider is crucial as it may indicate a perimeter
+  compromise of federated credentials or unauthorized backdoor access set by an attacker.
+  If confirmed malicious, this activity could allow attackers to manipulate identity
+  federation, potentially leading to unauthorized access to cloud resources and sensitive
+  data.
+required_fields:
+- _time
+- eventName
+- eventType
+- requestParameters.sAMLProviderArn
+- userIdentity.sessionContext.sessionIssuer.arn
+- sourceIPAddress
+- userIdentity.accessKeyId
+- userIdentity.principalId
+rule: sourcetype=aws:cloudtrail eventName=UpdateSAMLProvider | stats count min(_time)
+  as firstTime max(_time) as lastTime by eventType eventName requestParameters.sAMLProviderArn
+  userIdentity.sessionContext.sessionIssuer.arn sourceIPAddress userIdentity.accessKeyId
+  userIdentity.principalId | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)|
+  convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) |`aws_saml_update_identity_provider_filter`

@@ -1,0 +1,23 @@
+description: The following analytic detects multiple Okta accounts being locked out
+  within a short period. It uses the user.account.lock event from Okta logs, aggregated
+  over a 5-minute window, to identify this behavior. This activity is significant
+  as it may indicate a brute force or password spraying attack, where an adversary
+  attempts to guess passwords, leading to account lockouts. If confirmed malicious,
+  this could result in potential account takeovers or unauthorized access to sensitive
+  Okta accounts, posing a significant security risk.
+required_fields:
+- _time
+- All_Changes.change_type
+- All_Changes.object_category
+- All_Changes.action
+- All_Changes.command
+- All_Changes.result
+- All_Changes.src
+- sourcetype
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count max(_time) as lastTime, min(_time) as firstTime
+  values(All_Changes.user) as user from datamodel=Change where All_Changes.change_type=AAA
+  All_Changes.object_category=User AND All_Changes.action=lockout AND All_Changes.command=user.account.lock
+  by _time span=5m All_Changes.result All_Changes.command sourcetype All_Changes.src
+  | where count > 5 | `drop_dm_object_name("All_Changes")` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `okta_multiple_accounts_locked_out_filter`'

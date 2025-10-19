@@ -1,0 +1,22 @@
+description: The following analytic identifies multiple failed multi-factor authentication
+  (MFA) requests for a single user within an Azure AD tenant. It leverages Azure AD
+  Sign-in Logs, specifically error code 500121, to detect more than 10 failed MFA
+  attempts within 10 minutes. This behavior is significant as it may indicate an adversary
+  attempting to bypass MFA by bombarding the user with repeated authentication prompts.
+  If confirmed malicious, this activity could lead to unauthorized access, allowing
+  attackers to compromise user accounts and potentially escalate their privileges
+  within the environment.
+required_fields:
+- _time
+- properties.status.errorCode
+- category
+- properties.authenticationDetails
+- user
+- user_agent
+- operationName
+rule: sourcetype=azure:monitor:aad category=SignInLogs operationName="Sign-in activity"
+  properties.status.errorCode=500121 properties.status.additionalDetails!="MFA denied;
+  user declined the authentication" | rename properties.* as * | bucket span=10m _time
+  | stats count min(_time) as firstTime max(_time) as lastTime by user, status.additionalDetails,
+  appDisplayName, user_agent | where count > 10 | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `azure_ad_multiple_failed_mfa_requests_for_user_filter`

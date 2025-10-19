@@ -1,0 +1,3 @@
+Delete shadow copies
+To ensure that the compromised system is unable to restore from backup, REvil deletes shadow copies and disables recovery mode by executing the following command via ShellExecute. The length and uniqueness of this command allow for the development of high-fidelity detection controls.
+cmd.exe /c vssadmin.exe Delete Shadows /All /Quiet & bcdedit /set {default} recoveryenabled No & bcdedit /set {default} bootstatuspolicy ignoreallfailures

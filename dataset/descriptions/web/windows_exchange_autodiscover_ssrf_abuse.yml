@@ -1,0 +1,24 @@
+description: The following analytic detects potential abuse of the ProxyShell or ProxyNotShell
+  vulnerabilities in Microsoft Exchange via Server Side Request Forgery (SSRF). It
+  leverages the Web datamodel to identify suspicious POST requests with specific URI
+  paths and queries related to autodiscover, powershell, and mapi. This activity is
+  significant as it may indicate an attempt to exploit Exchange server vulnerabilities
+  to access internal services or sensitive data. If confirmed malicious, this could
+  lead to unauthorized access, data exfiltration, or further compromise of the network.
+required_fields:
+- _time
+- Web.src
+- Web.status
+- Web.uri_path
+- Web.dest
+- Web.http_method
+- Web.uri_query
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Web where (Web.status=200 OR Web.status=302 OR Web.status=401) AND
+  Web.http_method=POST by Web.src Web.status Web.uri_path Web.dest Web.http_method
+  Web.uri_query | `drop_dm_object_name("Web")` | eval is_autodiscover=if(like(lower(uri_path),"%autodiscover%"),1,0)
+  | eval powershell = if(match(lower(uri_query),"powershell"), "1",0) | eval mapi=if(like(uri_query,"%/mapi/%"),1,0)
+  | addtotals fieldname=Score is_autodiscover, powershell, mapi | fields Score, src,dest,
+  status, uri_query,uri_path,http_method | where Score >= 2 | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_exchange_autodiscover_ssrf_abuse_filter`'

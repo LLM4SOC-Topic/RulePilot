@@ -1,0 +1,18 @@
+description: The following analytic detects the creation of a new local user account
+  on a Windows system. It leverages Windows Security Audit logs, specifically event
+  ID 4720, to identify this activity. Monitoring the creation of local accounts is
+  crucial for a SOC as it can indicate unauthorized access or lateral movement within
+  the network. If confirmed malicious, this activity could allow an attacker to establish
+  persistence, escalate privileges, or gain unauthorized access to sensitive systems
+  and data.
+required_fields:
+- All_Changes.user
+- All_Changes.dest
+- All_Changes.result
+- All_Changes.action
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` values(All_Changes.result_id) as result_id count
+  min(_time) as firstTime max(_time) as lastTime from datamodel=Change where All_Changes.result_id=4720
+  by All_Changes.user All_Changes.dest All_Changes.result All_Changes.action | `drop_dm_object_name("All_Changes")`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_create_local_account_filter`'

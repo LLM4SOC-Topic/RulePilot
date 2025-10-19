@@ -1,0 +1,24 @@
+description: The following analytic detects non-Firefox processes accessing the Firefox
+  profile directory, which contains sensitive user data such as login credentials,
+  browsing history, and cookies. It leverages Windows Security Event logs, specifically
+  event code 4663, to monitor access attempts. This activity is significant because
+  it may indicate attempts by malware, such as RATs or trojans, to harvest user information.
+  If confirmed malicious, this behavior could lead to data exfiltration, unauthorized
+  access to user accounts, and further compromise of the affected system.
+required_fields:
+- _time
+- Object_Name
+- Object_Type
+- process_name
+- Access_Mask
+- Accesses
+- process_id
+- EventCode
+- dest
+- user
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=4663 NOT (ProcessName IN ("*\\firefox.exe", "*\\explorer.exe", "*sql*"))
+  ObjectName="*\\AppData\\Roaming\\Mozilla\\Firefox\\Profiles*" | stats count min(_time)
+  as firstTime max(_time) as lastTime by ObjectName ObjectType ProcessName AccessMask
+  EventCode dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `non_firefox_process_access_firefox_profile_dir_filter`

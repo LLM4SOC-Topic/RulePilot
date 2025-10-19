@@ -1,0 +1,25 @@
+description: The following analytic identifies suspicious process names using a pre-trained
+  Deep Learning model. It leverages Endpoint Detection and Response (EDR) telemetry
+  to analyze process names and predict their likelihood of being malicious. The model,
+  a character-level Recurrent Neural Network (RNN), classifies process names as benign
+  or suspicious based on a threshold score of 0.5. This detection is significant as
+  it helps identify malware, such as TrickBot, which often uses randomly generated
+  filenames to evade detection. If confirmed malicious, this activity could indicate
+  the presence of malware capable of propagating across the network and executing
+  harmful actions.
+required_fields:
+- _time
+- Processes.process
+- Processes.parent_process_name
+- Processes.process_name
+- Processes.parent_process
+- Processes.user
+- Processes.dest
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes by Processes.process_name Processes.parent_process_name
+  Processes.process Processes.user Processes.dest | `drop_dm_object_name(Processes)`
+  | rename process_name as text | fields text, parent_process_name, process, user,
+  dest | apply detect_suspicious_processnames_using_pretrained_model_in_dsdl | rename
+  predicted_label as is_suspicious_score | rename text as process_name | where is_suspicious_score
+  > 0.5 | `detect_suspicious_processnames_using_pretrained_model_in_dsdl_filter`'

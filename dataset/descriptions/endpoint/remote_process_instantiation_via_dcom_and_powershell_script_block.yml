@@ -1,0 +1,18 @@
+description: The following analytic detects the execution of PowerShell commands that
+  initiate a process on a remote endpoint via the DCOM protocol. It leverages PowerShell
+  Script Block Logging (EventCode=4104) to identify the use of ShellExecute and ExecuteShellCommand.
+  This activity is significant as it may indicate lateral movement or remote code
+  execution attempts by adversaries. If confirmed malicious, this behavior could allow
+  attackers to execute arbitrary code on remote systems, potentially leading to further
+  compromise and persistence within the network.
+required_fields:
+- _time
+- EventCode
+- ScriptBlockText
+- Computer
+- user_id
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 (ScriptBlockText="*Document.Application.ShellExecute*" OR ScriptBlockText="*Document.ActiveView.ExecuteShellCommand*")
+  | stats count min(_time) as firstTime max(_time) as lastTime by EventCode ScriptBlockText
+  Computer user_id | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `remote_process_instantiation_via_dcom_and_powershell_script_block_filter`

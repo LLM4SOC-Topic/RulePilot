@@ -1,0 +1,9 @@
+Upon successful execution, cmd.exe will create a scheduled task to spawn cmd.exe at 20:10.
+Inputs:
+Name	Description	Type	Default Value
+task_command	What you want to execute	string	C:\windows\system32\cmd.exe
+time	What time 24 Hour	string	20:10
+Attack Commands: Run with command_prompt!
+SCHTASKS /Create /SC ONCE /TN spawn /TR #{task_command} /ST #{time}
+Cleanup Commands:
+SCHTASKS /Delete /TN spawn /F >nul 2>&1

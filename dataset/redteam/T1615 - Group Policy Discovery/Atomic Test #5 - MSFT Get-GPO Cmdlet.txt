@@ -1,0 +1,6 @@
+MSFT Get-GPO Cmdlet
+The Get-GPO cmdlet gets one Group Policy Object (GPO) or all the GPOs in a domain. Tested on Windows Server 2019 as a domain user with computer joined to domain.
+Attack Commands: Run with powershell! Elevation Required (e.g. root or admin)
+Get-GPO -Domain $ENV:userdnsdomain #{gpo_param} >> #{gpo_output}
+Cleanup Commands:
+del $env:temp\GPO_Output.txt -erroraction silentlycontinue

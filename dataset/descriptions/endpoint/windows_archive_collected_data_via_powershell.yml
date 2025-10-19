@@ -1,0 +1,19 @@
+description: The following analytic detects the use of PowerShell scripts to archive
+  files into a temporary folder. It leverages PowerShell Script Block Logging, specifically
+  monitoring for the `Compress-Archive` command targeting the `Temp` directory. This
+  activity is significant as it may indicate an adversary's attempt to collect and
+  compress data for exfiltration. If confirmed malicious, this behavior could lead
+  to unauthorized data access and exfiltration, posing a severe risk to sensitive
+  information and overall network security.
+required_fields:
+- _time
+- EventCode
+- ScriptBlockText
+- dest
+- user
+- Score
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText = "*Compress-Archive*"  ScriptBlockText = "*\\Temp\\*"
+  | stats count min(_time) as firstTime max(_time) as lastTime by EventCode ScriptBlockText
+  Computer UserID | rename Computer as dest | rename UserID as user | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_archive_collected_data_via_powershell_filter`

@@ -1,0 +1,22 @@
+description: The following analytic detects a potential UAC bypass using the colorui.dll
+  COM Object. It leverages Sysmon EventCode 7 to identify instances where colorui.dll
+  is loaded by a process other than colorcpl.exe, excluding common system directories.
+  This activity is significant because UAC bypass techniques are often used by malware,
+  such as LockBit ransomware, to gain elevated privileges without user consent. If
+  confirmed malicious, this could allow an attacker to execute code with higher privileges,
+  leading to further system compromise and persistence within the environment.
+required_fields:
+- _time
+- Image
+- ImageLoaded
+- process_name
+- dest
+- EventCode
+- Signed
+- ProcessId
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=7 ImageLoaded="*\\colorui.dll"
+  process_name != "colorcpl.exe" NOT(Image IN("*\\windows\\*", "*\\program files*"))
+  | stats count min(_time) as firstTime max(_time) as lastTime by Image ImageLoaded
+  process_name dest user_id EventCode Signed ProcessId | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `uac_bypass_with_colorui_com_object_filter`

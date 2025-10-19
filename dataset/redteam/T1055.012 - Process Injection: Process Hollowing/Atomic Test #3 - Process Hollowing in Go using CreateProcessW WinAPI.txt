@@ -1,0 +1,8 @@
+After decoding the encoded part, it can be clearly seen that the payload uses Windows APIs
+that are indicative of process injection. In addition, it is possible to see that the attackers aimed to evade detection by “renaming” process injection-related functions and also adding spaces to break signature patterns
+
+Creates a process in a suspended state, executes shellcode to spawn calc.exe in a child process, and then resumes the original process.
+Attack Commands: Run with powershell!
+Cleanup Commands:
+Stop-Process -Name CalculatorApp -ErrorAction SilentlyContinue
+Stop-Process -Name "#{hollow_process_name}" -ErrorAction SilentlyContinue

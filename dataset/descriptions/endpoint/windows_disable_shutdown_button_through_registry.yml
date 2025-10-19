@@ -1,0 +1,25 @@
+description: The following analytic detects suspicious registry modifications that
+  disable the shutdown button on a user's logon screen. It leverages data from the
+  Endpoint.Registry data model, specifically monitoring changes to registry paths
+  associated with shutdown policies. This activity is significant because it is a
+  tactic used by malware, particularly ransomware like KillDisk, to hinder system
+  usability and prevent the removal of malicious changes. If confirmed malicious,
+  this could impede system recovery efforts, making it difficult to restart the machine
+  and remove other harmful modifications.
+required_fields:
+- _time
+- Registry.dest
+- Registry.registry_value_name
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.registry_value_data
+- Registry.process_guid
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry WHERE ((Registry.registry_path= "*\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\shutdownwithoutlogon"
+  Registry.registry_value_data = "0x00000000") OR (Registry.registry_path="*\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\NoClose"
+  Registry.registry_value_data = "0x00000001")) BY Registry.dest Registry.user Registry.registry_path
+  Registry.registry_key_name Registry.registry_value_name Registry.registry_value_data
+  Registry.process_guid | `drop_dm_object_name(Registry)` | where isnotnull(registry_value_data)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_disable_shutdown_button_through_registry_filter`'

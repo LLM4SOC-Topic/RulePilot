@@ -1,0 +1,31 @@
+description: The following analytic identifies anomalous network traffic volumes between
+  Kubernetes workloads or between a workload and external sources. It leverages Network
+  Performance Monitoring metrics collected via an OTEL collector and pulled from Splunk
+  Observability Cloud. The detection compares recent network metrics (tcp.bytes, tcp.new_sockets,
+  tcp.packets, udp.bytes, udp.packets) over the last hour with the average over the
+  past 30 days to identify significant deviations. This activity is significant as
+  unexpected spikes may indicate unauthorized data transfers or lateral movement.
+  If confirmed malicious, it could lead to data exfiltration or compromise of additional
+  services, potentially resulting in data breaches.
+required_fields:
+- tcp.*
+- udp.*
+- k8s.cluster.name
+- source.workload.name
+- dest.workload.name
+- udp.packets
+rule: '| mstats avg(tcp.*) as tcp.* avg(udp.*) as udp.* where index=kubernetes_metrics
+  AND earliest=-1h by k8s.cluster.name source.workload.name dest.workload.name span=10s
+  | eval key=''source.workload.name'' + ":" + ''dest.workload.name'' | join type=left
+  key [ mstats avg(tcp.*) as avg_tcp.* avg(udp.*) as avg_udp.* stdev(tcp.*) as stdev_tcp.*
+  avg(udp.*) as stdev_udp.* where index=kubernetes_metrics AND earliest=-30d latest=-1h
+  by source.workload.name dest.workload.name | eval key=''source.workload.name'' +
+  ":" + ''dest.workload.name'' ] | eval anomalies = "" | foreach stdev_* [ eval anomalies
+  =if( ''<<MATCHSTR>>'' > (''avg_<<MATCHSTR>>'' + 3 * ''stdev_<<MATCHSTR>>''), anomalies
+  + "<<MATCHSTR>> higher than average by " + tostring(round((''<<MATCHSTR>>'' - ''avg_<<MATCHSTR>>'')/''stdev_<<MATCHSTR>>''
+  ,2)) + " Standard Deviations. <<MATCHSTR>>=" + tostring(''<<MATCHSTR>>'') + " avg_<<MATCHSTR>>="
+  + tostring(''avg_<<MATCHSTR>>'') + " ''stdev_<<MATCHSTR>>''=" + tostring(''stdev_<<MATCHSTR>>'')
+  + ", " , anomalies) ] | fillnull | eval anomalies = split(replace(anomalies, ",\s$$$$",
+  "") ,", ") | where anomalies!="" | stats count(anomalies) as count values(anomalies)
+  as anomalies by k8s.cluster.name source.workload.name dest.workload.name | rename
+  service as k8s.service | where count > 5 | rename k8s.cluster.name as host | `kubernetes_anomalous_traffic_on_network_edge_filter`'

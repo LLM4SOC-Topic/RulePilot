@@ -1,0 +1,17 @@
+description: The following analytic detects the use of the PowerShell cmdlet `export-pfxcertificate`
+  by leveraging Script Block Logging. This activity is significant as it may indicate
+  an adversary attempting to exfiltrate certificates from the Windows Certificate
+  Store. Monitoring this behavior is crucial for identifying potential certificate
+  theft, which can lead to unauthorized access and impersonation attacks. If confirmed
+  malicious, this activity could allow attackers to compromise secure communications,
+  authenticate as legitimate users, and escalate their privileges within the network.
+required_fields:
+- _time
+- ScriptBlockText
+- dest
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText IN ("*export-pfxcertificate*") | rename Computer
+  as dest  | stats count min(_time) as firstTime max(_time) as lastTime by EventCode
+  ScriptBlockText dest user_id | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_powershell_export_pfxcertificate_filter`

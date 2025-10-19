@@ -1,0 +1,43 @@
+description: The following analytic identifies the use of Living Off the Land Binaries
+  and Scripts (LOLBAS) with network traffic. It leverages data from the Network Traffic
+  data model to detect when native Windows binaries, often abused by adversaries,
+  initiate network connections. This activity is significant as LOLBAS are frequently
+  used to download malicious payloads, enabling lateral movement, command-and-control,
+  or data exfiltration. If confirmed malicious, this behavior could allow attackers
+  to execute arbitrary code, escalate privileges, or maintain persistence within the
+  environment, posing a severe threat to organizational security.
+required_fields:
+- _time
+- Processes.user
+- Processes.process_id
+- Processes.process_name
+- Processes.process
+- Processes.process_path
+- Processes.dest
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.process_guid
+- All_Traffic.app
+- All_Traffic.src
+- All_Traffic.src_ip
+- All_Traffic.dest
+- All_Traffic.dest_ip
+- All_Traffic.process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Network_Traffic.All_Traffic where (All_Traffic.app IN ("*Regsvcs.exe",
+  "*\\Ftp.exe", "*OfflineScannerShell.exe", "*Rasautou.exe", "*Schtasks.exe", "*Xwizard.exe",
+  "*Pnputil.exe", "*Atbroker.exe", "*Pcwrun.exe", "*Ttdinject.exe", "*Mshta.exe",
+  "*Bitsadmin.exe", "*Certoc.exe", "*Ieexec.exe", "*Microsoft.Workflow.Compiler.exe",
+  "*Runscripthelper.exe", "*Forfiles.exe", "*Msbuild.exe", "*Register-cimprovider.exe",
+  "*Tttracer.exe", "*Ie4uinit.exe", "*Bash.exe", "*Hh.exe", "*SettingSyncHost.exe",
+  "*Cmstp.exe", "*Stordiag.exe", "*Scriptrunner.exe", "*Odbcconf.exe", "*Extexport.exe",
+  "*Msdt.exe", "*WorkFolders.exe", "*Diskshadow.exe", "*Mavinject.exe", "*Regasm.exe",
+  "*Gpscript.exe", "*Regsvr32.exe", "*Msiexec.exe", "*Wuauclt.exe", "*Presentationhost.exe",
+  "*Wmic.exe", "*Runonce.exe", "*Syncappvpublishingserver.exe", "*Verclsid.exe", "*Infdefaultinstall.exe",
+  "*Installutil.exe", "*Netsh.exe", "*Wab.exe", "*Dnscmd.exe", "*\\At.exe", "*Pcalua.exe",
+  "*Msconfig.exe", "*makecab.exe", "*cscript.exe", "*notepad.exe", "*\\cmd.exe", "*certutil.exe",
+  "*\\powershell.exe", "*powershell_ise.exe")) by All_Traffic.app,All_Traffic.src,All_Traffic.src_ip,All_Traffic.user,All_Traffic.dest,All_Traffic.dest_ip
+  | `drop_dm_object_name(All_Traffic)` | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | rex field=app ".*\\\(?<process_name>.*)$"
+  | rename app as process | `lolbas_with_network_traffic_filter`'

@@ -1,0 +1,23 @@
+description: The following analytic detects the creation of an AWS DataSync task,
+  which could indicate potential data exfiltration. It leverages AWS CloudTrail logs
+  to identify the `CreateTask` event from the DataSync service. This activity is significant
+  because attackers can misuse DataSync to transfer sensitive data from a private
+  AWS location to a public one, leading to data compromise. If confirmed malicious,
+  this could result in unauthorized access to sensitive information, causing severe
+  data breaches and compliance violations.
+required_fields:
+- _time
+- eventName
+- user_arn
+- src_ip
+- aws_account_id
+- destinationLocationArn
+- sourceLocationArn
+- userAgent
+- userIdentity.principalId
+rule: sourcetype=aws:cloudtrail eventName = CreateTask eventSource="datasync.amazonaws.com"
+  | rename  requestParameters.*  as *  | stats count min(_time) as firstTime max(_time)
+  as lastTime by src_ip aws_account_id awsRegion eventName destinationLocationArn
+  sourceLocationArn userAgent user_arn userIdentity.principalId  errorCode | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `aws_exfiltration_via_datasync_task_filter`

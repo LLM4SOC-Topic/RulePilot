@@ -1,0 +1,23 @@
+description: The following analytic detects the deletion of SSH keys on a Linux machine.
+  It leverages filesystem event logs to identify when files within "/etc/ssh/*" or
+  "~/.ssh/*" are deleted. This activity is significant because attackers may delete
+  or modify SSH keys to evade security measures or as part of a destructive payload,
+  similar to the AcidRain malware. If confirmed malicious, this behavior could lead
+  to impaired security features, hindered forensic investigations, or further unauthorized
+  access, necessitating immediate investigation to identify the responsible process
+  and user.
+required_fields:
+- _time
+- Filesystem.dest
+- Filesystem.file_create_time
+- Filesystem.file_name
+- Filesystem.process_guid
+- Filesystem.file_path
+- Filesystem.action
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Filesystem where Filesystem.action=deleted AND Filesystem.file_path
+  IN ("/etc/ssh/*", "~/.ssh/*") by _time span=1h Filesystem.file_name Filesystem.file_path
+  Filesystem.dest Filesystem.process_guid Filesystem.action | `drop_dm_object_name(Filesystem)`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$)| `linux_account_manipulation_of_ssh_config_and_keys_filter`'

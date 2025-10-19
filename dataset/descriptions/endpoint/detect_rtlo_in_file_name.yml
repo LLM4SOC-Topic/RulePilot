@@ -1,0 +1,23 @@
+description: The following analytic identifies the use of the right-to-left override
+  (RTLO) character in file names. It leverages data from the Endpoint.Filesystem datamodel,
+  specifically focusing on file creation events and file names containing the RTLO
+  character (U+202E). This activity is significant because adversaries use RTLO to
+  disguise malicious files as benign by reversing the text that follows the character.
+  If confirmed malicious, this technique can deceive users and security tools, leading
+  to the execution of harmful files and potential system compromise.
+required_fields:
+- _time
+- Filesystem.dest
+- Filesystem.user
+- Filesystem.file_name
+- Filesystem.file_path
+- Filesystem.process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  values(Filesystem.file_create_time) as file_create_time from datamodel=Endpoint.Filesystem
+  where Filesystem.file_name!=unknown by Filesystem.dest Filesystem.user Filesystem.process_id
+  Filesystem.file_name Filesystem.file_path | `drop_dm_object_name(Filesystem)` |
+  convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | regex file_name =  "\\x{202E}" | rex field=file_name "(?<RTLO_file_1>.+)(?<RTLO_exist_file>\\x{202E})(?<RTLO_file_2>.+)"
+  | eval file_name_with_RTLO=file_name | eval file_name=RTLO_file_1.RTLO_file_2 |
+  fields - RTLO* | `detect_rtlo_in_file_name_filter`'

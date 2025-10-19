@@ -1,0 +1,19 @@
+description: The following analytic identifies DNS queries with unusually large lengths
+  by computing the standard deviation of query lengths and filtering those exceeding
+  twice the standard deviation. It leverages DNS query data from the Network_Resolution
+  data model, focusing on the length of the domain names being resolved. This activity
+  is significant as unusually long DNS queries can indicate data exfiltration or command-and-control
+  communication attempts. If confirmed malicious, this activity could allow attackers
+  to stealthily transfer data or maintain persistent communication channels within
+  the network.
+required_fields:
+- _time
+- DNS.query
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count from datamodel=Network_Resolution where NOT
+  DNS.record_type IN("Pointer","PTR") by DNS.query host| `drop_dm_object_name("DNS")`
+  | eval tlds=split(query,".") | eval tld=mvindex(tlds,-1) | eval tld_len=len(tld)
+  | search tld_len<=24 | eval query_length = len(query) | table host query query_length
+  record_type count | eventstats stdev(query_length) AS stdev avg(query_length) AS
+  avg p50(query_length) AS p50| where query_length>(avg+stdev*2) | eval z_score=(query_length-avg)/stdev
+  | `dns_query_length_with_high_standard_deviation_filter`'

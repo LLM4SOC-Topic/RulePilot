@@ -1,0 +1,20 @@
+description: The following analytic identifies an excessive number of distinct processes
+  executing from the Windows\Temp directory. It leverages data from Endpoint Detection
+  and Response (EDR) agents, focusing on process paths and counts within a 20-minute
+  window. This behavior is significant as it often indicates the presence of post-exploit
+  frameworks like Koadic and Meterpreter, which use this technique to execute malicious
+  actions. If confirmed malicious, this activity could allow attackers to execute
+  arbitrary code, escalate privileges, and maintain persistence within the environment,
+  posing a severe threat to system integrity and security.
+required_fields:
+- _time
+- Processes.process
+- Processes.dest
+- Processes.user
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` values(Processes.process) as process distinct_count(Processes.process)
+  as distinct_process_count  min(_time) as firstTime max(_time) as lastTime from datamodel=Endpoint.Processes
+  where Processes.process_path = "*\\Windows\\Temp\\*" by Processes.dest Processes.user  _time
+  span=20m | where distinct_process_count > 37 | `drop_dm_object_name(Processes)`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `excessive_distinct_processes_from_windows_temp_filter`'

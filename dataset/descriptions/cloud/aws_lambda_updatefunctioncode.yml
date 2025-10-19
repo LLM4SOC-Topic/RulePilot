@@ -1,0 +1,16 @@
+description: The following analytic identifies IAM users attempting to update or modify
+  AWS Lambda code via the AWS CLI. It leverages CloudTrail logs to detect successful
+  `UpdateFunctionCode` events initiated by IAM users. This activity is significant
+  as it may indicate an attempt to gain persistence, further access, or plant backdoors
+  within your AWS environment. If confirmed malicious, an attacker could upload and
+  execute malicious code automatically when the Lambda function is triggered, potentially
+  compromising the integrity and security of your AWS infrastructure.
+required_fields:
+- _time
+- eventName
+- userAgent
+- errorCode
+rule: sourcetype=aws:cloudtrail eventSource=lambda.amazonaws.com eventName=UpdateFunctionCode*  errorCode
+  = success  user_type=IAMUser | stats  count min(_time) as firstTime max(_time) as
+  lastTime  values(requestParameters.functionName) as function_updated by src_ip user_arn
+  user_agent user_type eventName aws_account_id |`aws_lambda_updatefunctioncode_filter`

@@ -1,0 +1,23 @@
+description: The following analytic identifies the registration of a new Multi-Factor
+  Authentication (MFA) method for an AWS account, as logged through Amazon Security
+  Lake (ASL). It detects this activity by monitoring the `CreateVirtualMFADevice`
+  API operation within ASL logs. This behavior is significant because adversaries
+  who gain unauthorized access to an AWS account may register a new MFA method to
+  maintain persistence. If confirmed malicious, this activity could allow attackers
+  to secure their access, making it harder to detect and remove their presence from
+  the compromised environment.
+required_fields:
+- api.operation
+- actor.user.account_uid
+- actor.user.name
+- actor.user.uid
+- http_request.user_agent
+- src_endpoint.ip
+- cloud.region
+rule: sourcetype=aws:cloudtrail:lake api.operation=CreateVirtualMFADevice | fillnull
+  | stats count min(_time) as firstTime max(_time) as lastTime by api.operation actor.user.account_uid
+  actor.user.name actor.user.uid http_request.user_agent src_endpoint.ip cloud.region
+  | rename actor.user.name as user, src_endpoint.ip as src_ip, cloud.region as region,
+  http_request.user_agent as user_agent, actor.user.account_uid as aws_account_id
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `asl_aws_new_mfa_method_registered_for_user_filter`

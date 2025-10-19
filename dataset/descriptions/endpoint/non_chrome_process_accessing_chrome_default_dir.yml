@@ -1,0 +1,25 @@
+description: The following analytic detects a non-Chrome process accessing files in
+  the Chrome user default folder. It leverages Windows Security Event logs, specifically
+  event code 4663, to identify unauthorized access attempts. This activity is significant
+  because the Chrome default folder contains sensitive user data such as login credentials,
+  browsing history, and cookies. If confirmed malicious, this behavior could indicate
+  an attempt to exfiltrate sensitive information, often associated with RATs, trojans,
+  and advanced persistent threats like FIN7. Such access could lead to data theft
+  and further compromise of the affected system.
+required_fields:
+- _time
+- Object_Name
+- Object_Type
+- process_name
+- Access_Mask
+- Accesses
+- process_id
+- EventCode
+- dest
+- user
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=4663 NOT (ProcessName IN ("*\\chrome.exe", "*\\explorer.exe", "*sql*"))
+  ObjectName="*\\Google\\Chrome\\User Data\\Default*" | stats count min(_time) as
+  firstTime max(_time) as lastTime by ObjectName ObjectType ProcessName AccessMask
+  EventCode dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `non_chrome_process_accessing_chrome_default_dir_filter`

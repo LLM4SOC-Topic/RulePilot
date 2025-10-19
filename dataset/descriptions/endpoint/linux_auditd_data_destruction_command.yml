@@ -1,0 +1,20 @@
+description: The following analytic detects the execution of a Unix shell command
+  designed to wipe root directories on a Linux host. It leverages data from Linux
+  Auditd, focusing on the 'rm' command with force recursive deletion and the '--no-preserve-root'
+  option. This activity is significant as it indicates potential data destruction
+  attempts, often associated with malware like Awfulshred. If confirmed malicious,
+  this behavior could lead to severe data loss, system instability, and compromised
+  integrity of the affected Linux host. Immediate investigation and response are crucial
+  to mitigate potential damage.
+required_fields:
+- _time
+- argc
+- process_exec
+rule: sourcetype="linux:audit" type=EXECVE | eval relevant_fields=if(type="EXECVE",
+  "", relevant_fields) | foreach a* [eval relevant_fields=if(type="EXECVE", mvappend(relevant_fields,
+  '<<FIELD>>'), relevant_fields)] | eval process_exec=if(type="EXECVE", mvjoin(relevant_fields,
+  " "), process_exec) | eval process_exec=if(type="EXECVE", trim(process_exec), process_exec)
+  | rename host as dest | where LIKE (process_exec, "%rm %") AND LIKE (process_exec,
+  "% -rf %") AND LIKE (process_exec, "%--no-preserve-root%") | stats count min(_time)
+  as firstTime max(_time) as lastTime by argc process_exec dest | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| `linux_auditd_data_destruction_command_filter`

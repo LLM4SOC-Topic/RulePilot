@@ -1,0 +1,28 @@
+description: The following analytic identifies the execution of commonly used NirSoft
+  utilities on Windows systems. It leverages data from Endpoint Detection and Response
+  (EDR) agents, focusing on process execution details such as process name, parent
+  process, and command-line arguments. This activity is significant for a SOC because
+  NirSoft utilities, while legitimate, can be used by adversaries for malicious purposes
+  like credential theft or system reconnaissance. If confirmed malicious, this activity
+  could lead to unauthorized access, data exfiltration, or further system compromise.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Processes by Processes.dest Processes.user Processes.parent_process_name
+  Processes.process_name Processes.process Processes.original_file_name Processes.process_path
+  Processes.process_id Processes.parent_process_id | `drop_dm_object_name("Processes")`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | lookup update=true is_nirsoft_software filename as process_name
+  OUTPUT nirsoftFile | search nirsoftFile=true | `windows_nirsoft_utilities_filter`'

@@ -1,0 +1,17 @@
+description: The following analytic detects when an email manually submitted to Microsoft
+  through the Security & Compliance portal is found to be malicious. This capability
+  is an enhanced protection feature that can be used within o365 tenants by administrative
+  users to report potentially malicious emails. This correlation looks for any submission
+  that returns a Phish or Malware verdict upon submission.
+required_fields:
+- _time
+- Id
+- Operation
+- UserId
+rule: sourcetype=o365:management:activity Workload=SecurityComplianceCenter Operation=AdminSubmission
+  | search RescanVerdict IN (Phish,Malware) | stats values(Subject) as subject, values(RescanVerdict)
+  as result, values(SenderIP) as src, values(P2Sender) as sender, values(P1Sender)
+  as src_user, values(Recipients{}) as user, count min(_time) as firstTime, max(_time)
+  as lastTime, by Id,Operation,UserId | rename Name as signature, Id as signature_id,
+  UserId as o365_adminuser | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `o365_email_reported_by_admin_found_malicious_filter`

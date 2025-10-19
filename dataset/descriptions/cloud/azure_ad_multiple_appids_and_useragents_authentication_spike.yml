@@ -1,0 +1,28 @@
+description: The following analytic detects unusual authentication activity in Azure
+  AD, specifically when a single user account has over 8 authentication attempts using
+  3+ unique application IDs and 5+ unique user agents within a short period. It leverages
+  Azure AD audit logs, focusing on authentication events and using statistical thresholds.
+  This behavior is significant as it may indicate an adversary probing for MFA requirements.
+  If confirmed malicious, it suggests a compromised account, potentially leading to
+  further exploitation, lateral movement, and data exfiltration. Early detection is
+  crucial to prevent substantial harm.
+required_fields:
+- _time
+- category
+- user
+- src_ip
+- operationName
+- properties.authenticationRequirement
+- properties.status.additionalDetails
+- properties.authenticationDetails{}.succeeded
+- properties.userAgent
+- properties.appDisplayName
+rule: sourcetype=azure:monitor:aad category=SignInLogs operationName="Sign-in activity"
+  (properties.authenticationRequirement="multiFactorAuthentication" AND properties.status.additionalDetails="MFA
+  required in Azure AD") OR (properties.authenticationRequirement=singleFactorAuthentication
+  AND "properties.authenticationDetails{}.succeeded"=true) | bucket span=5m _time
+  | rename properties.* as * | stats count min(_time) as firstTime max(_time) as lastTime
+  dc(appId) as unique_app_ids dc(userAgent) as unique_user_agents values(appDisplayName)
+  values(deviceDetail.operatingSystem) by user, src_ip | where count > 5 and unique_app_ids
+  > 2 and unique_user_agents > 5 | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `azure_ad_multiple_appids_and_useragents_authentication_spike_filter`

@@ -1,0 +1,10 @@
+Map admin share
+Connecting To Remote Shares
+
+Name	Description	Type	Default Value
+user_name	Username	string	DOMAIN\Administrator
+share_name	Examples C$, IPC$, Admin$	string	C$
+password	Password	string	P@ssw0rd1
+computer_name	Target Computer Name	string	Target
+Attack Commands: Run with command_prompt!
+cmd.exe /c "net use \\#{computer_name}\#{share_name} #{password} /u:#{user_name}"

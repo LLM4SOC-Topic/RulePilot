@@ -1,0 +1,10 @@
+pandas~=2.2.1
+openai~=1.41.0
+python-dotenv~=1.0.1
+requests~=2.31.0
+urllib3~=2.2.2
+splunk-sdk~=2.1.0
+colorama~=0.4.6
+yaml~=0.2.5
+pyyaml~=6.0.1
+streamlit~=1.37.1

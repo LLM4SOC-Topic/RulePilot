@@ -1,0 +1,22 @@
+description: The following analytic detects suspicious registry modifications that
+  change the default file association to execute a malicious payload. It leverages
+  data from the Endpoint data model, specifically monitoring registry paths under
+  "*\\shell\\open\\command\\*" and "*HKCR\\*". This activity is significant because
+  altering default file associations can allow attackers to execute arbitrary scripts
+  or payloads when a user opens a file, leading to potential code execution. If confirmed
+  malicious, this technique can enable attackers to persist on the compromised host
+  and execute further malicious commands, posing a severe threat to the environment.
+required_fields:
+- _time
+- Registry.dest
+- Registry.user
+- Registry.registry_path
+- Registry.registry_key_name
+- Registry.registry_value_name
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count  min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry where Registry.registry_path ="*\\shell\\open\\command\\*"
+  Registry.registry_path = "*HKCR\\*" by Registry.dest  Registry.user Registry.registry_path
+  Registry.registry_key_name Registry.registry_value_name | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `drop_dm_object_name(Registry)`
+  | `change_default_file_association_filter`'

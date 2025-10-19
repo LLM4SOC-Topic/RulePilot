@@ -1,0 +1,21 @@
+description: The following analytic detects unauthorized file creation in known crontab
+  directories on Unix-based systems. It leverages filesystem data to identify new
+  files in directories such as /etc/cron* and /var/spool/cron/*. This activity is
+  significant as it may indicate an attempt by threat actors or malware to establish
+  persistence on a compromised host. If confirmed malicious, this could allow attackers
+  to execute arbitrary code at scheduled intervals, potentially leading to further
+  system compromise and unauthorized access to sensitive information.
+required_fields:
+- _time
+- Filesystem.dest
+- Filesystem.file_create_time
+- Filesystem.file_name
+- Filesystem.process_guid
+- Filesystem.file_path
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Filesystem where Filesystem.file_path IN ("*/etc/cron*",
+  "*/var/spool/cron/*") by Filesystem.dest Filesystem.file_create_time Filesystem.file_name
+  Filesystem.process_guid Filesystem.file_path | `drop_dm_object_name(Filesystem)`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `linux_add_files_in_known_crontab_directories_filter`'

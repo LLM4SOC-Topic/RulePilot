@@ -1,0 +1,26 @@
+description: The following analytic identifies instances where more than 10 unique
+  user accounts have failed to authenticate from a single IP address within a 5-minute
+  window in an Okta tenant. This detection uses OktaIm2 logs ingested via the Splunk
+  Add-on for Okta Identity Cloud. Such activity is significant as it may indicate
+  brute-force attacks or password spraying attempts. If confirmed malicious, this
+  behavior suggests an external entity is attempting to compromise multiple user accounts,
+  potentially leading to unauthorized access to organizational resources and data
+  breaches.
+required_fields:
+- _time
+- Authentication.user
+- Authentication.signature
+- Authentication.user
+- Authentication.app
+- Authentication.authentication_method
+- Authentication.action
+- Authentication.src
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count max(_time) as lastTime, min(_time) as firstTime
+  dc(Authentication.user) as unique_accounts values(Authentication.signature) as signature
+  values(Authentication.user) as user values(Authentication.app) as app values(Authentication.authentication_method)
+  as authentication_method from datamodel=Authentication where Authentication.action="failure"
+  AND Authentication.signature=user.session.start by _time span=5m Authentication.src
+  sourcetype | where unique_accounts > 9 | `drop_dm_object_name("Authentication")`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `okta_multiple_users_failing_to_authenticate_from_ip_filter`'

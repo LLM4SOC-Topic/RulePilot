@@ -1,0 +1,713 @@
+Atomic Test #1 - Windows - Delete Volume Shadow Copies
+
+Log1
+09/11/2024 07:25:06 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=491919
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-10 23:25:06.071
+ProcessGuid: {6f6dba56-d552-66e0-a6a5-3c0000001700}
+ProcessId: 141616
+Image: C:\Windows\System32\vssadmin.exe
+FileVersion: 10.0.19041.1 (WinBuild.160101.0800)
+Description: Command Line Interface for Microsoft® Volume Shadow Copy Service 
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: VSSADMIN.EXE
+CommandLine: "C:\Windows\system32\vssadmin.exe" delete shadows /all /quiet
+CurrentDirectory: E:\Experiment\Windows-Hacker-Attack-Program\caldera\T1053.005-Scheduled-Task\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=AAFE91BDC580260E4EF7FABC6B273FF0AE1E703F,MD5=B58073DB8892B67A672906C9358020EC,SHA256=8C1FABCC2196E4D096B7D155837C5F699AD7F55EDBF84571E4F8E03500B7A8B0,IMPHASH=C1EDC431CD345F0A0F32019895D13FCE
+ParentProcessGuid: {6f6dba56-c92c-66d7-881d-2d0000001700}
+ParentProcessId: 10628
+ParentImage: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+ParentCommandLine: "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" 
+ParentUser: DESKTOP-43B3OH1\xcy
+
+Log2
+09/11/2024 07:24:48 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=490316
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-10 23:24:48.343
+ProcessGuid: {6f6dba56-d540-66e0-88a5-3c0000001700}
+ProcessId: 139624
+Image: C:\Windows\System32\vssadmin.exe
+FileVersion: 10.0.19041.1 (WinBuild.160101.0800)
+Description: Command Line Interface for Microsoft® Volume Shadow Copy Service 
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: VSSADMIN.EXE
+CommandLine: vssadmin.exe  delete shadows /all /quiet
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=AAFE91BDC580260E4EF7FABC6B273FF0AE1E703F,MD5=B58073DB8892B67A672906C9358020EC,SHA256=8C1FABCC2196E4D096B7D155837C5F699AD7F55EDBF84571E4F8E03500B7A8B0,IMPHASH=C1EDC431CD345F0A0F32019895D13FCE
+ParentProcessGuid: {6f6dba56-c9eb-66d7-e61e-2d0000001700}
+ParentProcessId: 109704
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: cmd
+ParentUser: DESKTOP-43B3OH1\xcy
+
+Log3
+09/11/2024 07:24:16 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=486421
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-10 23:24:16.370
+ProcessGuid: {6f6dba56-d520-66e0-40a5-3c0000001700}
+ProcessId: 143856
+Image: C:\Windows\System32\vssadmin.exe
+FileVersion: 10.0.19041.1 (WinBuild.160101.0800)
+Description: Command Line Interface for Microsoft® Volume Shadow Copy Service 
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: VSSADMIN.EXE
+CommandLine: vssadmin.exe  delete shadows /all /quiet
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=AAFE91BDC580260E4EF7FABC6B273FF0AE1E703F,MD5=B58073DB8892B67A672906C9358020EC,SHA256=8C1FABCC2196E4D096B7D155837C5F699AD7F55EDBF84571E4F8E03500B7A8B0,IMPHASH=C1EDC431CD345F0A0F32019895D13FCE
+ParentProcessGuid: {6f6dba56-c9eb-66d7-e61e-2d0000001700}
+ParentProcessId: 109704
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: cmd
+ParentUser: DESKTOP-43B3OH1\xcy
+
+Atomic Test #2 - Windows - Delete Volume Shadow Copies via WMI
+
+Log1
+09/11/2024 07:25:40 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=495366
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-10 23:25:40.475
+ProcessGuid: {6f6dba56-d574-66e0-e5a5-3c0000001700}
+ProcessId: 136396
+Image: C:\Windows\System32\wbem\WMIC.exe
+FileVersion: 10.0.19041.4355 (WinBuild.160101.0800)
+Description: WMI Commandline Utility
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: wmic.exe
+CommandLine: wmic.exe  shadowcopy delete
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=BC2AF7B06E6FA7CF10ACC2686EA7E491A28DFB6D,MD5=F04138FE0E6A4814BF3942E3037900F4,SHA256=BF4FA71C1495F95ADBCF3F7C7D41837E2661622C2EE3B24CD9647676047578DA,IMPHASH=527C7C66CDD13D72D793BCA3A417BCBE
+ParentProcessGuid: {6f6dba56-c9eb-66d7-e61e-2d0000001700}
+ParentProcessId: 109704
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: cmd
+ParentUser: DESKTOP-43B3OH1\xcy
+
+Atomic Test #3 - Windows - wbadmin Delete Windows Backup Catalog
+
+Log1
+09/11/2024 07:26:05 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=497950
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-10 23:26:05.161
+ProcessGuid: {6f6dba56-d58d-66e0-15a6-3c0000001700}
+ProcessId: 139864
+Image: C:\Windows\System32\wbadmin.exe
+FileVersion: 10.0.19041.3636 (WinBuild.160101.0800)
+Description: Command Line Interface for Microsoft® BLB Backup
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: WBADMIN.EXE
+CommandLine: "C:\Windows\system32\wbadmin.exe" delete catalog -quiet
+CurrentDirectory: E:\Experiment\Windows-Hacker-Attack-Program\caldera\T1053.005-Scheduled-Task\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=AFC20FEEDDD3DDD2349F3251EE03786BE280D051,MD5=151FEEFF52D82BFB150B80F852DC7B50,SHA256=94235BD6D75B2B11243F47D7EA2B5958433CCDE58368C2C9F1B14226E68867F6,IMPHASH=D72A8A096458529EDF54E67F5F212651
+ParentProcessGuid: {6f6dba56-c92c-66d7-881d-2d0000001700}
+ParentProcessId: 10628
+ParentImage: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+ParentCommandLine: "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" 
+ParentUser: DESKTOP-43B3OH1\xcy
+
+Log2
+09/11/2024 07:25:56 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=496626
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-10 23:25:56.416
+ProcessGuid: {6f6dba56-d584-66e0-fda5-3c0000001700}
+ProcessId: 141168
+Image: C:\Windows\System32\wbadmin.exe
+FileVersion: 10.0.19041.3636 (WinBuild.160101.0800)
+Description: Command Line Interface for Microsoft® BLB Backup
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: WBADMIN.EXE
+CommandLine: wbadmin  delete catalog -quiet
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=AFC20FEEDDD3DDD2349F3251EE03786BE280D051,MD5=151FEEFF52D82BFB150B80F852DC7B50,SHA256=94235BD6D75B2B11243F47D7EA2B5958433CCDE58368C2C9F1B14226E68867F6,IMPHASH=D72A8A096458529EDF54E67F5F212651
+ParentProcessGuid: {6f6dba56-c9eb-66d7-e61e-2d0000001700}
+ParentProcessId: 109704
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: cmd
+ParentUser: DESKTOP-43B3OH1\xcy
+
+Atomic Test #4 - Windows - Disable Windows Recovery Console Repair
+
+Log1
+09/11/2024 07:26:18 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=499466
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-10 23:26:18.488
+ProcessGuid: {6f6dba56-d59a-66e0-2ea6-3c0000001700}
+ProcessId: 143748
+Image: C:\Windows\System32\bcdedit.exe
+FileVersion: 10.0.19041.4648 (WinBuild.160101.0800)
+Description: Boot Configuration Data Editor
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: bcdedit.exe
+CommandLine: bcdedit.exe  /set {default} bootstatuspolicy ignoreallfailures
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=22378A175CC9E35C0A2C856F329C4F9EC4219A0E,MD5=46AE614192BC719A3E54BB50404B0081,SHA256=9C7E4D8390A3674D711A10E23D4F4A6A816E0884342C505FB58DADE865A193D4,IMPHASH=ED47BFF4333B75903582989F6C229A64
+ParentProcessGuid: {6f6dba56-c9eb-66d7-e61e-2d0000001700}
+ParentProcessId: 109704
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: cmd
+ParentUser: DESKTOP-43B3OH1\xcy
+
+Log2
+09/11/2024 07:26:20 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=499873
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-10 23:26:20.544
+ProcessGuid: {6f6dba56-d59c-66e0-35a6-3c0000001700}
+ProcessId: 138704
+Image: C:\Windows\System32\bcdedit.exe
+FileVersion: 10.0.19041.4648 (WinBuild.160101.0800)
+Description: Boot Configuration Data Editor
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: bcdedit.exe
+CommandLine: bcdedit.exe  /set {default} recoveryenabled no
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=22378A175CC9E35C0A2C856F329C4F9EC4219A0E,MD5=46AE614192BC719A3E54BB50404B0081,SHA256=9C7E4D8390A3674D711A10E23D4F4A6A816E0884342C505FB58DADE865A193D4,IMPHASH=ED47BFF4333B75903582989F6C229A64
+ParentProcessGuid: {6f6dba56-c9eb-66d7-e61e-2d0000001700}
+ParentProcessId: 109704
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: cmd
+ParentUser: DESKTOP-43B3OH1\xcy
+
+Atomic Test #5 - Windows - Delete Volume Shadow Copies via WMI with PowerShell
+
+Log1
+10/10/2024 03:35:11 PM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=88
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=6033
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+Get-WmiObject Win32_Shadowcopy | ForEach-Object {$_.Delete();}
+
+ScriptBlock ID: 58273d85-7d6e-4423-9d34-c005863356ab
+
+Atomic Test #7 - Windows - wbadmin Delete systemstatebackup
+
+Log1
+09/11/2024 07:27:56 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=508853
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-10 23:27:56.125
+ProcessGuid: {6f6dba56-d5fc-66e0-daa6-3c0000001700}
+ProcessId: 143640
+Image: C:\Windows\System32\wbadmin.exe
+FileVersion: 10.0.19041.3636 (WinBuild.160101.0800)
+Description: Command Line Interface for Microsoft® BLB Backup
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: WBADMIN.EXE
+CommandLine: "C:\Windows\system32\wbadmin.exe" delete systemstatebackup -keepVersions:0
+CurrentDirectory: E:\Experiment\Windows-Hacker-Attack-Program\caldera\T1053.005-Scheduled-Task\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=AFC20FEEDDD3DDD2349F3251EE03786BE280D051,MD5=151FEEFF52D82BFB150B80F852DC7B50,SHA256=94235BD6D75B2B11243F47D7EA2B5958433CCDE58368C2C9F1B14226E68867F6,IMPHASH=D72A8A096458529EDF54E67F5F212651
+ParentProcessGuid: {6f6dba56-c92c-66d7-881d-2d0000001700}
+ParentProcessId: 10628
+ParentImage: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+ParentCommandLine: "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" 
+ParentUser: DESKTOP-43B3OH1\xcy
+
+Log2
+09/11/2024 07:27:41 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=507523
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-10 23:27:41.190
+ProcessGuid: {6f6dba56-d5ed-66e0-c0a6-3c0000001700}
+ProcessId: 143304
+Image: C:\Windows\System32\wbadmin.exe
+FileVersion: 10.0.19041.3636 (WinBuild.160101.0800)
+Description: Command Line Interface for Microsoft® BLB Backup
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: WBADMIN.EXE
+CommandLine: wbadmin  delete systemstatebackup -keepVersions:0
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=AFC20FEEDDD3DDD2349F3251EE03786BE280D051,MD5=151FEEFF52D82BFB150B80F852DC7B50,SHA256=94235BD6D75B2B11243F47D7EA2B5958433CCDE58368C2C9F1B14226E68867F6,IMPHASH=D72A8A096458529EDF54E67F5F212651
+ParentProcessGuid: {6f6dba56-c9eb-66d7-e61e-2d0000001700}
+ParentProcessId: 109704
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: cmd
+ParentUser: DESKTOP-43B3OH1\xcy
+
+Atomic Test #8 - Windows - Disable the SR scheduled task
+
+Log1
+09/11/2024 07:28:10 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=510447
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-10 23:28:10.342
+ProcessGuid: {6f6dba56-d60a-66e0-f6a6-3c0000001700}
+ProcessId: 141552
+Image: C:\Windows\System32\schtasks.exe
+FileVersion: 10.0.19041.3636 (WinBuild.160101.0800)
+Description: Task Scheduler Configuration Tool
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: schtasks.exe
+CommandLine: schtasks.exe  /Change /TN "\Microsoft\Windows\SystemRestore\SR" /disable
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+
+Atomic Test #9 - Disable System Restore Through Registry
+
+Log1
+09/11/2024 07:28:35 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=513383
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-10 23:28:35.732
+ProcessGuid: {6f6dba56-d623-66e0-2fa7-3c0000001700}
+ProcessId: 131620
+Image: C:\Windows\System32\reg.exe
+FileVersion: 10.0.19041.1 (WinBuild.160101.0800)
+Description: Registry Console Tool
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: reg.exe
+CommandLine: reg  add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v "DisableSR" /t "REG_DWORD" /d "1" /f
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=C0DB341DEFA8EF40C03ED769A9001D600E0F4DAE,MD5=227F63E1D9008B36BDBCC4B397780BE4,SHA256=C0E25B1F9B22DE445298C1E96DDFCEAD265CA030FA6626F61A4A4786CC4A3B7D,IMPHASH=BE482BE427FE212CFEF2CDA0E61F19AC
+ParentProcessGuid: {6f6dba56-c9eb-66d7-e61e-2d0000001700}
+ParentProcessId: 109704
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: cmd
+ParentUser: DESKTOP-43B3OH1\xcy
+
+Log2
+09/11/2024 07:28:33 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=513259
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-10 23:28:33.782
+ProcessGuid: {6f6dba56-d621-66e0-2ba7-3c0000001700}
+ProcessId: 142712
+Image: C:\Windows\System32\reg.exe
+FileVersion: 10.0.19041.1 (WinBuild.160101.0800)
+Description: Registry Console Tool
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: reg.exe
+CommandLine: reg  add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v "DisableConfig" /t "REG_DWORD" /d "1" /f
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=C0DB341DEFA8EF40C03ED769A9001D600E0F4DAE,MD5=227F63E1D9008B36BDBCC4B397780BE4,SHA256=C0E25B1F9B22DE445298C1E96DDFCEAD265CA030FA6626F61A4A4786CC4A3B7D,IMPHASH=BE482BE427FE212CFEF2CDA0E61F19AC
+ParentProcessGuid: {6f6dba56-c9eb-66d7-e61e-2d0000001700}
+ParentProcessId: 109704
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: cmd
+ParentUser: DESKTOP-43B3OH1\xcy
+
+Log3
+09/11/2024 07:28:33 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=513237
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-10 23:28:33.756
+ProcessGuid: {6f6dba56-d621-66e0-2aa7-3c0000001700}
+ProcessId: 141616
+Image: C:\Windows\System32\reg.exe
+FileVersion: 10.0.19041.1 (WinBuild.160101.0800)
+Description: Registry Console Tool
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: reg.exe
+CommandLine: reg  add "HKLM\SOFTWARE\Policies\Microsoft\Windows NT\SystemRestore" /v "DisableSR" /t "REG_DWORD" /d "1" /f
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=C0DB341DEFA8EF40C03ED769A9001D600E0F4DAE,MD5=227F63E1D9008B36BDBCC4B397780BE4,SHA256=C0E25B1F9B22DE445298C1E96DDFCEAD265CA030FA6626F61A4A4786CC4A3B7D,IMPHASH=BE482BE427FE212CFEF2CDA0E61F19AC
+ParentProcessGuid: {6f6dba56-c9eb-66d7-e61e-2d0000001700}
+ParentProcessId: 109704
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: cmd
+ParentUser: DESKTOP-43B3OH1\xcy
+
+Log4
+09/11/2024 07:28:33 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=513064
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-10 23:28:33.406
+ProcessGuid: {6f6dba56-d621-66e0-28a7-3c0000001700}
+ProcessId: 142864
+Image: C:\Windows\System32\reg.exe
+FileVersion: 10.0.19041.1 (WinBuild.160101.0800)
+Description: Registry Console Tool
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: reg.exe
+CommandLine: reg  add "HKLM\SOFTWARE\Policies\Microsoft\Windows NT\SystemRestore" /v "DisableConfig" /t "REG_DWORD" /d "1" /f
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=C0DB341DEFA8EF40C03ED769A9001D600E0F4DAE,MD5=227F63E1D9008B36BDBCC4B397780BE4,SHA256=C0E25B1F9B22DE445298C1E96DDFCEAD265CA030FA6626F61A4A4786CC4A3B7D,IMPHASH=BE482BE427FE212CFEF2CDA0E61F19AC
+ParentProcessGuid: {6f6dba56-c9eb-66d7-e61e-2d0000001700}
+ParentProcessId: 109704
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: cmd
+ParentUser: DESKTOP-43B3OH1\xcy
+
+Atomic Test #10 - Windows - vssadmin Resize Shadowstorage Volume
+
+Log1
+09/11/2024 07:29:00 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=515408
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-10 23:29:00.492
+ProcessGuid: {6f6dba56-d63c-66e0-54a7-3c0000001700}
+ProcessId: 144004
+Image: C:\Windows\System32\vssadmin.exe
+FileVersion: 10.0.19041.1 (WinBuild.160101.0800)
+Description: Command Line Interface for Microsoft® Volume Shadow Copy Service 
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: VSSADMIN.EXE
+CommandLine: "C:\Windows\system32\vssadmin.exe" resize shadowstorage /For=C: /On=C: /MaxSize=20%%
+CurrentDirectory: E:\Experiment\Windows-Hacker-Attack-Program\caldera\T1053.005-Scheduled-Task\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=AAFE91BDC580260E4EF7FABC6B273FF0AE1E703F,MD5=B58073DB8892B67A672906C9358020EC,SHA256=8C1FABCC2196E4D096B7D155837C5F699AD7F55EDBF84571E4F8E03500B7A8B0,IMPHASH=C1EDC431CD345F0A0F32019895D13FCE
+ParentProcessGuid: {6f6dba56-c92c-66d7-881d-2d0000001700}
+ParentProcessId: 10628
+ParentImage: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+ParentCommandLine: "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" 
+ParentUser: DESKTOP-43B3OH1\xcy
+
+Atomic Test #11 - Modify VSS Service Permissions
+
+Log1
+09/11/2024 07:29:20 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=517934
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-10 23:29:20.081
+ProcessGuid: {6f6dba56-d650-66e0-82a7-3c0000001700}
+ProcessId: 139236
+Image: C:\Windows\System32\sc.exe
+FileVersion: 10.0.19041.1 (WinBuild.160101.0800)
+Description: Service Control Manager Configuration Tool
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: sc.exe
+CommandLine: sc  sdset VSS D:(D;;GA;;;NU)(D;;GA;;;WD)(D;;GA;;;AN)S:(AU;FA;GA;;;WD)(AU;OIIOFA;GA;;;WD)
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=B4979A9F970029889713D756C3F123643DDE73DA,MD5=3FB5CF71F7E7EB49790CB0E663434D80,SHA256=41F067C3A11B02FE39947F9EBA68AE5C7CB5BD1872A6009A4CD1506554A9ABA9,IMPHASH=803254E010814E69947095A2725B2AFD
+ParentProcessGuid: {6f6dba56-c9eb-66d7-e61e-2d0000001700}
+ParentProcessId: 109704
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: cmd
+ParentUser: DESKTOP-43B3OH1\xcy

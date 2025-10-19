@@ -1,0 +1,20 @@
+description: The following analytic detects the creation of a Service Principal in
+  an Azure AD environment. It leverages Azure Active Directory events ingested through
+  EventHub, specifically monitoring the "Add service principal" operation. This activity
+  is significant because Service Principals can be used by adversaries to establish
+  persistence and bypass multi-factor authentication and conditional access policies.
+  If confirmed malicious, this could allow attackers to maintain single-factor access
+  to the Azure AD environment, potentially leading to unauthorized access to resources
+  and prolonged undetected activity.
+required_fields:
+- _time
+- properties.targetResources{}.displayName
+- properties.targetResources{}.type
+- user
+- properties.result
+rule: sourcetype=azure:monitor:aad  operationName="Add service principal" properties.initiatedBy.user.id=*
+  | rename properties.* as * | rename targetResources{}.displayName as displayName
+  | rename targetResources{}.type as type | stats count min(_time) as firstTime max(_time)
+  as lastTime values(displayName) as displayName by type, user, result, operationName
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `azure_ad_service_principal_created_filter`

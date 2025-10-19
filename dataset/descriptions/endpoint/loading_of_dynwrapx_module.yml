@@ -1,0 +1,25 @@
+description: The following analytic detects the loading of the dynwrapx.dll module,
+  which is associated with the DynamicWrapperX ActiveX component. This detection leverages
+  Sysmon EventCode 7 to identify processes that load or register dynwrapx.dll. This
+  activity is significant because DynamicWrapperX can be used to call Windows API
+  functions in scripts, making it a potential tool for malicious actions. If confirmed
+  malicious, this could allow an attacker to execute arbitrary code, escalate privileges,
+  or maintain persistence on the host. Immediate investigation of parallel processes
+  and registry modifications is recommended.
+required_fields:
+- _time
+- Image
+- ImageLoaded
+- OriginalFileName
+- Product
+- process_name
+- dest
+- EventCode
+- Signed
+- ProcessId
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=7 (ImageLoaded = "*\\dynwrapx.dll"
+  OR OriginalFileName = "dynwrapx.dll" OR  Product = "DynamicWrapperX") | stats count
+  min(_time) as firstTime max(_time) as lastTime by Image ImageLoaded OriginalFileName
+  Product process_name dest EventCode Signed ProcessId | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `loading_of_dynwrapx_module_filter`

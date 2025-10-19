@@ -1,0 +1,23 @@
+description: The following analytic detects the creation of a new DWORD value named
+  "EnableAt" in the registry path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Configuration".
+  This modification enables the use of the at.exe or wmi Win32_ScheduledJob commands
+  to add scheduled tasks on a Windows endpoint. The detection leverages registry event
+  data from the Endpoint datamodel. This activity is significant because it may indicate
+  that an attacker is enabling the ability to schedule tasks, potentially to execute
+  malicious code at specific times or intervals. If confirmed malicious, this could
+  allow persistent code execution on the system.
+required_fields:
+- _time
+- Registry.registry_path
+- Registry.dest
+- Registry.user
+- Registry.registry_value_name
+- Registry.registry_value_type
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count values(Registry.registry_key_name) as registry_key_name
+  values(Registry.registry_path) as registry_path min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Registry where Registry.registry_path="*\\CurrentVersion\\Schedule\\Configuration*"
+  Registry.registry_value_name=EnableAt  by Registry.dest, Registry.user, Registry.registry_value_name,
+  Registry.registry_value_type | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `drop_dm_object_name(Registry)`
+  | `windows_enable_win32_scheduledjob_via_registry_filter`'

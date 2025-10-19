@@ -1,0 +1,23 @@
+description: The following analytic identifies a computer account creating a new computer
+  account with a specific Service Principal Name (SPN) "RestrictedKrbHost". This detection
+  leverages Windows Security Event Logs, specifically EventCode 4741, to identify
+  such activities. This behavior is significant as it may indicate an attempt to establish
+  unauthorized Kerberos authentication channels, potentially leading to lateral movement
+  or privilege escalation. If confirmed malicious, this activity could allow an attacker
+  to impersonate services, access sensitive information, or maintain persistence within
+  the network.
+required_fields:
+- _time
+- dest
+- subject
+- action
+- src_user
+- user
+- Account_Name
+- Subject_Account_Name
+- Subject_Account_Domain
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=4741 user_type=computer SubjectDomainName!="NT AUTHORITY" ServicePrincipalNames=*RestrictedKrbHost*
+  | stats  count min(_time) as firstTime max(_time) as lastTime by dest, subject,
+  action ,src_user, user, user_type, SubjectUserName,SubjectDomainName | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_computer_account_created_by_computer_account_filter`

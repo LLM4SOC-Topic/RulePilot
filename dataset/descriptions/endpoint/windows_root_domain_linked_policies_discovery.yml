@@ -1,0 +1,19 @@
+description: The following analytic detects the use of the `[Adsisearcher]` type accelerator
+  in PowerShell to query Active Directory for root domain linked policies. It leverages
+  PowerShell Script Block Logging (EventCode=4104) to identify this activity. This
+  behavior is significant as it may indicate an attempt by adversaries or Red Teams
+  to gain situational awareness and perform Active Directory Discovery. If confirmed
+  malicious, this activity could allow attackers to map out domain policies, potentially
+  aiding in further exploitation or lateral movement within the network.
+required_fields:
+- _time
+- EventCode
+- ScriptBlockText
+- Computer
+- user_id
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText = "*[adsisearcher]*" ScriptBlockText = "*.SearchRooT*"
+  ScriptBlockText = "*.gplink*" | stats count min(_time) as firstTime max(_time) as
+  lastTime by EventCode ScriptBlockText Computer user_id | rename Computer as dest,
+  user_id as user | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_root_domain_linked_policies_discovery_filter`

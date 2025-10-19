@@ -1,0 +1,21 @@
+description: The following analytic detects the execution of the Get-ForestTrust command
+  from PowerSploit using PowerShell Script Block Logging (EventCode=4104). This method
+  captures the full command sent to PowerShell, providing detailed visibility into
+  potentially suspicious activities. Monitoring this behavior is crucial as it can
+  indicate an attempt to gather domain trust information, which is often a precursor
+  to lateral movement or privilege escalation. If confirmed malicious, this activity
+  could allow an attacker to map trust relationships within the domain, facilitating
+  further exploitation and access to sensitive resources.
+required_fields:
+- _time
+- EventCode
+- ScriptBlockText
+- Path
+- Opcode
+- Computer
+- UserID
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText = "*get-foresttrust*" | stats count min(_time) as
+  firstTime max(_time) as lastTime by EventCode ScriptBlockText Computer UserID |
+  rename Computer as dest | rename UserID as user | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `get_foresttrust_with_powershell_script_block_filter`

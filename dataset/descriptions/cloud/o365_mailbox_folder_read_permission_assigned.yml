@@ -1,0 +1,22 @@
+description: The following analytic identifies instances where read permissions are
+  assigned to mailbox folders within an Office 365 environment. It leverages the `o365_management_activity`
+  data source, specifically monitoring the `ModifyFolderPermissions` and `AddFolderPermissions`
+  operations, while excluding Calendar, Contacts, and PersonMetadata objects. This
+  activity is significant as unauthorized read permissions can lead to data exposure
+  and potential information leakage. If confirmed malicious, an attacker could gain
+  unauthorized access to sensitive emails, leading to data breaches and compromising
+  the confidentiality of organizational communications.
+required_fields:
+- _time
+- Operation
+- Workload
+- UserId
+- object
+- Item.ParentFolder.MemberRights
+rule: sourcetype=o365:management:activity Workload=Exchange (Operation=ModifyFolderPermissions
+  OR Operation=AddFolderPermissions) Workload=Exchange object!=Calendar object!=Contacts
+  object!=PersonMetadata | eval isReadRole=if(match('Item.ParentFolder.MemberRights',
+  "(ReadAny)"), "true", "false")  | rename UserId as user  | stats count earliest(_time)
+  as firstTime latest(_time) as lastTime by Operation, user, object, Item.ParentFolder.MemberUpn,
+  Item.ParentFolder.MemberRights | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `o365_mailbox_folder_read_permission_assigned_filter`

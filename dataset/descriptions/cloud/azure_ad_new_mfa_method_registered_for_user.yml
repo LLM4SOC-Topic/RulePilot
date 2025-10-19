@@ -1,0 +1,21 @@
+description: The following analytic detects the registration of a new Multi-Factor
+  Authentication (MFA) method for an Azure AD account. It leverages Azure AD AuditLogs
+  to identify when a user registers new security information. This activity is significant
+  because adversaries who gain unauthorized access to an account may add their own
+  MFA method to maintain persistence. If confirmed malicious, this could allow attackers
+  to bypass existing security controls, maintain long-term access, and potentially
+  escalate their privileges within the environment.
+required_fields:
+- _time
+- category
+- operationName
+- properties.operationType
+- user
+- resultDescription
+- result
+- src_ip
+rule: sourcetype=azure:monitor:aad category=AuditLogs operationName="User registered
+  security info" properties.operationType=Add | rename properties.* as * | rename
+  targetResources{}.* as * | stats count min(_time) as firstTime max(_time) as lastTime
+  by user, resultDescription, result, src_ip | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `azure_ad_new_mfa_method_registered_for_user_filter`

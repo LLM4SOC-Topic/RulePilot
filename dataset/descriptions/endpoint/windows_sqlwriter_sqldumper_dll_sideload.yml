@@ -1,0 +1,21 @@
+description: The following analytic detects the abuse of SqlWriter and SQLDumper executables
+  to sideload the vcruntime140.dll library. It leverages Sysmon EventCode 7 logs,
+  focusing on instances where SQLDumper.exe or SQLWriter.exe load vcruntime140.dll,
+  excluding legitimate loads from the System32 directory. This activity is significant
+  as it indicates potential DLL sideloading, a technique used by adversaries to execute
+  malicious code within trusted processes. If confirmed malicious, this could allow
+  attackers to execute arbitrary code, maintain persistence, and evade detection by
+  blending with legitimate processes.
+required_fields:
+- Image
+- ImageLoaded
+- user
+- Computer
+- EventCode
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=7 (Image="*\\SQLDumper.exe"
+  OR Image="*\\SQLWriter.exe") ImageLoaded="*\\vcruntime140.dll" NOT ImageLoaded="C:\\Windows\\System32\\*"
+  | stats values(ImageLoaded) count min(_time) as firstTime max(_time) as lastTime
+  by Image,ImageLoaded, user, Computer, EventCode | rename Computer as dest | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$)| `windows_sqlwriter_sqldumper_dll_sideload_filter`

@@ -1,0 +1,21 @@
+description: The following analytic detects the execution of a PowerShell script that
+  modifies the 'TrustedHosts' configuration via EventCode 4104. It leverages PowerShell
+  Script Block Logging to identify commands targeting WSMan settings, specifically
+  those altering or concatenating trusted hosts. This activity is significant as it
+  can indicate attempts to manipulate remote connection settings, potentially allowing
+  unauthorized remote access. If confirmed malicious, this could enable attackers
+  to establish persistent remote connections, bypass security protocols, and gain
+  unauthorized access to sensitive systems and data.
+required_fields:
+- _time
+- EventCode
+- ScriptBlockText
+- Computer
+- UserID
+- Score
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104  ScriptBlockText = "*WSMan:\\localhost\\Client\\TrustedHosts*" ScriptBlockText
+  IN ("* -Value *", "* -Concatenate *") | rename Computer as dest, UserID as user
+  | stats count min(_time) as firstTime max(_time) as lastTime by EventCode ScriptBlockText
+  dest user | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `powershell_remote_services_add_trustedhost_filter`

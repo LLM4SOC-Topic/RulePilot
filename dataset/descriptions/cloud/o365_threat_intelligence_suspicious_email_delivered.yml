@@ -1,0 +1,24 @@
+description: The following analytic identifies when a suspicious email is detected
+  within the Microsoft Office 365 ecosystem through the Advanced Threat Protection
+  engine and delivered to an end user. Attackers may execute several attacks through
+  email, any detections from built-in Office 365 capabilities should be monitored
+  and responded to appropriately. Certain premium Office 365 capabilities such as
+  Safe Attachment and Safe Links further enhance these detection and response functions.
+required_fields:
+- _time
+- P2Sender
+- P1Sender
+- Recipients
+- DeliveryAction
+- Operation
+- Workload
+rule: sourcetype=o365:management:activity Workload=ThreatIntelligence Operation=TIMailData
+  DeliveryAction!=Blocked Directionality=InBound | rename P2Sender as src_user, P1Sender
+  as sender, Recipients{} as user, DeliveryAction as action | stats values(SenderIp)
+  as src, values(Subject) as subject, values(user) as user, values(action) as action,
+  values(SystemOverrides{}.Details) as reason, values(LatestDeliveryLocation) as result,
+  values(ThreatsAndDetectionTech{}) as category, values(AttachmentData{}.FileName)
+  as file_name, values(AttachmentData{}.FileType) as file_type, values(AttachmentData{}.SHA256)
+  as file_hash values(DetectionMethod) as signature, min(_time) as firstTime max(_time)
+  as lastTime, count  by src_user,sender | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `o365_threat_intelligence_suspicious_email_delivered_filter`

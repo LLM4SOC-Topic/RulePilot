@@ -1,0 +1,10 @@
+description: This search returns a list of hosts that have not successfully completed
+  a backup in over a week. Deprecated because it's a infrastructure monitoring.
+required_fields:
+- _time
+- MESSAGE
+- COMPUTERNAME
+rule: sourcetype="netbackup_logs" MESSAGE="Disk/Partition backup completed successfully."
+  | stats latest(_time) as latestTime by COMPUTERNAME | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | rename COMPUTERNAME as dest | eval isOutlier=if(latestTime <= relative_time(now(),
+  "-7d@d"), 1, 0) | search isOutlier=1 | table latestTime, dest | `extended_period_without_successful_netbackup_backups_filter`

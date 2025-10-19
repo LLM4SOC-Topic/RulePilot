@@ -1,0 +1,54 @@
+{
+    "cases": [
+        {
+            "case": 1,
+            "kql": "Event \n| summarize UniqueComputers = make_set(Computer, 128) by EventID",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" \n| stats values(host) as UniqueComputers by EventCode"
+        },
+        {
+            "case": 2,
+            "kql": "Event \n| summarize UniqueIPAddresses = make_set(IpAddress, 128) by Account",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" \n| stats values(IpAddress) as UniqueIPAddresses by Account"
+        },
+        {
+            "case": 3,
+            "kql": "Event \n| summarize UniqueWorkstations = make_set(WorkstationName, 128) by EventID",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" \n| stats values(WorkstationName) as UniqueWorkstations by EventCode"
+        },
+        {
+            "case": 4,
+            "kql": "Event \n| summarize UniqueAccounts = make_set(Account, 128) by Computer",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" \n| stats values(Account) as UniqueAccounts by host"
+        },
+        {
+            "case": 5,
+            "kql": "Event \n| summarize UniqueProcesses = make_set(Process, 128) by EventID",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" \n| stats values(Process) as UniqueProcesses by EventCode"
+        },
+        {
+            "case": 6,
+            "kql": "Event \n| summarize UniqueEventIDs = make_set(EventID, 128), TotalEvents = count() by Account",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" \n| stats values(EventCode) as UniqueEventIDs, count as TotalEvents by Account"
+        },
+        {
+            "case": 7,
+            "kql": "Event \n| summarize UniqueIPAddresses = make_set(IpAddress, 128) by LogonTypeName",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" \n| stats values(IpAddress) as UniqueIPAddresses by LogonTypeName"
+        },
+        {
+            "case": 8,
+            "kql": "Event \n| where EventID == 4625 \n| summarize UniqueReasons = make_set(Reason, 128), FailureCount = count() by EventID",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" EventCode=4625 \n| stats values(Reason) as UniqueReasons, count as FailureCount by EventCode"
+        },
+        {
+            "case": 9,
+            "kql": "Event \n| summarize UniqueComputers = make_set(Computer, 128), UniqueIPAddresses = make_set(IpAddress, 128) by EventID",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" \n| stats values(host) as UniqueComputers, values(IpAddress) as UniqueIPAddresses by EventCode"
+        },
+        {
+            "case": 10,
+            "kql": "Event \n| summarize UniqueWorkstations = make_set(WorkstationName, 128), TotalCount = count() by Account",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" \n| stats values(WorkstationName) as UniqueWorkstations, count as TotalCount by Account"
+        }
+    ]
+}

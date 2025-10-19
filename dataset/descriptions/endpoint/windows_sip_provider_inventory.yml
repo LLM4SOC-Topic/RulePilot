@@ -1,0 +1,15 @@
+description: The following analytic identifies all SIP (Subject Interface Package)
+  providers on a Windows system using PowerShell scripted inputs. It detects SIP providers
+  by capturing DLL paths from relevant events. This activity is significant because
+  malicious SIP providers can be used to bypass trust controls, potentially allowing
+  unauthorized code execution. If confirmed malicious, this activity could enable
+  attackers to subvert system integrity, leading to unauthorized access or persistent
+  threats within the environment. Analysts should review for new and non-standard
+  paths to identify potential threats.
+required_fields:
+- Path
+- Dll
+- host
+rule: sourcetype="PwSh:SubjectInterfacePackage" Dll=*\\*.dll | stats count min(_time)
+  as firstTime max(_time) as lastTime values(Dll) by Path host| convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| `windows_sip_provider_inventory_filter`

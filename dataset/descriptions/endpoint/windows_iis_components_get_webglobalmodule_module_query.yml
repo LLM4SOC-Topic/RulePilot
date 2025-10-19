@@ -1,0 +1,16 @@
+description: The following analytic identifies the execution of the PowerShell cmdlet
+  Get-WebGlobalModule, which lists all IIS Modules installed on a system. It leverages
+  PowerShell input data to detect this activity by capturing the module names and
+  the image paths of the DLLs. This activity is significant for a SOC because it can
+  indicate an attempt to enumerate installed IIS modules, which could be a precursor
+  to exploiting vulnerabilities or misconfigurations. If confirmed malicious, this
+  could allow an attacker to gain insights into the web server's configuration, potentially
+  leading to further exploitation or privilege escalation.
+required_fields:
+- _time
+- host
+- name
+- image
+rule: sourcetype="Pwsh:InstalledIISModules" | stats count min(_time) as firstTime
+  max(_time) as lastTime by host name image | rename host as dest | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_iis_components_get_webglobalmodule_module_query_filter`

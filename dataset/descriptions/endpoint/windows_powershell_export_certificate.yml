@@ -1,0 +1,18 @@
+description: The following analytic detects the use of the PowerShell Cmdlet `export-certificate`
+  by leveraging Script Block Logging. This activity is significant as it may indicate
+  an adversary attempting to exfiltrate certificates from the local Certificate Store
+  on a Windows endpoint. Monitoring this behavior is crucial because stolen certificates
+  can be used to impersonate users, decrypt sensitive data, or facilitate further
+  attacks. If confirmed malicious, this activity could lead to unauthorized access
+  to encrypted communications and sensitive information, posing a severe security
+  risk.
+required_fields:
+- _time
+- ScriptBlockText
+- dest
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText IN ("*export-certificate*") | rename Computer as
+  dest  | stats count min(_time) as firstTime max(_time) as lastTime by EventCode
+  ScriptBlockText dest user_id | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_powershell_export_certificate_filter`

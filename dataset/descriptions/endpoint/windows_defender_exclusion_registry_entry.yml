@@ -1,0 +1,22 @@
+description: The following analytic detects modifications to the Windows Defender
+  exclusion registry entries. It leverages endpoint registry data to identify changes
+  in the registry path "*\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Exclusions\\*".
+  This activity is significant because adversaries often modify these entries to bypass
+  Windows Defender, allowing malicious code to execute without detection. If confirmed
+  malicious, this behavior could enable attackers to evade antivirus defenses, maintain
+  persistence, and execute further malicious activities undetected.
+required_fields:
+- Registry.dest
+- Registry.registry_value_name
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.registry_value_data
+- Registry.process_guid
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry WHERE (Registry.registry_path = "*\\SOFTWARE\\Policies\\Microsoft\\Windows
+  Defender\\Exclusions\\*") BY Registry.dest Registry.user Registry.registry_path
+  Registry.registry_key_name Registry.registry_value_name Registry.registry_value_data
+  Registry.process_guid | `drop_dm_object_name(Registry)` | where isnotnull(registry_value_data)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_defender_exclusion_registry_entry_filter`'

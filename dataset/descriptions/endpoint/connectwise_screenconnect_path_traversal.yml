@@ -1,0 +1,23 @@
+description: The following analytic detects attempts to exploit the ConnectWise ScreenConnect
+  CVE-2024-1708 vulnerability, which allows path traversal attacks by manipulating
+  file_path and file_name parameters in the URL. It leverages the Endpoint datamodel
+  Filesystem node to identify suspicious file system events, specifically targeting
+  paths and filenames associated with ScreenConnect. This activity is significant
+  as it can lead to unauthorized access to sensitive files and directories, potentially
+  resulting in data exfiltration or arbitrary code execution. If confirmed malicious,
+  attackers could gain unauthorized access and control over the host system, posing
+  a severe security risk.
+required_fields:
+- Filesystem.file_create_time
+- Filesystem.process_id
+- Filesystem.process_guid
+- Filesystem.file_name
+- Filesystem.file_path
+- Filesystem.dest
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Filesystem where Filesystem.file_path IN ("*\\ScreenConnect\\App_Extensions\\*")
+  Filesystem.file_name IN ("*.aspx","*.ashx") by Filesystem.file_create_time Filesystem.process_id
+  Filesystem.process_guid Filesystem.file_name Filesystem.file_path Filesystem.dest
+  | `drop_dm_object_name(Filesystem)` | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `connectwise_screenconnect_path_traversal_filter`'

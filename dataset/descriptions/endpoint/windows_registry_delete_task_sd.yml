@@ -1,0 +1,27 @@
+description: The following analytic detects a process attempting to delete a scheduled
+  task's Security Descriptor (SD) from the registry path of that task. It leverages
+  the Endpoint.Registry data model to identify registry actions performed by the SYSTEM
+  user, specifically targeting deletions or modifications of the SD value. This activity
+  is significant as it may indicate an attempt to remove evidence of a scheduled task
+  for defense evasion. If confirmed malicious, it suggests an attacker with privileged
+  access trying to hide their tracks, potentially compromising system integrity and
+  security. Immediate investigation is required.
+required_fields:
+- _time
+- Registry.registry_path
+- Registry.registry_key_name
+- Registry.registry_value_name
+- Registry.dest
+- Processes.process_id
+- Processes.process_name
+- Processes.process
+- Processes.dest
+- Processes.process_guid
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry where Registry.registry_path IN ("*\\Schedule\\TaskCache\\Tree\\*")
+  Registry.user="SYSTEM" Registry.registry_value_name="SD" (Registry.action=Deleted
+  OR Registry.action=modified) by Registry.dest Registry.process_guid Registry.user
+  Registry.registry_path Registry.registry_value_name Registry.registry_key_name Registry.registry_value_data
+  Registry.status Registry.action | `drop_dm_object_name(Registry)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_registry_delete_task_sd_filter`'

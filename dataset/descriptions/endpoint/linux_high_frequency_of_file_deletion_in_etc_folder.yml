@@ -1,0 +1,23 @@
+description: The following analytic detects a high frequency of file deletions in
+  the /etc/ folder on Linux systems. It leverages the Endpoint.Filesystem data model
+  to identify instances where 200 or more files are deleted within an hour, grouped
+  by process name and process ID. This behavior is significant as it may indicate
+  the presence of wiper malware, such as AcidRain, which aims to delete critical system
+  files. If confirmed malicious, this activity could lead to severe system instability,
+  data loss, and potential disruption of services.
+required_fields:
+- _time
+- Filesystem.dest
+- Filesystem.file_create_time
+- Filesystem.file_name
+- Filesystem.process_guid
+- Filesystem.file_path
+- Filesystem.action
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` values(Filesystem.file_name) as deletedFileNames
+  values(Filesystem.file_path) as deletedFilePath dc(Filesystem.file_path) as numOfDelFilePath
+  count min(_time) as firstTime max(_time) as lastTime FROM datamodel=Endpoint.Filesystem
+  where Filesystem.action=deleted Filesystem.file_path = "/etc/*" by _time span=1h  Filesystem.dest
+  Filesystem.process_guid Filesystem.action | `drop_dm_object_name(Filesystem)`  |
+  where  numOfDelFilePath >= 200 | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `linux_high_frequency_of_file_deletion_in_etc_folder_filter`'

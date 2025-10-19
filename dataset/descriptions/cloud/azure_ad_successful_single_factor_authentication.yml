@@ -1,0 +1,19 @@
+description: The following analytic identifies a successful single-factor authentication
+  event against Azure Active Directory. It leverages Azure SignInLogs data, specifically
+  focusing on events where single-factor authentication succeeded. This activity is
+  significant as it may indicate a misconfiguration, policy violation, or potential
+  account takeover attempt. If confirmed malicious, an attacker could gain unauthorized
+  access to the account, potentially leading to data breaches, privilege escalation,
+  or further exploitation within the environment.
+required_fields:
+- _time
+- category
+- properties.authenticationRequirement
+- properties.authenticationDetails
+- user
+- src_ip
+- properties.appDisplayName
+rule: sourcetype=azure:monitor:aad category=SignInLogs properties.authenticationRequirement=singleFactorAuthentication
+  properties.authenticationDetails{}.succeeded=true | rename properties.* as * | stats
+  count min(_time) as firstTime max(_time) as lastTime values(user) as user by src_ip,
+  appDisplayName, authenticationRequirement | `azure_ad_successful_single_factor_authentication_filter`

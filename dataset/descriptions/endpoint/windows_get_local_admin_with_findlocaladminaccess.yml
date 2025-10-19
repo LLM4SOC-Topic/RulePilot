@@ -1,0 +1,19 @@
+description: The following analytic detects the execution of the `Find-LocalAdminAccess`
+  cmdlet using PowerShell Script Block Logging (EventCode=4104). This cmdlet is part
+  of PowerView, a toolkit for Windows domain enumeration. Identifying the use of `Find-LocalAdminAccess`
+  is crucial as adversaries may use it to find machines where the current user has
+  local administrator access, facilitating lateral movement or privilege escalation.
+  If confirmed malicious, this activity could allow attackers to target and compromise
+  additional systems within the network, significantly increasing their control and
+  access to sensitive information.
+required_fields:
+- _time
+- EventCode
+- Message
+- Computer
+- UserID
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText = "*Find-LocalAdminAccess*" | stats count min(_time)
+  as firstTime max(_time) as lastTime by EventCode ScriptBlockText Computer UserID
+  | rename Computer as dest, UserID as user | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_get_local_admin_with_findlocaladminaccess_filter`

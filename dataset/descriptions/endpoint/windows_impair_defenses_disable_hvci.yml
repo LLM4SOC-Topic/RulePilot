@@ -1,0 +1,22 @@
+description: The following analytic detects the disabling of Hypervisor-protected
+  Code Integrity (HVCI) by monitoring changes in the Windows registry. It leverages
+  data from the Endpoint datamodel, specifically focusing on registry paths and values
+  related to HVCI settings. This activity is significant because HVCI helps protect
+  the kernel and system processes from tampering by malicious code. If confirmed malicious,
+  disabling HVCI could allow attackers to execute unsigned kernel-mode code, potentially
+  leading to kernel-level rootkits or other severe security breaches.
+required_fields:
+- Registry.registry_path
+- Registry.registry_value_data
+- Registry.registry_value_name
+- Registry.process_guid
+- Registry.action
+- Registry.user
+- Registry.dest
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Registry where Registry.registry_path = "*\\CurrentControlSet\\Control\\DeviceGuard\\Scenarios\\HypervisorEnforcedCodeIntegrity\\Enabled"
+  Registry.registry_value_data="0x00000000"  by  Registry.registry_path Registry.registry_value_name
+  Registry.registry_value_data Registry.process_guid Registry.action  Registry.user
+  Registry.dest | `drop_dm_object_name(Registry)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_impair_defenses_disable_hvci_filter`'

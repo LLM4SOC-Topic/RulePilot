@@ -1,0 +1,27 @@
+description: The following analytic detects the creation of a Kubernetes cron job,
+  which is a task scheduled to run automatically at specified intervals. It identifies
+  this activity by monitoring Kubernetes Audit logs for the creation events of cron
+  jobs. This behavior is significant for a SOC as it could allow an attacker to execute
+  malicious tasks repeatedly and automatically, posing a threat to the Kubernetes
+  infrastructure. If confirmed malicious, this activity could lead to persistent attacks,
+  service disruptions, or unauthorized access to sensitive information.
+required_fields:
+- user.groups{}
+- kind
+- objectRef.name
+- objectRef.namespace
+- objectRef.resource
+- requestObject.kind
+- requestObject.spec.schedule
+- requestObject.spec.jobTemplate.spec.template.spec.containers{}.image
+- responseStatus.code
+- sourceIPs{}
+- stage
+- user.username
+- userAgent
+- verb
+rule: source="kubernetes" verb=create "objectRef.resource"=cronjobs | fillnull | stats
+  count values(user.groups{}) as user_groups by kind objectRef.name objectRef.namespace
+  objectRef.resource requestObject.kind requestObject.spec.schedule requestObject.spec.jobTemplate.spec.template.spec.containers{}.image
+  responseStatus.code sourceIPs{} stage user.username userAgent verb | rename sourceIPs{}
+  as src_ip, user.username as user | `kubernetes_cron_job_creation_filter`

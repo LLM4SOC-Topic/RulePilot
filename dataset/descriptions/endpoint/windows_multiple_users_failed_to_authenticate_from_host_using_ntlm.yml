@@ -1,0 +1,17 @@
+description: The following analytic identifies a single source endpoint failing to
+  authenticate with 30 unique valid users using the NTLM protocol. It leverages EventCode
+  4776 from Domain Controller logs, focusing on error code 0xC000006A, which indicates
+  a bad password. This behavior is significant as it may indicate a Password Spraying
+  attack, where an adversary attempts to gain initial access or elevate privileges.
+  If confirmed malicious, this activity could lead to unauthorized access to sensitive
+  information or further compromise of the Active Directory environment.
+required_fields:
+- _time
+- EventCode
+- Status
+- TargetUserName
+- Workstation
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=4776 TargetUserName!=*$ Status=0xC000006A | bucket span=5m _time | stats
+  dc(TargetUserName) AS unique_accounts values(TargetUserName) as tried_accounts by
+  _time, Workstation | where unique_accounts > 30 | `windows_multiple_users_failed_to_authenticate_from_host_using_ntlm_filter`

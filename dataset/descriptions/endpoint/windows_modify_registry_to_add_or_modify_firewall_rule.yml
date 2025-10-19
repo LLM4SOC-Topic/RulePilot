@@ -1,0 +1,22 @@
+description: The following analytic detects a potential addition or modification of
+  firewall rules, signaling possible configuration changes or security policy adjustments.
+  It tracks commands such as netsh advfirewall firewall add rule and netsh advfirewall
+  firewall set rule, which may indicate attempts to alter network access controls.
+  Monitoring these actions ensures the integrity of firewall settings and helps prevent
+  unauthorized network access.
+required_fields:
+- _time
+- Registry.dest
+- Registry.registry_value_name
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.registry_value_data
+- Registry.process_guid
+- Registry.action
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry WHERE Registry.registry_path= "*\\System\\CurrentControlSet\\Services\\SharedAccess\\Parameters\\FirewallPolicy\\FirewallRules\\*"  Registry.action
+  = modified BY Registry.registry_path Registry.registry_key_name Registry.registry_value_name
+  Registry.registry_value_data Registry.process_guid  Registry.dest Registry.user
+  Registry.action | `drop_dm_object_name(Registry)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_modify_registry_to_add_or_modify_firewall_rule_filter`'

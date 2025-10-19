@@ -1,0 +1,29 @@
+description: The following analytic detects the use of `esentutl.exe` to access credentials
+  stored in the ntds.dit or SAM file. This detection leverages data from Endpoint
+  Detection and Response (EDR) agents, focusing on process execution logs that include
+  command-line details. This activity is significant because it may indicate an attempt
+  to extract sensitive credential information, which is a common tactic in lateral
+  movement and privilege escalation. If confirmed malicious, this could allow an attacker
+  to gain unauthorized access to user credentials, potentially compromising the entire
+  network.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where (Processes.process_name=esentutl.exe OR
+  Processes.original_file_name=esentutl.exe) Processes.process IN ("*ntds*", "*SAM*")
+  by Processes.dest Processes.user Processes.parent_process_name Processes.process_name
+  Processes.original_file_name Processes.process Processes.process_id Processes.parent_process_id
+  | `drop_dm_object_name(Processes)` | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `esentutl_sam_copy_filter`'

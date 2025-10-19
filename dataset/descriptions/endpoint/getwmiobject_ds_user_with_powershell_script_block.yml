@@ -1,0 +1,21 @@
+description: The following analytic detects the execution of the `Get-WmiObject` cmdlet
+  with the `DS_User` class parameter via PowerShell Script Block Logging (EventCode=4104).
+  It leverages logs to identify attempts to query all domain users using WMI. This
+  activity is significant as it may indicate an adversary or Red Team operation attempting
+  to enumerate domain users for situational awareness and Active Directory discovery.
+  If confirmed malicious, this behavior could lead to further reconnaissance, enabling
+  attackers to map out the network and identify potential targets for privilege escalation
+  or lateral movement.
+required_fields:
+- _time
+- ScriptBlockText
+- Opcode
+- Computer
+- UserID
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText = "*get-wmiobject*" ScriptBlockText = "*ds_user*"
+  ScriptBlockText = "*-namespace*" ScriptBlockText = "*root\\directory\\ldap*" | stats
+  count min(_time) as firstTime max(_time) as lastTime by Opcode Computer UserID EventCode
+  ScriptBlockText | rename Computer as dest | rename UserID as user| convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `getwmiobject_ds_user_with_powershell_script_block_filter`

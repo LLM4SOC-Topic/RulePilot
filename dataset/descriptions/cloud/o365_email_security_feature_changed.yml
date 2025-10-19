@@ -1,0 +1,17 @@
+description: The following analytic identifies when specific O365 advanced security
+  settings are altered within the Office 365 tenant. If an attacker successfully disables
+  O365 security settings, they can operate within the tenant with reduced risk of
+  detection. This can lead to unauthorized data access, data exfiltration, account
+  compromise, or other malicious activities without leaving a detailed audit trail.
+required_fields:
+- _time
+- Id
+- UserId
+- Operation
+- Workload
+rule: sourcetype=o365:management:activity Workload=Exchange AND Operation IN ("Set-*","Disable-*","New-*","Remove-*")
+  Operation IN ("*AntiPhish*","*SafeLink*","*SafeAttachment*","*Malware*") | stats
+  values(ObjectId) as object, min(_time) as firstTime, max(_time) as lastTime, count  by
+  Id, UserId, Operation | rename Id as object_id, UserId as user, Operation as signature
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `o365_email_security_feature_changed_filter`

@@ -1,0 +1,23 @@
+description: The following analytic detects cloud provisioning activities originating
+  from previously unseen IP addresses. It leverages cloud infrastructure logs to identify
+  events where resources are created or started, and cross-references these with a
+  baseline of known IP addresses. This activity is significant as it may indicate
+  unauthorized access or potential misuse of cloud resources. If confirmed malicious,
+  an attacker could gain unauthorized control over cloud resources, leading to data
+  breaches, service disruptions, or increased operational costs.
+required_fields:
+- _time
+- All_Changes.object_id
+- All_Changes.action
+- All_Changes.status
+- All_Changes.src
+- All_Changes.user
+- All_Changes.command
+rule: '| tstats earliest(_time) as firstTime, latest(_time) as lastTime, values(All_Changes.object_id)
+  as object_id from datamodel=Change where (All_Changes.action=started OR All_Changes.action=created)
+  All_Changes.status=success by All_Changes.src, All_Changes.user, All_Changes.command
+  | `drop_dm_object_name("All_Changes")` | lookup previously_seen_cloud_provisioning_activity_sources
+  src as src OUTPUT firstTimeSeen, enough_data | eventstats max(enough_data) as enough_data
+  | where enough_data=1 | eval firstTimeSeenSrc=min(firstTimeSeen) | where isnull(firstTimeSeenSrc)
+  OR firstTimeSeenSrc > relative_time(now(), "-70m@m") | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | table firstTime, src, user, object_id, command | `cloud_provisioning_activity_from_previously_unseen_ip_address_filter`'

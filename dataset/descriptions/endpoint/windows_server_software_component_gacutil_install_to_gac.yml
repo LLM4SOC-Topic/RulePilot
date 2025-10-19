@@ -1,0 +1,27 @@
+description: The following analytic detects the use of GACUtil.exe to add a DLL into
+  the Global Assembly Cache (GAC). It leverages data from Endpoint Detection and Response
+  (EDR) agents, focusing on process names and command-line executions. This activity
+  is significant because adding a DLL to the GAC allows it to be called by any application,
+  potentially enabling widespread code execution. If confirmed malicious, this could
+  allow an attacker to execute arbitrary code across the operating system, leading
+  to privilege escalation or persistent access.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where Processes.process_name=gacutil.exe Processes.process
+  IN ("*-i *","*/i *") by Processes.dest Processes.user Processes.parent_process_name
+  Processes.process_name Processes.process Processes.process_id Processes.parent_process_id
+  | `drop_dm_object_name(Processes)` | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_server_software_component_gacutil_install_to_gac_filter`'

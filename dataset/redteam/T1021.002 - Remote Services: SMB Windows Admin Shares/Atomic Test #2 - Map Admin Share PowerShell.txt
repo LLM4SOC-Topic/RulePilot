@@ -1,0 +1,12 @@
+Map Admin Share PowerShell
+Map Admin share utilizing PowerShell
+
+Supported Platforms: Windows
+
+Inputs:
+Name	Description	Type	Default Value
+share_name	Examples C$, IPC$, Admin$	string	C$
+map_name	Mapped Drive Letter	string	g
+computer_name	Target Computer Name	string	Target
+Attack Commands: Run with powershell!
+New-PSDrive -name #{map_name} -psprovider filesystem -root \\#{computer_name}\#{share_name}

@@ -1,0 +1,20 @@
+description: The following analytic detects the creation of sqlite3.dll files in the
+  %temp% folder. It leverages Sysmon EventCode 11 to identify when these files are
+  written to the temporary directory. This activity is significant because it is associated
+  with IcedID malware, which uses the sqlite3 module to parse browser databases and
+  steal sensitive information such as banking details, credit card information, and
+  credentials. If confirmed malicious, this behavior could lead to significant data
+  theft and compromise of user accounts.
+required_fields:
+- _time
+- process_name
+- TargetFilename
+- EventCode
+- ProcessId
+- Image
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=11 (TargetFilename = "*\\sqlite32.dll"
+  OR TargetFilename = "*\\sqlite64.dll") (TargetFilename = "*\\temp\\*") | stats count
+  min(_time) as firstTime max(_time) as lastTime by dest signature signature_id process_name
+  file_name file_path action process_guid| convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `sqlite_module_in_temp_folder_filter`

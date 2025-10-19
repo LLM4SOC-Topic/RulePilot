@@ -1,0 +1,23 @@
+description: The following analytic detects the creation of files in the Windows %startup%
+  folder, a common persistence technique. It leverages the Endpoint.Filesystem data
+  model to identify file creation events in this specific directory. This activity
+  is significant because adversaries often use the startup folder to ensure their
+  malicious code executes automatically upon system boot or user logon. If confirmed
+  malicious, this could allow attackers to maintain persistence on the host, potentially
+  leading to further system compromise and unauthorized access to sensitive information.
+required_fields:
+- _time
+- Filesystem.file_create_time
+- Filesystem.process_id
+- Filesystem.file_name
+- Filesystem.user
+- Filesystem.file_path
+- Filesystem.process_guid
+- Filesystem.dest
+rule: '|tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Filesystem where Filesystem.file_path = "*\\Microsoft\\Windows\\Start
+  Menu\\Programs\\Startup\\*" by Filesystem.file_create_time Filesystem.process_id
+  Filesystem.file_name Filesystem.user Filesystem.file_path Filesystem.process_guid
+  Filesystem.dest | `drop_dm_object_name(Filesystem)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_boot_or_logon_autostart_execution_in_startup_folder_filter`'

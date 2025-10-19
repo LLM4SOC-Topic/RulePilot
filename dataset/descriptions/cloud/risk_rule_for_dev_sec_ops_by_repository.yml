@@ -1,0 +1,21 @@
+description: The following analytic identifies high-risk activities within repositories
+  by correlating repository data with risk scores. It leverages risk events from the
+  Dev Sec Ops analytic stories, summing risk scores and capturing source and user
+  information. The detection focuses on high-risk scores above 100 and sources with
+  more than three occurrences. This activity is significant as it highlights repositories
+  frequently targeted by threats, providing insights into potential vulnerabilities.
+  If confirmed malicious, attackers could exploit these repositories, leading to data
+  breaches or infrastructure compromise.
+required_fields:
+- _time
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` min(_time) as firstTime max(_time) as lastTime
+  sum(All_Risk.calculated_risk_score) as sum_risk_score, values(All_Risk.annotations.mitre_attack.mitre_tactic)
+  as annotations.mitre_attack.mitre_tactic, values(All_Risk.annotations.mitre_attack.mitre_technique_id)
+  as annotations.mitre_attack.mitre_technique_id, dc(All_Risk.annotations.mitre_attack.mitre_technique_id)
+  as mitre_technique_id_count values(source) as source, dc(source) as source_count
+  from datamodel=Risk.All_Risk where All_Risk.analyticstories="Dev Sec Ops" All_Risk.risk_object_type
+  = "other" by All_Risk.risk_object All_Risk.risk_object_type All_Risk.annotations.mitre_attack.mitre_tactic
+  | `drop_dm_object_name(All_Risk)` | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | where source_count > 3
+  and sum_risk_score > 100 | `risk_rule_for_dev_sec_ops_by_repository_filter`'

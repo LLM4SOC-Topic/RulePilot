@@ -1,0 +1,22 @@
+description: The following analytic detects the creation of a remote thread by rundll32.exe
+  into another process. It leverages Sysmon EventCode 8 logs, specifically monitoring
+  SourceImage and TargetImage fields. This activity is significant as it is a common
+  technique used by malware, such as IcedID, to execute malicious code within legitimate
+  processes, aiding in defense evasion and data theft. If confirmed malicious, this
+  behavior could allow an attacker to execute arbitrary code, escalate privileges,
+  and exfiltrate sensitive information from the compromised host.
+required_fields:
+- _time
+- SourceImage
+- TargetImage
+- TargetProcessId
+- SourceProcessId
+- StartAddress
+- EventCode
+- dest
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=8 SourceImage = "*\\rundll32.exe"
+  TargetImage = "*.exe" | stats count min(_time) as firstTime max(_time) as lastTime
+  by SourceImage TargetImage TargetProcessId SourceProcessId StartAddress EventCode
+  dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `rundll32_create_remote_thread_to_a_process_filter`

@@ -1,0 +1,10 @@
+description: The search is used to detect systems that are still vulnerable to the
+  Spectre and Meltdown vulnerabilities.
+required_fields:
+- _time
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Vulnerabilities where Vulnerabilities.cve ="CVE-2017-5753" OR Vulnerabilities.cve
+  ="CVE-2017-5715" OR Vulnerabilities.cve ="CVE-2017-5754" by Vulnerabilities.dest
+  | `drop_dm_object_name(Vulnerabilities)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `spectre_and_meltdown_vulnerable_systems_filter`'

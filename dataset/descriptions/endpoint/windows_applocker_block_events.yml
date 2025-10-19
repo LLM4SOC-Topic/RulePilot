@@ -1,0 +1,23 @@
+description: The following analytic detects attempts to bypass application restrictions
+  by identifying Windows AppLocker policy violations. It leverages Windows AppLocker
+  event logs, specifically EventCodes 8007, 8004, 8022, 8025, 8029, and 8040, to pinpoint
+  blocked actions. This activity is significant for a SOC as it highlights potential
+  unauthorized application executions, which could indicate malicious intent or policy
+  circumvention. If confirmed malicious, this activity could allow an attacker to
+  execute unauthorized applications, potentially leading to further system compromise
+  or data exfiltration.
+required_fields:
+- dest
+- PolicyName
+- RuleId
+- user
+- TargetProcessId
+- FilePath
+- FullFilePath
+rule: (source="WinEventLog:Microsoft-Windows-AppLocker/*" OR source="XmlWinEventLog:Microsoft-Windows-AppLocker/*")  EventCode
+  IN (8007, 8004, 8022, 8025, 8029, 8040) | spath input=UserData_Xml | rename RuleAndFileData.*
+  as *, TargetUser as user, Computer as dest  | stats count min(_time) as firstTime
+  max(_time) as lastTime by dest, PolicyName, RuleId, user, TargetProcessId, FilePath,
+  FullFilePath, EventCode | lookup applockereventcodes EventCode OUTPUT Description
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_applocker_block_events_filter`

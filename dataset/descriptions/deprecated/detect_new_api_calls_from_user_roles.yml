@@ -1,0 +1,20 @@
+description: This search detects new API calls that have either never been seen before
+  or that have not been seen in the previous hour, where the identity type is `AssumedRole`.
+required_fields:
+- _time
+- eventType
+- errorCode
+- userIdentity.type
+- userName
+- eventName
+rule: sourcetype=aws:cloudtrail eventType=AwsApiCall errorCode=success userIdentity.type=AssumedRole
+  [search sourcetype=aws:cloudtrail eventType=AwsApiCall errorCode=success  userIdentity.type=AssumedRole
+  | stats earliest(_time) as earliest latest(_time) as latest by userName eventName
+  |  inputlookup append=t previously_seen_api_calls_from_user_roles | stats min(earliest)
+  as earliest, max(latest) as latest by userName eventName | outputlookup previously_seen_api_calls_from_user_roles|
+  eval newApiCallfromUserRole=if(earliest>=relative_time(now(), "-70m@m"), 1, 0) |
+  where newApiCallfromUserRole=1 | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | table eventName userName]  |rename
+  userName as user| stats values(eventName) earliest(_time) as earliest latest(_time)
+  as latest by user | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `detect_new_api_calls_from_user_roles_filter`

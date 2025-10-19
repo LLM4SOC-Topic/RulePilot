@@ -1,0 +1,23 @@
+description: The following analytic detects the creation of a new Azure Automation
+  account within an Azure tenant. It leverages Azure Audit events, specifically the
+  Azure Activity log category, to identify when an account is created or updated.
+  This activity is significant because Azure Automation accounts can be used to automate
+  tasks and orchestrate actions across Azure and on-premise environments. If an attacker
+  creates an Automation account with elevated privileges, they could maintain persistence,
+  execute malicious runbooks, and potentially escalate privileges or execute code
+  on virtual machines, posing a significant security risk.
+required_fields:
+- _time
+- operationName.localizedValue
+- status.value
+- object
+- caller
+- claims.ipaddr
+- resourceGroupName
+- object_path
+rule: sourcetype=mscs:azure:audit operationName.localizedValue="Create or Update an
+  Azure Automation account" status.value=Succeeded | dedup object | rename claims.ipaddr
+  as src_ip | rename caller as user | stats count min(_time) as firstTime max(_time)
+  as lastTime values(object) as object by user, src_ip, resourceGroupName, object_path
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `azure_automation_account_created_filter`

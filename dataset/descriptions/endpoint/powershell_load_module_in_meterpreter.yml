@@ -1,0 +1,19 @@
+description: The following analytic detects the execution of suspicious PowerShell
+  commands associated with Meterpreter modules, such as "MSF.Powershell" and "MSF.Powershell.Meterpreter".
+  It leverages PowerShell Script Block Logging (EventCode=4104) to capture and analyze
+  the full command sent to PowerShell. This activity is significant as it indicates
+  potential post-exploitation actions, including credential dumping and persistence
+  mechanisms. If confirmed malicious, an attacker could gain extensive control over
+  the compromised system, escalate privileges, and maintain long-term access, posing
+  a severe threat to the environment.
+required_fields:
+- _time
+- EventCode
+- ScriptBlockText
+- Computer
+- User_id
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText IN ("*MSF.Powershell*","*MSF.Powershell.Meterpreter*","*MSF.Powershell.Meterpreter.Kiwi*","*MSF.Powershell.Meterpreter.Transport*")
+  | stats count min(_time) as firstTime max(_time) as lastTime by EventCode ScriptBlockText
+  Computer user_id | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `powershell_load_module_in_meterpreter_filter`

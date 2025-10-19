@@ -1,0 +1,54 @@
+{
+    "cases": [
+        {
+            "case": 1,
+            "kql": "Event \n| extend FullMessage = strcat(\"EventID: \", tostring(EventID), \" | Computer: \", Computer)",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" \n| eval FullMessage=\"EventID: \" . EventCode . \" | Computer: \" . host"
+        },
+        {
+            "case": 2,
+            "kql": "Event \n| extend LogDetails = strcat(\"User: \", Account, \", Workstation: \", WorkstationName, \", Status: \", Reason)",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" \n| eval LogDetails=\"User: \" . Account . \", Workstation: \" . WorkstationName . \", Status: \" . Reason"
+        },
+        {
+            "case": 3,
+            "kql": "Event \n| extend StatusMessage = strcat(\"LogonType: \", tostring(LogonTypeName), \", FailureReason: \", tostring(column_ifexists(\"FailureReason\", \"Unknown\")))",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" \n| eval StatusMessage=\"LogonType: \" . LogonTypeName . \", FailureReason: \" . coalesce(FailureReason, \"Unknown\")"
+        },
+        {
+            "case": 4,
+            "kql": "Event \n| extend IP_Host = strcat(\"IP: \", IpAddress, \" - Host: \", Computer)",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" \n| eval IP_Host=\"IP: \" . IpAddress . \" - Host: \" . host"
+        },
+        {
+            "case": 5,
+            "kql": "Event \n| extend TimeDetails = strcat(\"StartTime: \", tostring(StartTime), \" - EndTime: \", tostring(EndTime))",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" \n| eval TimeDetails=\"StartTime: \" . strftime(StartTime, \"%Y-%m-%d %H:%M:%S\") . \" - EndTime: \" . strftime(EndTime, \"%Y-%m-%d %H:%M:%S\")"
+        },
+        {
+            "case": 6,
+            "kql": "Event \n| extend FullInfo = strcat(\"Event: \", tostring(EventID), \", Source: \", EventSourceName, \", Computer: \", Computer)",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" \n| eval FullInfo=\"Event: \" . EventCode . \", Source: \" . EventSourceName . \", Computer: \" . host"
+        },
+        {
+            "case": 7,
+            "kql": "Event \n| where EventID == 4625 \n| extend LogFailure = strcat(\"Account: \", Account, \" - Workstation: \", WorkstationName, \" - Reason: \", Reason)",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" EventCode=4625 \n| eval LogFailure=\"Account: \" . Account . \" - Workstation: \" . WorkstationName . \" - Reason: \" . Reason"
+        },
+        {
+            "case": 8,
+            "kql": "Event \n| extend LogSummary = strcat(\"User \", Account, \" logged in from \", Computer, \" at \", tostring(TimeGenerated))",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" \n| eval LogSummary=\"User \" . Account . \" logged in from \" . host . \" at \" . strftime(_time, \"%Y-%m-%d %H:%M:%S\")"
+        },
+        {
+            "case": 9,
+            "kql": "Event \n| where EventID == 1102 \n| extend AlertMessage = strcat(\"Security log cleared on \", Computer, \" by user \", Account)",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" EventCode=1102 \n| eval AlertMessage=\"Security log cleared on \" . host . \" by user \" . Account"
+        },
+        {
+            "case": 10,
+            "kql": "Event \n| where EventID == 4672 \n| extend PrivilegedAccess = strcat(\"User \", Account, \" obtained privileged access on \", Computer, \" using process \", Process)",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" EventCode=4672 \n| eval PrivilegedAccess=\"User \" . Account . \" obtained privileged access on \" . host . \" using process \" . Process"
+        }
+    ]
+}

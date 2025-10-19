@@ -1,0 +1,18 @@
+description: The following analytic detects the creation of a new Group Policy Object
+  (GPO) using Splunk's Admon data. It identifies events where a new GPO is created,
+  excluding default "New Group Policy Object" entries. Monitoring GPO creation is
+  crucial as adversaries can exploit GPOs to escalate privileges or deploy malware
+  across an Active Directory network. If confirmed malicious, this activity could
+  allow attackers to control system configurations, deploy ransomware, or propagate
+  malware, significantly compromising the network's security.
+required_fields:
+- _time
+- admonEventType
+- objectCategory
+- displayName
+- gPCFileSysPath
+- dcName
+rule: source=ActiveDirectory admonEventType=Update objectCategory="CN=Group-Policy-Container,CN=Schema,CN=Configuration,DC=*"
+  versionNumber=0 displayName!="New Group Policy Object" | stats min(_time) as firstTime
+  max(_time) as lastTime values(gPCFileSysPath) by dcName, displayName | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_admon_group_policy_object_created_filter`

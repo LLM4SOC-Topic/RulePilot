@@ -1,0 +1,22 @@
+description: This detection searches for Windows Defender ASR block events. ASR is
+  a feature of Windows Defender Exploit Guard that prevents actions and apps that
+  are typically used by exploit-seeking malware to infect machines. ASR rules are
+  applied to processes and applications. When a process or application attempts to
+  perform an action that is blocked by an ASR rule, an event is generated. This detection
+  searches for ASR block events that are generated when a process or application attempts
+  to perform an action that is blocked by an ASR rule. Typically, these will be enabled
+  in block most after auditing and tuning the ASR rules themselves. Set to TTP once
+  tuned.
+required_fields:
+- host
+- Process_Name
+- Path
+- ID
+- EventCode
+- ASR_Rule
+rule: source="WinEventLog:Microsoft-Windows-Windows Defender/Operational" EventCode
+  IN (1121, 1126, 1129, 1131, 1133) | stats count min(_time) as firstTime max(_time)
+  as lastTime by host, Path, Parent_Commandline, Process_Name, ID, EventCode | lookup
+  asr_rules ID OUTPUT ASR_Rule | fillnull value=NULL | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| rename host
+  as dest | `windows_defender_asr_block_events_filter`

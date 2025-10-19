@@ -1,0 +1,19 @@
+description: The following analytic detects the execution of the `Get-DomainGroup`
+  cmdlet using PowerShell Script Block Logging (EventCode=4104). This cmdlet, part
+  of the PowerView tool, is used to enumerate domain groups within a Windows domain.
+  The detection leverages script block text to identify this specific command. Monitoring
+  this activity is crucial as it may indicate an adversary or Red Team performing
+  reconnaissance to gain situational awareness and map out Active Directory structures.
+  If confirmed malicious, this activity could lead to further exploitation, including
+  privilege escalation and lateral movement within the network.
+required_fields:
+- _time
+- ScriptBlockText
+- Opcode
+- Computer
+- UserID
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 (ScriptBlockText = "*Get-DomainGroup*") | stats count min(_time)
+  as firstTime max(_time) as lastTime by Opcode Computer UserID EventCode ScriptBlockText
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `getdomaingroup_with_powershell_script_block_filter`

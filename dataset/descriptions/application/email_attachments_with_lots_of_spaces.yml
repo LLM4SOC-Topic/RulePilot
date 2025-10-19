@@ -1,0 +1,22 @@
+description: The following analytic detects email attachments with an unusually high
+  number of spaces in their file names, which is a common tactic used by attackers
+  to obfuscate file extensions. It leverages the Email data model to identify attachments
+  where the ratio of spaces to the total file name length exceeds 10%. This behavior
+  is significant as it may indicate an attempt to bypass security filters and deliver
+  malicious payloads. If confirmed malicious, this activity could lead to the execution
+  of harmful code or unauthorized access to sensitive information within the recipient's
+  environment.
+required_fields:
+- _time
+- All_Email.recipient
+- All_Email.file_name
+- All_Email.src_user
+- All_Email.file_name
+- All_Email.message_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count values(All_Email.recipient) as recipient_address
+  min(_time) as firstTime max(_time) as lastTime from datamodel=Email where All_Email.file_name="*"
+  by All_Email.src_user, All_Email.file_name All_Email.message_id | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `drop_dm_object_name("All_Email")`
+  | eval space_ratio = (mvcount(split(file_name," "))-1)/len(file_name) | search space_ratio
+  >= 0.1 |  rex field=recipient_address "(?<recipient_user>.*)@" | `email_attachments_with_lots_of_spaces_filter`'

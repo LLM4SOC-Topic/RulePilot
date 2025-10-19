@@ -1,0 +1,20 @@
+description: The following analytic detects the execution of the `Get-DomainUser`
+  commandlet with the `-PreauthNotRequired` parameter using PowerShell Script Block
+  Logging (EventCode=4104). This command is part of PowerView, a tool used for enumerating
+  Windows Active Directory networks. Identifying domain accounts with Kerberos Pre-Authentication
+  disabled is significant because adversaries can leverage this information to attempt
+  offline password cracking. If confirmed malicious, this activity could lead to unauthorized
+  access to domain accounts, potentially compromising sensitive information and escalating
+  privileges within the network.
+required_fields:
+- _time
+- ScriptBlockText
+- Opcode
+- Computer
+- UserID
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 (ScriptBlockText = "*Get-DomainUser*" AND ScriptBlockText="*PreauthNotRequired*")
+  | stats count min(_time)  as firstTime max(_time) as lastTime by Opcode Computer
+  UserID EventCode ScriptBlockText | rename Computer as dest | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `disabled_kerberos_pre_authentication_discovery_with_powerview_filter`

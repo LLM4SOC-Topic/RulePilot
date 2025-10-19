@@ -1,0 +1,28 @@
+description: The following analytic detects a process from a non-standard file path
+  on Windows attempting to create a remote thread in another process. This is identified
+  using Sysmon EventCode 8, focusing on processes not originating from typical system
+  directories. This behavior is significant as it often indicates process injection,
+  a technique used by adversaries to evade detection or escalate privileges. If confirmed
+  malicious, this activity could allow an attacker to execute arbitrary code within
+  another process, potentially leading to unauthorized actions and further compromise
+  of the system.
+required_fields:
+- _time
+- SourceImage
+- TargetImage
+- TargetProcessId
+- SourceProcessId
+- StartAddress
+- EventCode
+- dest
+- signature
+- TargetProcessGuid
+- SourceProcessGuid
+- StartAddress
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=8 TargetImage = "*.exe" AND
+  NOT(SourceImage IN("C:\\Windows\\*", "C:\\Program File*", "%systemroot%\\*")) |
+  stats count min(_time) as firstTime max(_time) as lastTime by SourceImage TargetImage
+  signature TargetProcessGuid SourceProcessGuid TargetProcessId SourceProcessId StartAddress
+  EventCode dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_process_injection_with_public_source_path_filter`

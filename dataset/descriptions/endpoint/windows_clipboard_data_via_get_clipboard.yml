@@ -1,0 +1,19 @@
+description: The following analytic detects the execution of the PowerShell command
+  'Get-Clipboard' to retrieve clipboard data. It leverages PowerShell Script Block
+  Logging (EventCode 4104) to identify instances where this command is used. This
+  activity is significant because it can indicate an attempt to steal sensitive information
+  such as usernames, passwords, or other confidential data copied to the clipboard.
+  If confirmed malicious, this behavior could lead to unauthorized access to sensitive
+  information, potentially compromising user accounts and other critical assets.
+required_fields:
+- _time
+- ScriptBlockText
+- Opcode
+- Computer
+- UserID
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText = "*Get-Clipboard*" | stats count min(_time) as firstTime
+  max(_time) as lastTime by EventCode ScriptBlockText Computer UserID | rename Computer
+  as dest | rename UserID as user| convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_clipboard_data_via_get_clipboard_filter`

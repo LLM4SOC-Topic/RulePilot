@@ -1,0 +1,28 @@
+description: The following analytic detects the execution of rundll32.exe without
+  any command line arguments. This behavior is identified using Endpoint Detection
+  and Response (EDR) telemetry, focusing on process execution logs. It is significant
+  because rundll32.exe typically requires command line arguments to function properly,
+  and its absence is often associated with malicious activities, such as those performed
+  by Cobalt Strike. If confirmed malicious, this activity could indicate an attempt
+  to execute arbitrary code, potentially leading to credential dumping, unauthorized
+  file writes, or other malicious actions.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count FROM datamodel=Endpoint.Processes where (Processes.process_name=rundll32.exe
+  OR Processes.original_file_name=RUNDLL32.EXE) by _time span=1h  Processes.process_id
+  Processes.process_name Processes.dest Processes.user Processes.process_path Processes.process
+  Processes.parent_process_name | `drop_dm_object_name(Processes)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | regex process="(?i)(rundll32\.exe.{0,4}$)"
+  | `suspicious_rundll32_no_command_line_arguments_filter`'

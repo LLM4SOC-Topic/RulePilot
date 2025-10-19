@@ -1,0 +1,24 @@
+description: The following analytic detects access to Windows administrative SMB shares
+  (Admin$, IPC$, C$) using the 'dir' command. It leverages Windows Security Event
+  Logs with EventCode 5140 to identify this activity. This behavior is significant
+  as it is commonly used by tools like PsExec/PaExec for staging binaries before creating
+  and starting services on remote endpoints, a technique often employed by adversaries
+  for lateral movement and remote code execution. If confirmed malicious, this activity
+  could allow attackers to propagate malware, such as IcedID, across the network,
+  leading to widespread infection and potential data breaches.
+required_fields:
+- _time
+- ShareName
+- IpAddress
+- ObjectType
+- SubjectUserName
+- SubjectDomainName
+- IpPort
+- AccessMask
+- Computer
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=5140 ShareName IN("\\\\*\\ADMIN$","\\\\*\\C$","*\\\\*\\IPC$") AccessMask=
+  0x1 | stats min(_time) as firstTime max(_time) as lastTime count by ShareName IpAddress
+  ObjectType SubjectUserName SubjectDomainName IpPort AccessMask Computer | rename
+  Computer as dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `network_share_discovery_via_dir_command_filter`

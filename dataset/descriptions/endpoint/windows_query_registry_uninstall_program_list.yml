@@ -1,0 +1,21 @@
+description: The following analytic detects an access request on the uninstall registry
+  key. It leverages Windows Security Event logs, specifically event code 4663. This
+  activity is significant because adversaries or malware can exploit this key to gather
+  information about installed applications, aiding in further attacks. If confirmed
+  malicious, this behavior could allow attackers to map out installed software, potentially
+  identifying vulnerabilities or software to exploit, leading to further system compromise.
+required_fields:
+- _time
+- object_file_name
+- object_file_path
+- process_name
+- process_path
+- process_id
+- EventCode
+- dest
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=4663 object_file_path="*\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*"
+  | stats count min(_time) as firstTime max(_time) as lastTime by object_file_name
+  object_file_path process_name process_path  process_id EventCode dest | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_query_registry_uninstall_program_list_filter`

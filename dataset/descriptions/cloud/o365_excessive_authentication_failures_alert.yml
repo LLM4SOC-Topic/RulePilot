@@ -1,0 +1,21 @@
+description: The following analytic identifies an excessive number of authentication
+  failures, including failed attempts against MFA prompt codes. It uses data from
+  the `o365_management_activity` dataset, focusing on events where the authentication
+  status is marked as failure. This behavior is significant as it may indicate a brute
+  force attack or an attempt to compromise user accounts. If confirmed malicious,
+  this activity could lead to unauthorized access, data breaches, or further exploitation
+  within the environment.
+required_fields:
+- _time
+- Workload
+- UserAuthenticationMethod
+- status
+- UserAgent
+- src_ip
+- user
+rule: sourcetype=o365:management:activity Workload=AzureActiveDirectory UserAuthenticationMethod=*
+  status=failure | stats count earliest(_time) AS firstTime latest(_time) AS lastTime
+  values(UserAuthenticationMethod) AS UserAuthenticationMethod values(UserAgent) AS
+  UserAgent values(status) AS status values(src_ip) AS src_ip by user | where count
+  > 10 | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `o365_excessive_authentication_failures_alert_filter`

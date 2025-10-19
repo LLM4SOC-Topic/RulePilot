@@ -1,0 +1,21 @@
+description: The following analytic identifies a Java user agent performing a GET
+  request for a .class file from a remote site. It leverages web or proxy logs within
+  the Web Datamodel to detect this activity. This behavior is significant as it may
+  indicate exploitation attempts, such as those related to CVE-2021-44228 (Log4Shell).
+  If confirmed malicious, an attacker could exploit vulnerabilities in the Java application,
+  potentially leading to remote code execution and further compromise of the affected
+  system.
+required_fields:
+- _time
+- Web.http_method
+- Web.url
+- Web.url_length
+- Web.src
+- Web.dest
+- Web.http_user_agent
+rule: '| tstats  summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count from datamodel=Web where Web.http_user_agent="*Java*"
+  Web.http_method="GET" Web.url="*.class*" by Web.http_user_agent Web.http_method,
+  Web.url,Web.url_length Web.src, Web.dest | `drop_dm_object_name("Web")` | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `java_class_file_download_by_java_user_agent_filter`'

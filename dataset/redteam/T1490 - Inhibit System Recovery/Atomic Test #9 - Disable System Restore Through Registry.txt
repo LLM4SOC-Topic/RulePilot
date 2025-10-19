@@ -1,0 +1,7 @@
+How to Enabled/Disable System Restore in Registry
+1.  Click Start | Run | type Regedit.exe | Click Ok
+Picture
+2.  Navigate to HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore
+3.  To the right, look for DisableSR
+4.  Under Data, if the value is set to 0 (Enable) 1 (Disable)
+5. Restart the computer for the change to take affect

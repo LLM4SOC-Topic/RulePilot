@@ -1,0 +1,25 @@
+description: The following analytic detects instances where the taskschd.dll is loaded
+  by processes running in suspicious or writable directories. This activity is unusual,
+  as legitimate processes that load taskschd.dll typically reside in protected system
+  locations. Malware or threat actors may attempt to load this DLL from writable or
+  non-standard directories to manipulate the Task Scheduler and execute malicious
+  tasks. By identifying processes that load taskschd.dll in these unsafe locations,
+  this detection helps security analysts flag potentially malicious activity and investigate
+  further to prevent unauthorized system modifications.
+required_fields:
+- _time
+- Image
+- ImageLoaded
+- process_name
+- dest
+- EventCode
+- Signed
+- ProcessId
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=7 Image IN ("*\\windows\\fonts\\*",
+  "*\\windows\\temp\\*", "*\\users\\public\\*", "*\\windows\\debug\\*", "*\\Users\\Administrator\\Music\\*",
+  "*\\Windows\\servicing\\*", "*\\Users\\Default\\*", "*Recycle.bin*", "*\\Windows\\Media\\*",
+  "\\Windows\\repair\\*", "*\\temp\\*", "*\\PerfLogs\\*") ImageLoaded = "*\\taskschd.dll"
+  | stats min(_time) as firstTime max(_time) as lastTime count by user_id, dest, Image
+  ,ImageLoaded, , OriginalFileName, ProcessGuid | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_scheduled_task_dll_module_loaded_filter`

@@ -1,0 +1,20 @@
+description: The following analytic identifies user sessions in Office 365 accessed
+  from multiple IP addresses, indicating potential adversary-in-the-middle (AiTM)
+  phishing attacks. It detects this activity by analyzing Azure Active Directory logs
+  for 'UserLoggedIn' operations and flags sessions with more than one associated IP
+  address. This behavior is significant as it suggests unauthorized concurrent access,
+  which is uncommon in normal usage. If confirmed malicious, the impact could include
+  data theft, account takeover, and the launching of internal phishing campaigns,
+  posing severe risks to organizational security.
+required_fields:
+- _time
+- Operation
+- Workload
+- src_ip
+- user
+- user_agent
+rule: sourcetype=o365:management:activity Workload=AzureActiveDirectory  Operation=UserLoggedIn
+  | stats min(_time) as firstTime max(_time) as lastTime values(src_ip) as ips values(user_agent)
+  as user_agents by Operation, user, SessionId | where mvcount(ips) > 1 | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `o365_concurrent_sessions_from_different_ips_filter`

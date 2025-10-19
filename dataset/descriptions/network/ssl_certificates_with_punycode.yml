@@ -1,0 +1,24 @@
+description: The following analytic detects SSL certificates with Punycode domains
+  in the SSL issuer email domain, identified by the prefix "xn--". It leverages the
+  Certificates Datamodel to flag these domains and uses CyberChef for decoding. This
+  activity is significant as Punycode can be used for domain spoofing and phishing
+  attacks. If confirmed malicious, attackers could deceive users and systems, potentially
+  leading to unauthorized access and data breaches.
+required_fields:
+- All_Certificates.SSL.ssl_issuer_email_domain
+- All_Certificates.SSL.ssl_issuer
+- All_Certificates.SSL.ssl_subject_email
+- All_Certificates.SSL.dest
+- All_Certificates.SSL.src
+- All_Certificates.SSL.sourcetype
+- All_Certificates.SSL.ssl_subject_email_domain
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Certificates.All_Certificates by All_Certificates.SSL.ssl_issuer_email_domain
+  All_Certificates.SSL.ssl_issuer All_Certificates.SSL.ssl_subject_email All_Certificates.SSL.dest
+  All_Certificates.SSL.src All_Certificates.SSL.sourcetype All_Certificates.SSL.ssl_subject_email_domain
+  | `drop_dm_object_name("All_Certificates.SSL")` | eval punycode=if(like(ssl_issuer_email_domain,"%xn--%"),1,0)
+  | where punycode=1 | cyberchef infield="ssl_issuer_email_domain" outfield="convertedPuny"
+  jsonrecipe="[{"op":"From Punycode","args":[true]}]" | table ssl_issuer_email_domain
+  convertedPuny ssl_issuer ssl_subject_email dest src sourcetype ssl_subject_email_domain
+  | `ssl_certificates_with_punycode_filter`'

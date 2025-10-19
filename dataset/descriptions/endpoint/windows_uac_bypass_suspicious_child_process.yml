@@ -1,0 +1,29 @@
+description: The following analytic detects when an executable known for User Account
+  Control (UAC) bypass exploitation spawns a child process in a user-controlled location
+  or a command shell executable (e.g., cmd.exe, powershell.exe). This detection leverages
+  Sysmon EventID 1 data, focusing on high or system integrity level processes with
+  specific parent-child process relationships. This activity is significant as it
+  may indicate an attacker has successfully used a UAC bypass exploit to escalate
+  privileges. If confirmed malicious, this could allow the attacker to execute arbitrary
+  commands with elevated privileges, potentially compromising the entire system.
+required_fields:
+- Processes.dest
+- Processes.user
+- Processes.parent_process_guid
+- Processes.parent_process
+- Processes.parent_process_name
+- Processes.process_name Processes.process
+- Processes.process_path
+- Processes.process_integrity_level
+- Processes.process_current_directory
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where Processes.process_integrity_level IN ("high","system")
+  AND Processes.parent_process_name IN (BitlockerWizardElev.exe,cliconfg.exe,clipup.exe,cmstp.exe,CompMgmtLauncher.exe,consent.exe,control.exe,credwiz.exe,dccw.exe,dismhost.exe,EventVwr.exe,fodhelper.exe,GWXUXWorker.exe,inetmgr.exe,iscsicli.exe,mcx2prov.exe,migwiz.exe,mmc.exe,msconfig.exe,oobe.exe,osk.exe,pkgmgr.exe,recdisc.exe,rstrui.exe,sdclt.exe,setupsqm.exe,slui.exe,sysprep.exe,SystemPropertiesAdvanced.exe,taskhost.exe,TpmInit.exe,tzsync.exe,w32tm.exe,WerFault.exe,WSReset.exe,wusa.exe)
+  AND (Processes.process_name IN ("cmd.exe","powershell.exe","pwsh.exe","wscript","cscript.exe","bash.exe","werfault.exe")
+  OR Processes.process IN ("*\\\\*","*\\Users\\*","*\\ProgramData\\*","*\\Temp\\*"))
+  by Processes.dest, Processes.user, Processes.parent_process_guid, Processes.parent_process,
+  Processes.parent_process_name Processes.process_name Processes.process, Processes.process_path,
+  Processes.process_integrity_level, Processes.process_current_directory | `drop_dm_object_name(Processes)`
+  | where parent_process_name != process_name | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_uac_bypass_suspicious_child_process_filter`'

@@ -1,0 +1,29 @@
+description: The following analytic identifies modifications to the TranscodedWallpaper
+  file in the wallpaper theme directory, excluding changes made by explorer.exe. This
+  detection leverages the Endpoint.Processes and Endpoint.Filesystem data models to
+  correlate process activity with file modifications. This activity is significant
+  as it may indicate an adversary attempting to deface or change the desktop wallpaper
+  of a targeted host, a tactic often used to signal compromise or deliver a message.
+  If confirmed malicious, this could be a sign of unauthorized access and tampering,
+  potentially leading to further system compromise or data exfiltration.
+required_fields:
+- _time
+- dest
+- file_create_time
+- file_name
+- file_path
+- process_name
+- process_path
+- process
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count FROM datamodel=Endpoint.Processes where Processes.process_path
+  !="*\\Windows\\Explorer.EXE" by _time span=1h Processes.process_id Processes.process_name
+  Processes.process Processes.dest Processes.process_guid  Processes.original_file_name
+  | `drop_dm_object_name(Processes)` |rename process_guid as proc_guid | join proc_guid,
+  _time [ | tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count FROM datamodel=Endpoint.Filesystem where
+  Filesystem.file_path = "*\\AppData\\Roaming\\Microsoft\\Windows\\Themes\\TranscodedWallpaper"
+  by _time span=1h Filesystem.dest Filesystem.file_create_time Filesystem.file_name
+  Filesystem.file_path Filesystem.process_guid | `drop_dm_object_name(Filesystem)`
+  |rename process_guid as proc_guid | fields file_name file_path process_name process_path
+  process dest file_create_time _time proc_guid] | `windows_defacement_modify_transcodedwallpaper_file_filter`'

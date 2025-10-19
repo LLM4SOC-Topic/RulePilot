@@ -1,0 +1,20 @@
+description: The following analytic identifies an AWS IAM account with concurrent
+  sessions originating from more than one unique IP address within a 5-minute window.
+  It leverages AWS CloudTrail logs, specifically the `DescribeEventAggregates` event,
+  to detect this behavior. This activity is significant as it may indicate a session
+  hijacking attack, where an adversary uses stolen session cookies to access AWS resources
+  from a different location. If confirmed malicious, this could allow unauthorized
+  access to sensitive corporate resources, leading to potential data breaches or further
+  exploitation within the AWS environment.
+required_fields:
+- _time
+- eventName
+- userAgent
+- errorCode
+- user_arn
+- aws_account_id
+- src_ip
+rule: sourcetype=aws:cloudtrail eventName = DescribeEventAggregates src_ip!="AWS Internal"
+  | bin span=5m _time | stats values(userAgent) values(eventName) values(src_ip) as
+  src_ip  dc(src_ip) as distinct_ip_count by _time user_arn | where distinct_ip_count
+  > 1 | `aws_concurrent_sessions_from_different_ips_filter`

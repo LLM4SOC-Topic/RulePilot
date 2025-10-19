@@ -1,0 +1,17 @@
+description: This search provides detection of high risk permissions by resource and
+  accounts. These are permissions that can allow attackers with compromised accounts
+  to move laterally and escalate privileges.
+required_fields:
+- _time
+- data.protoPayload.authorizationInfo{}.permission
+- data.protoPayload.requestMetadata.callerIp
+- data.protoPayload.authenticationInfo.principalEmail
+- data.protoPayload.authorizationInfo{}.permission
+- data.protoPayload.response.bindings{}.members{}
+- data.resource.labels.project_id
+rule: sourcetype="google:gcp:pubsub:message" data.protoPayload.authorizationInfo{}.permission=iam.serviceAccounts.getaccesstoken
+  OR iam.serviceAccounts.setIamPolicy OR iam.serviceAccounts.actas OR dataflow.jobs.create
+  OR composer.environments.create OR dataproc.clusters.create |table data.protoPayload.requestMetadata.callerIp
+  data.protoPayload.authenticationInfo.principalEmail data.protoPayload.authorizationInfo{}.permission
+  data.protoPayload.response.bindings{}.members{} data.resource.labels.project_id
+  | `gcp_detect_high_risk_permissions_by_resource_and_account_filter`

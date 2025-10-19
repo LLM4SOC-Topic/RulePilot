@@ -1,0 +1,20 @@
+description: The following analytic identifies instances where a single user creates
+  more than three unique OAuth applications within a 10-minute timeframe in Azure
+  AD. It detects this activity by monitoring the 'Add service principal' operation
+  and aggregating data in 10-minute intervals. This behavior is significant as it
+  may indicate an adversary rapidly creating multiple service principals to stage
+  an attack or expand their foothold within the network. If confirmed malicious, this
+  activity could allow attackers to establish persistence, escalate privileges, or
+  access sensitive information within the Azure environment.
+required_fields:
+- _time
+- operationName
+- properties.initiatedBy.user.id
+- targetResources{}.displayName
+- src_user
+rule: sourcetype=azure:monitor:aad operationName="Add service principal" properties.initiatedBy.user.id=*
+  | rename properties.* as * | bucket span=10m _time | rename targetResources{}.displayName
+  as displayName | stats min(_time) as firstTime max(_time) as lastTime values(displayName)
+  as displayName dc(displayName) as unique_apps by src_user | where unique_apps >
+  3 | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `azure_ad_multiple_service_principals_created_by_user_filter`

@@ -1,0 +1,27 @@
+description: The following analytic identifies the first-time execution of child processes
+  spawned by Zoom (zoom.exe or zoom.us). It leverages Endpoint Detection and Response
+  (EDR) data, specifically monitoring process creation events and comparing them against
+  previously seen child processes. This activity is significant because the execution
+  of unfamiliar child processes by Zoom could indicate malicious exploitation or misuse
+  of the application. If confirmed malicious, this could lead to unauthorized code
+  execution, data exfiltration, or further compromise of the endpoint.
+required_fields:
+- _time
+- Processes.parent_process_name
+- Processes.parent_process_id
+- Processes.process_name
+- Processes.process
+- Processes.parent_process_name
+- Processes.process_id
+- Processes.dest
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` min(_time) as firstTime values(Processes.parent_process_name)
+  as parent_process_name values(Processes.parent_process_id) as parent_process_id
+  values(Processes.process_name) as process_name values(Processes.process) as process
+  from datamodel=Endpoint.Processes where (Processes.parent_process_name=zoom.exe
+  OR Processes.parent_process_name=zoom.us) by Processes.process_id Processes.dest
+  | `drop_dm_object_name(Processes)` | lookup zoom_first_time_child_process dest as
+  dest process_name as process_name OUTPUT firstTimeSeen | where isnull(firstTimeSeen)
+  OR firstTimeSeen > relative_time(now(), ""-70m@m"") | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | table firstTime dest, process_id, process_name, parent_process_id,
+  parent_process_name |`first_time_seen_child_process_of_zoom_filter`'

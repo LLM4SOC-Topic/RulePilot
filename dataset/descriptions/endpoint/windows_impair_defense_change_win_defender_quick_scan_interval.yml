@@ -1,0 +1,22 @@
+description: The following analytic detects modifications to the Windows registry
+  that change the Windows Defender Quick Scan Interval. It leverages data from the
+  Endpoint.Registry data model, focusing on changes to the "QuickScanInterval" registry
+  path. This activity is significant because altering the scan interval can impair
+  Windows Defender's ability to detect malware promptly, potentially allowing threats
+  to persist undetected. If confirmed malicious, this modification could enable attackers
+  to bypass security measures, maintain persistence, and execute further malicious
+  activities without being detected by quick scans.
+required_fields:
+- _time
+- Registry.registry_key_name
+- Registry.registry_value_name
+- Registry.dest
+- Registry.user
+- Registry.registry_path
+- Registry.action
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry where Registry.registry_path= "*\\Windows Defender\\Scan\\QuickScanInterval"
+  by Registry.registry_key_name Registry.user Registry.registry_path Registry.registry_value_data
+  Registry.action Registry.dest | `drop_dm_object_name(Registry)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_impair_defense_change_win_defender_quick_scan_interval_filter`'

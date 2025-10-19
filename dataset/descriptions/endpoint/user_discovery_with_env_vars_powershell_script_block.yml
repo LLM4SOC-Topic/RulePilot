@@ -1,0 +1,21 @@
+description: The following analytic detects the use of PowerShell environment variables
+  to identify the current logged user by leveraging PowerShell Script Block Logging
+  (EventCode=4104). This method monitors script blocks containing `$env:UserName`
+  or `[System.Environment]::UserName`. Identifying this activity is significant as
+  adversaries and Red Teams may use it for situational awareness and Active Directory
+  discovery on compromised endpoints. If confirmed malicious, this activity could
+  allow attackers to gain insights into user context, aiding in further exploitation
+  and lateral movement within the network.
+required_fields:
+- _time
+- Path
+- Message
+- OpCode
+- ComputerName
+- User
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 (ScriptBlockText = "*$env:UserName*" OR ScriptBlockText = "*[System.Environment]::UserName*")
+  | stats count min(_time) as firstTime max(_time) as lastTime by EventCode ScriptBlockText
+  Computer user_id | rename Computer as dest, user_id as user | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `user_discovery_with_env_vars_powershell_script_block_filter`

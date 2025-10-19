@@ -1,0 +1,19 @@
+description: The following analytic detects the execution of rare processes that appear
+  only once across the network within a specified timeframe. It leverages data from
+  Endpoint Detection and Response (EDR) agents, focusing on process execution logs.
+  This activity is significant for a SOC as it helps identify potentially malicious
+  activities or unauthorized software, which could indicate a security breach or ongoing
+  attack. If confirmed malicious, such rare processes could lead to data theft, privilege
+  escalation, or complete system compromise, making early detection crucial for minimizing
+  impact.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.process_name
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` dc(Processes.dest) as dc_dest values(Processes.dest)
+  as dest values(Processes.user) as user min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes by Processes.process_name | `drop_dm_object_name(Processes)`
+  | search dc_dest < 10 | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) |
+  convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `detect_rare_executables_filter`'

@@ -1,0 +1,22 @@
+description: The following analytic identifies a process making a DNS query to Discord,
+  excluding legitimate Discord application paths. It leverages Sysmon logs with Event
+  ID 22 to detect DNS queries containing "discord" in the QueryName field. This activity
+  is significant because Discord can be abused by adversaries to host and download
+  malicious files, as seen in the WhisperGate campaign. If confirmed malicious, this
+  could indicate malware attempting to download additional payloads from Discord,
+  potentially leading to further code execution and compromise of the affected system.
+required_fields:
+- _time
+- Image
+- QueryName
+- QueryStatus
+- process_name
+- QueryResults
+- dest
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=22 QueryName IN ("*discord*")
+  Image != "*\\AppData\\Local\\Discord\\*" AND Image != "*\\Program Files*" AND Image
+  != "discord.exe" | stats count min(_time) as firstTime max(_time) as lastTime by
+  Image QueryName QueryStatus process_name QueryResults Computer | rename Computer
+  as dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `suspicious_process_with_discord_dns_query_filter`

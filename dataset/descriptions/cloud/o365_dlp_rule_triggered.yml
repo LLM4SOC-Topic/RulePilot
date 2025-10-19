@@ -1,0 +1,28 @@
+description: The following analytic detects when Microsoft Office 365 Data Loss Prevention
+  (DLP) rules have been triggered. DLP rules can be configured for any number of security,
+  regulatory, or business compliance reasons, as such this analytic will only be as
+  accurate as the upstream DLP configuration. Detections from this analytic should
+  be evaluated thoroughly to determine what, if any, security relevance the underlying
+  DLP events contain.
+required_fields:
+- _time
+- Operation
+- ExchangeMetaData.To{}
+- ExchangeMetaData.UniqueID
+- PolicyDetails{}.Rules{}.RuleName
+- UserId
+- PolicyDetails{}.Rules{}.ConditionsMatched.SensitiveInformation{}.SensitiveInformationTypeName
+- PolicyDetails{}.Rules{}.Actions{}
+- PolicyDetails{}.Rules{}.ConditionsMatched.SensitiveInformation{}.Location
+rule: sourcetype=o365:management:activity Operation=DLPRuleMatch | eval recipient
+  = 'ExchangeMetaData.To{}', signature_id = 'ExchangeMetaData.UniqueID', signature
+  = 'PolicyDetails{}.Rules{}.RuleName' , src_user = UserId, reason ='PolicyDetails{}.Rules{}.ConditionsMatched.SensitiveInformation{}.SensitiveInformationTypeName',
+  result='PolicyDetails{}.Rules{}.Actions{}', file_name=case(NOT match('PolicyDetails{}.Rules{}.ConditionsMatched.SensitiveInformation{}.Location',"Message
+  Body"),'PolicyDetails{}.Rules{}.ConditionsMatched.SensitiveInformation{}.Location')
+  | stats min(_time) as firstTime max(_time) as lastTime values(signature) as signature
+  values(file_name) as file_name values(ExchangeMetaData.Subject) AS subject values(Workload)
+  as app values(result) as result by src_user,recipient,signature_id,reason | `o365_dlp_rule_triggered_filter`
+  | stats count min(firstTime) as firstTime max(lastTime) as lastTime values(*) AS
+  * by src_user,signature_id | eval action = CASE(match(result,"Halt"),"blocked",isnotnull(result),"alert",true(),"allow")
+  |convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)  |convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$)

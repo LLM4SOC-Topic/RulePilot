@@ -1,0 +1,22 @@
+description: The following analytic detects the installation of the XMRIG coinminer
+  driver on a system. It identifies the loading of the `WinRing0x64.sys` driver, commonly
+  associated with XMRIG, by analyzing Sysmon EventCode 6 logs for specific signatures
+  and image loads. This activity is significant because XMRIG is an open-source CPU
+  miner frequently exploited by adversaries to mine cryptocurrency illicitly. If confirmed
+  malicious, this activity could lead to unauthorized resource consumption, degraded
+  system performance, and potential financial loss due to unauthorized cryptocurrency
+  mining.
+required_fields:
+- _time
+- dest
+- ImageLoaded
+- Hashes
+- IMPHASH
+- Signature
+- Signed
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=6 Signature="Noriyuki MIYAZAKI"
+  OR ImageLoaded= "*\\WinRing0x64.sys" |  stats  min(_time) as firstTime max(_time)
+  as lastTime count by  dest ImageLoaded Hashes IMPHASH Signature Signed | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `xmrig_driver_loaded_filter`

@@ -1,0 +1,21 @@
+description: The following analytic detects when an unusual number NTLM authentications
+  is attempted by the same source against multiple destinations. This activity generally
+  results when an attacker attempts to brute force, password spray, or otherwise authenticate
+  to a multiple domain joined Windows devices using an NTLM based process/attack.
+  This same activity may also generate a large number of EventID 4776 events as well.
+required_fields:
+- _time
+- EventCode
+- DomainName
+- Security
+- WorkstationName
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-NTLM/Operational OR source=XmlWinEventLog:Microsoft-Windows-NTLM/Operational
+  EventCode = 8004 SChannelName=* WorkstationName=* | eval src = replace(WorkstationName,"\\\\","")  ```CIM
+  alignment, remove leading \\ from some auth attempts ``` | eval dest = SChannelName,
+  user = UserName ``` CIM alignment``` | where SChannelName!=src ``` Remove NTLM auths
+  to self, improves accuracy for certain applications ``` | `windows_unusual_ntlm_authentication_destinations_by_source_filter`
+  | stats count min(_time) as firstTime max(_time) as lastTime dc(eval(upper(dest)))
+  as unique_count by src | eventstats avg(unique_count) as unique_avg , stdev(unique_count)
+  as unique_std | eval upperBound_unique=(1+unique_avg+unique_std*3) ``` adjust formula
+  for sensitivity``` | eval isOutlier=CASE(unique_count > upperBound_unique, 1, true(),
+  0) | where isOutlier==1 | `security_content_ctime(firstTime)` | `security_content_ctime(lastTime)`

@@ -1,0 +1,22 @@
+description: The following analytic detects the modification of the Windows Registry
+  key "DisableAntiSpyware" being set to disable. This detection leverages data from
+  the Endpoint.Registry datamodel, specifically looking for the registry value name
+  "DisableAntiSpyware" with a value of "0x00000001". This activity is significant
+  as it is commonly associated with Ryuk ransomware infections, indicating potential
+  malicious intent to disable Windows Defender. If confirmed malicious, this action
+  could allow attackers to disable critical security defenses, facilitating further
+  malicious activities such as data encryption, exfiltration, or additional system
+  compromise.
+required_fields:
+- _time
+- Registry.registry_key_name
+- Registry.registry_value_name
+- Registry.dest
+- Registry.user
+- Registry.registry_path
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Registry where Registry.registry_value_name="DisableAntiSpyware"
+  AND Registry.registry_value_data="0x00000001" by Registry.dest Registry.user Registry.registry_path
+  Registry.registry_value_data | `drop_dm_object_name(Registry)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_disableantispyware_registry_filter`'

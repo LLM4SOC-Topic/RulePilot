@@ -1,0 +1,20 @@
+description: The following analytic detects the creation of files with extensions
+  commonly associated with the Mimikatz Crypto module. It leverages the Endpoint.Filesystem
+  data model to identify specific file names indicative of certificate export activities.
+  This behavior is significant as it may indicate the use of Mimikatz to export cryptographic
+  keys, which is a common tactic for credential theft. If confirmed malicious, this
+  activity could allow an attacker to exfiltrate sensitive cryptographic material,
+  potentially leading to unauthorized access and further compromise of the environment.
+required_fields:
+- _time
+- Filesystem.dest
+- Filesystem.file_create_time
+- Filesystem.file_name
+- Filesystem.file_path
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Filesystem where Filesystem.file_name IN ("*.keyx.rsa.pvk","*sign.rsa.pvk","*sign.dsa.pvk","*dsa.ec.p8k","*dh.ec.p8k",
+  "*.pfx", "*.der") by _time span=1h Filesystem.dest Filesystem.file_create_time Filesystem.file_name
+  Filesystem.file_path | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `drop_dm_object_name(Filesystem)`
+  | `windows_mimikatz_crypto_export_file_extensions_filter`'

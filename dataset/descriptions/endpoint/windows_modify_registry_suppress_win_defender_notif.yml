@@ -1,0 +1,23 @@
+description: The following analytic detects modifications in the Windows registry
+  to suppress Windows Defender notifications. It leverages data from the Endpoint.Registry
+  datamodel, specifically targeting changes to the "Notification_Suppress" registry
+  value. This activity is significant because adversaries, including those deploying
+  Azorult malware, use this technique to bypass Windows Defender and disable critical
+  notifications. If confirmed malicious, this behavior could allow attackers to evade
+  detection, maintain persistence, and execute further malicious activities without
+  alerting the user or security tools.
+required_fields:
+- _time
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.user
+- Registry.dest
+- Registry.registry_value_name
+- Registry.action
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry where Registry.registry_path= "*\\Windows Defender\\UX
+  Configuration\\Notification_Suppress*" Registry.registry_value_data="0x00000001"
+  by Registry.registry_key_name Registry.user Registry.registry_path Registry.registry_value_data
+  Registry.action Registry.dest | `drop_dm_object_name(Registry)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_modify_registry_suppress_win_defender_notif_filter`'

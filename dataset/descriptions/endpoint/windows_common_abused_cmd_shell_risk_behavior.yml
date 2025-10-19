@@ -1,0 +1,34 @@
+description: The following analytic identifies instances where four or more distinct
+  detection analytics are associated with malicious command line behavior on a specific
+  host. This detection leverages the Command Line Interface (CLI) data from various
+  sources to identify suspicious activities. This behavior is significant as it often
+  indicates attempts to execute malicious commands, access sensitive data, install
+  backdoors, or perform other nefarious actions. If confirmed malicious, attackers
+  could gain unauthorized control, exfiltrate information, escalate privileges, or
+  launch further attacks within the network, leading to severe compromise.
+required_fields:
+- _time
+- All_Risk.analyticstories
+- All_Risk.risk_object_type
+- All_Risk.risk_object
+- All_Risk.annotations.mitre_attack.mitre_tactic
+- source
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` min(_time) as firstTime max(_time) as lastTime
+  sum(All_Risk.calculated_risk_score) as risk_score, count(All_Risk.calculated_risk_score)
+  as risk_event_count, values(All_Risk.annotations.mitre_attack.mitre_tactic_id) as
+  annotations.mitre_attack.mitre_tactic_id, dc(All_Risk.annotations.mitre_attack.mitre_tactic_id)
+  as mitre_tactic_id_count, values(All_Risk.annotations.mitre_attack.mitre_technique_id)
+  as annotations.mitre_attack.mitre_technique_id, dc(All_Risk.annotations.mitre_attack.mitre_technique_id)
+  as mitre_technique_id_count, values(All_Risk.tag) as tag, values(source) as source,
+  dc(source) as source_count from datamodel=Risk.All_Risk where source IN ("*Cmdline
+  Tool Not Executed In CMD Shell*", "*Windows System Network Config Discovery Display
+  DNS*", "*Local Account Discovery With Wmic*", "*Net Localgroup Discovery*", "*Create
+  local admin accounts using net exe*", "*Local Account Discovery with Net*", "*Icacls
+  Deny Command*", "*ICACLS Grant Command*", "*Windows Proxy Via Netsh*", "*Processes
+  launching netsh*", "*Disabling Firewall with Netsh*", "*Windows System Network Connections
+  Discovery Netsh*", "*Network Connection Discovery With Arp*", "*Windows System Discovery
+  Using ldap Nslookup*", "*Windows System Shutdown CommandLine*") by All_Risk.risk_object
+  All_Risk.risk_object_type All_Risk.annotations.mitre_attack.mitre_tactic | `drop_dm_object_name(All_Risk)`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | where source_count >= 4 | `windows_common_abused_cmd_shell_risk_behavior_filter`'

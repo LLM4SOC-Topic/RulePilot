@@ -1,0 +1,21 @@
+description: The following analytic detects the creation of new mail flow rules in
+  Office 365 that may redirect or copy emails to unauthorized or external addresses.
+  It leverages Office 365 Management Activity logs, specifically querying for the
+  "New-TransportRule" operation and parameters like "BlindCopyTo", "CopyTo", and "RedirectMessageTo".
+  This activity is significant as it can indicate potential data exfiltration or unauthorized
+  access to sensitive information. If confirmed malicious, attackers could intercept
+  or redirect email communications, leading to data breaches or information leakage.
+required_fields:
+- _time
+- Operation
+- Parameters{}.Name
+- user
+- Name
+rule: sourcetype=o365:management:activity Workload=Exchange Operation="New-TransportRule"
+  | eval match1=mvfind('Parameters{}.Name', "BlindCopyTo") | eval match2=mvfind('Parameters{}.Name',
+  "CopyTo") | eval match3=mvfind('Parameters{}.Name', "RedirectMessageTo") | where
+  match1>= 0 OR match2>= 0 OR match3>=0 | eval ForwardTo=coalesce(BlindCopyTo, CopyTo,
+  RedirectMessageTo) | search ForwardTo!=""  | rename UserId as user  | stats count
+  earliest(_time) as firstTime latest(_time) as lastTime by Operation, user, Name,
+  ForwardTo  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$)   | `o365_new_forwarding_mailflow_rule_created_filter`

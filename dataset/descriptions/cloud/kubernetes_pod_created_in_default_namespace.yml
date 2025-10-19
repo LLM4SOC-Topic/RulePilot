@@ -1,0 +1,27 @@
+description: The following analytic detects the creation of Kubernetes pods in the
+  default, kube-system, or kube-public namespaces. It leverages Kubernetes audit logs
+  to identify pod creation events within these specific namespaces. This activity
+  is significant for a SOC as it may indicate an attacker attempting to hide their
+  presence or evade defenses. Unauthorized pod creation in these namespaces can suggest
+  a successful cluster breach, potentially leading to privilege escalation, persistent
+  access, or further malicious activities within the cluster.
+required_fields:
+- objectRef.resource
+- verb
+- objectRef.name
+- objectRef.namespace
+- requestReceivedTimestamp
+- requestURI
+- responseStatus.code
+- sourceIPs{}
+- stage
+- user.groups{}
+- user.uid
+- user.username
+- userAgent
+- verb
+rule: source="kubernetes" objectRef.resource=pods verb=create objectRef.namespace
+  IN ("default", "kube-system", "kube-public") | fillnull | stats count by objectRef.name
+  objectRef.namespace objectRef.resource requestReceivedTimestamp requestURI responseStatus.code
+  sourceIPs{} stage user.groups{} user.uid user.username userAgent verb | rename sourceIPs{}
+  as src_ip, user.username as user | `kubernetes_pod_created_in_default_namespace_filter`

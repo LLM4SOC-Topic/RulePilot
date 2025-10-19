@@ -1,0 +1,25 @@
+description: The following analytic identifies attempts to exploit the JetBrains TeamCity
+  Authentication Bypass vulnerability (CVE-2024-27198). It detects suspicious POST
+  requests to the `/app/rest/users` and `/app/rest/users/id:1/tokens` endpoints, which
+  are indicative of attempts to create new administrator users or generate admin access
+  tokens without authentication. This detection leverages the Web datamodel and CIM-compliant
+  log sources, such as Nginx or TeamCity logs. This activity is significant as it
+  can lead to full control over the TeamCity server, including all projects, builds,
+  agents, and artifacts. If confirmed malicious, attackers could gain unauthorized
+  administrative access, leading to severe security breaches.
+required_fields:
+- Web.src
+- Web.dest
+- Web.http_user_agent
+- Web.url
+- Web.status
+- Web.http_method
+- sourcetype
+- source
+rule: '| tstats count min(_time) as firstTime max(_time) as lastTime from datamodel=Web
+  where ((Web.url="*?jsp=*" AND Web.url="*;.jsp*") Web.status=200 Web.http_method=POST)
+  OR (Web.url IN ("*jsp=/app/rest/users;.jsp","*?jsp=/app/rest/users;.jsp","*?jsp=.*/app/rest/users/id:*/tokens;*")
+  Web.status=200 Web.http_method=POST ) by Web.src, Web.dest, Web.http_user_agent,
+  Web.url, Web.status, Web.http_method, sourcetype, source | `drop_dm_object_name("Web")`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$)| `jetbrains_teamcity_authentication_bypass_cve_2024_27198_filter`'

@@ -1,0 +1,18 @@
+description: The following analytic detects when an IIS Module DLL fails to load due
+  to a configuration problem, identified by EventCode 2282. This detection leverages
+  Windows Application event logs to identify repeated failures in loading IIS modules.
+  Such failures can indicate misconfigurations or potential tampering with IIS components.
+  If confirmed malicious, this activity could lead to service disruptions or provide
+  an attacker with opportunities to exploit vulnerabilities within the IIS environment.
+  Immediate investigation is required to determine the legitimacy of the failing module
+  and to mitigate any potential security risks.
+required_fields:
+- _time
+- OpCode
+- EventCode
+- ComputerName
+- Message
+rule: eventtype=wineventlog_application OR source="XmlWinEventLog:Application" EventCode=2282
+  | stats  count min(_time) as firstTime max(_time) as lastTime by  EventCode dest
+  Name ModuleDll | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_iis_components_module_failed_to_load_filter`

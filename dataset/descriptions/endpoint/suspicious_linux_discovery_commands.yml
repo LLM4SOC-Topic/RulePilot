@@ -1,0 +1,23 @@
+description: The following analytic detects the execution of suspicious bash commands
+  commonly used in scripts like AutoSUID, LinEnum, and LinPeas for system discovery
+  on a Linux host. It leverages Endpoint Detection and Response (EDR) data, specifically
+  looking for a high number of distinct commands executed within a short time frame.
+  This activity is significant as it often precedes privilege escalation or other
+  malicious actions. If confirmed malicious, an attacker could gain detailed system
+  information, identify vulnerabilities, and potentially escalate privileges, posing
+  a severe threat to the environment.
+required_fields:
+- _time
+- Processes.process
+- Processes.parent_process_name
+- Processes.user
+- Processes.process_name
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count values(Processes.process) values(Processes.process_name)
+  values(Processes.parent_process_name) dc(Processes.process) as distinct_commands
+  dc(Processes.process_name) as distinct_process_names min(_time) as firstTime max(_time)
+  as lastTime from datamodel=Endpoint.Processes where [|inputlookup linux_tool_discovery_process.csv
+  | rename process as Processes.process |table Processes.process] by _time span=5m
+  Processes.user Processes.dest | `drop_dm_object_name(Processes)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| where distinct_commands
+  > 40 AND distinct_process_names > 3| `suspicious_linux_discovery_commands_filter`'

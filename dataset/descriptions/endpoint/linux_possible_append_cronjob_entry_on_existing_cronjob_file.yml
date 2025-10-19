@@ -1,0 +1,24 @@
+description: The following analytic detects potential tampering with cronjob files
+  on a Linux system by identifying 'echo' commands that append code to existing cronjob
+  files. It leverages logs from Endpoint Detection and Response (EDR) agents, focusing
+  on process names, parent processes, and command-line executions. This activity is
+  significant because adversaries often use it for persistence or privilege escalation.
+  If confirmed malicious, this could allow attackers to execute unauthorized code
+  automatically, leading to system compromises and unauthorized data access, thereby
+  impacting business operations and data integrity.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count from datamodel=Endpoint.Processes where Processes.process
+  = "*echo*" AND Processes.process IN("*/etc/cron*", "*/var/spool/cron/*", "*/etc/anacrontab*")
+  by Processes.dest Processes.user Processes.parent_process_name Processes.process_name
+  Processes.process Processes.process_id Processes.parent_process_id Processes.process_guid
+  | `drop_dm_object_name(Processes)` | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `linux_possible_append_cronjob_entry_on_existing_cronjob_file_filter`'

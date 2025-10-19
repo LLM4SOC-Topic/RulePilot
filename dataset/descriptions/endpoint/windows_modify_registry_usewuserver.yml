@@ -1,0 +1,24 @@
+description: The following analytic detects a suspicious modification to the Windows
+  Update configuration registry key "UseWUServer." It leverages data from the Endpoint.Registry
+  data model to identify changes where the registry value is set to "0x00000001."
+  This activity is significant because it is commonly used by adversaries, including
+  malware like RedLine Stealer, to bypass detection mechanisms and potentially exploit
+  zero-day vulnerabilities. If confirmed malicious, this modification could allow
+  attackers to evade defenses, persist on the target host, and deploy additional malicious
+  payloads.
+required_fields:
+- _time
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.user
+- Registry.dest
+- Registry.registry_value_name
+- Registry.action
+- Registry.registry_value_data
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Registry where Registry.registry_path="*\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU\\UseWUServer"
+  AND Registry.registry_value_data="0x00000001" by Registry.dest Registry.user Registry.registry_path
+  Registry.registry_value_data Registry.registry_key_name | `drop_dm_object_name(Registry)`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_modify_registry_usewuserver_filter`'

@@ -1,0 +1,21 @@
+description: The following analytic detects high-risk sign-in attempts against Azure
+  Active Directory, identified by Azure Identity Protection. It leverages the RiskyUsers
+  and UserRiskEvents log categories from Azure AD events ingested via EventHub. This
+  activity is significant as it indicates potentially compromised accounts, flagged
+  by heuristics and machine learning. If confirmed malicious, attackers could gain
+  unauthorized access to sensitive resources, leading to data breaches or further
+  exploitation within the environment.
+required_fields:
+- _time
+- category
+- properties.riskLevel
+- user
+- src_ip
+- properties.activity
+- properties.riskEventType
+- properties.additionalInfo
+rule: sourcetype=azure:monitor:aad category=UserRiskEvents properties.riskLevel=high
+  | rename properties.* as * | stats count min(_time) as firstTime max(_time) as lastTime
+  values(user) as user by src_ip, activity, riskLevel, riskEventType, additionalInfo
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `azure_active_directory_high_risk_sign_in_filter`

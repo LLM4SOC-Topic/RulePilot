@@ -1,0 +1,15 @@
+description: '**DEPRECATION NOTE** - This search has been deprecated and replaced
+  with this detection `Okta Unauthorized Access to Application - DM`.  The following
+  anomaly identifies failed Okta SSO events utilizing the legacy Okta event "unauth
+  app access attempt".'
+required_fields:
+- _time
+- displayMessage
+- app
+- src_user
+- result
+- src_ip
+rule: eventtype=okta_log OR sourcetype = "OktaIM2:log" eventType=app.generic.unauth_app_access_attempt
+  | stats min(_time) as firstTime max(_time) as lastTime values(app) as Apps count
+  by src_user, result ,displayMessage, src_ip | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `okta_failed_sso_attempts_filter`

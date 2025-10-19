@@ -1,0 +1,29 @@
+description: The following analytic detects the use of the `curl` command with proxy-related
+  arguments such as `-x`, `socks`, `--preproxy`, and `--proxy`. This detection leverages
+  data from Endpoint Detection and Response (EDR) agents, focusing on command-line
+  executions and process details. This activity is significant as it may indicate
+  an adversary attempting to use a proxy to evade network monitoring and obscure their
+  actions. If confirmed malicious, this behavior could allow attackers to bypass security
+  controls, making it difficult to track their activities and potentially leading
+  to unauthorized data access or exfiltration.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where Processes.process_name=curl Processes.process
+  IN ("*-x *", "*socks4a://*", "*socks5h://*", "*socks4://*","*socks5://*", "*--preproxy
+  *", "--proxy*") by Processes.dest Processes.user Processes.parent_process_name Processes.process_name
+  Processes.process Processes.process_id Processes.parent_process_id | `drop_dm_object_name(Processes)`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `linux_proxy_socks_curl_filter`'

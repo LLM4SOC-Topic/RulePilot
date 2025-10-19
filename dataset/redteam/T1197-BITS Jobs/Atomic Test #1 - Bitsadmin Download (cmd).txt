@@ -1,0 +1,3 @@
+Bitsadmin Download (cmd)
+This test simulates an adversary leveraging bitsadmin.exe to download and execute a payload
+Supported Platforms: Windows

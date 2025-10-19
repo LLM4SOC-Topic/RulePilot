@@ -1,0 +1,32 @@
+description: The following analytic identifies attempts to disable Windows Defender
+  real-time behavior monitoring via PowerShell commands. It detects the use of specific
+  `Set-MpPreference` parameters that disable various security features. This activity
+  is significant as it is commonly used by malware such as RATs, bots, or Trojans
+  to evade detection by disabling antivirus protections. If confirmed malicious, this
+  action could allow an attacker to operate undetected, leading to potential data
+  exfiltration, further system compromise, or persistent access within the environment.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where (Processes.process_name=pwsh.exe OR Processes.process_name=sqlps.exe
+  OR Processes.process_name=sqltoolsps.exe OR Processes.process_name=powershell.exe
+  OR Processes.process_name=powershell_ise.exe OR Processes.original_file_name=pwsh.dll
+  OR Processes.original_file_name=PowerShell.EXE OR Processes.original_file_name=powershell_ise.EXE)
+  Processes.process="*set-mppreference*" AND Processes.process IN ("*disablerealtimemonitoring*","*DisableScanningNetworkFiles*","*DisableScanningMappedNetworkDrivesForFullScan*","*DisableRemovableDriveScanning*","*DisableArchiveScanning*","*DisableCatchupFullScan*","*DisableCatchupQuickScan*","*disableioavprotection*","*disableintrusionpreventionsystem*","*disablescriptscanning*","*disableblockatfirstseen*","*DisableBehaviorMonitoring*","*MAPSReporting*","*drdsc
+  *","*dsnf *","*drtm *","*dioavp *","*dscrptsc *","*dbaf *","*dbm *","*dips *") by
+  Processes.dest Processes.user Processes.parent_process Processes.original_file_name
+  Processes.process_name Processes.process Processes.process_id Processes.parent_process_id
+  | `drop_dm_object_name(Processes)` | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `powershell_disable_security_monitoring_filter`'

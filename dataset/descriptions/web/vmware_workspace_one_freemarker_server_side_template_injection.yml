@@ -1,0 +1,20 @@
+description: The following analytic detects server-side template injection attempts
+  related to CVE-2022-22954 in VMware Workspace ONE. It leverages web or proxy logs
+  to identify HTTP GET requests to the endpoint catalog-portal/ui/oauth/verify with
+  the freemarker.template.utility.Execute command. This activity is significant as
+  it indicates potential exploitation attempts that could lead to remote code execution.
+  If confirmed malicious, an attacker could execute arbitrary commands on the server,
+  leading to full system compromise, data exfiltration, or further lateral movement
+  within the network.
+required_fields:
+- Web.http_method
+- Web.url
+- Web.url_length
+- Web.src
+- Web.dest
+- Web.http_user_agent
+rule: '| tstats count from datamodel=Web where Web.http_method IN ("GET") Web.url="*/catalog-portal/ui/oauth/verify?error=&deviceudid=*"
+  AND Web.url="*freemarker.template.utility.Execute*" by Web.http_user_agent Web.http_method,
+  Web.url,Web.url_length Web.src, Web.dest sourcetype | `drop_dm_object_name("Web")`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `vmware_workspace_one_freemarker_server_side_template_injection_filter`'

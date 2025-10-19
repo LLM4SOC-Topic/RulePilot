@@ -1,0 +1,16 @@
+description: '**DEPRECATION NOTE** - This search has been deprecated and replaced
+  with `Okta Multiple Accounts Locked Out`. The following analytic utilizes the user.acount.lock
+  event to identify associates who are locked out of Okta. An adversary attempting
+  to brute force or password spray account names may lock accounts out depending on
+  the threshold.'
+required_fields:
+- _time
+- src_user
+- src_ip
+- eventType
+- status
+rule: eventtype=okta_log OR sourcetype = "OktaIM2:log" eventType=user.account.lock
+  | stats count min(_time) as firstTime max(_time) as lastTime values(displayMessage)
+  values(src_user) as user by src_ip eventType status | where count >=3 | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$)| `okta_account_locked_out_filter`

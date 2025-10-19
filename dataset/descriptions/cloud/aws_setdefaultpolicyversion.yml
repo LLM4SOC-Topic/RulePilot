@@ -1,0 +1,20 @@
+description: The following analytic detects when a user sets a default policy version
+  in AWS. It leverages AWS CloudTrail logs to identify the `SetDefaultPolicyVersion`
+  event from the IAM service. This activity is significant because attackers may exploit
+  this technique for privilege escalation, especially if previous policy versions
+  grant more extensive permissions than the current one. If confirmed malicious, this
+  could allow an attacker to gain elevated access to AWS resources, potentially leading
+  to unauthorized actions and data breaches.
+required_fields:
+- _time
+- eventName
+- userAgent
+- errorCode
+- requestParameters.userName
+- eventSource
+rule: sourcetype=aws:cloudtrail eventName=SetDefaultPolicyVersion eventSource = iam.amazonaws.com
+  | stats count min(_time) as firstTime max(_time) as lastTime values(requestParameters.policyArn)
+  as policy_arn by src requestParameters.versionId eventName eventSource aws_account_id
+  errorCode userAgent eventID awsRegion userIdentity.principalId user_arn | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `aws_setdefaultpolicyversion_filter`

@@ -1,0 +1,29 @@
+description: The following analytic identifies the use of named-pipe impersonation
+  for privilege escalation, commonly associated with Cobalt Strike and similar frameworks.
+  It detects command-line executions where `cmd.exe` uses `echo` to write to a named
+  pipe, such as `cmd.exe /c echo 4sgryt3436 > \\.\Pipe\5erg53`. This detection leverages
+  data from Endpoint Detection and Response (EDR) agents, focusing on process and
+  command-line telemetry. This activity is significant as it indicates potential privilege
+  escalation attempts. If confirmed malicious, attackers could gain elevated privileges,
+  enabling further compromise and persistence within the environment.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where (Processes.process_name=cmd.exe OR Processes.original_file_name=Cmd.Exe)
+  OR Processes.process=*%comspec%* (Processes.process=*echo* AND Processes.process=*pipe*)
+  by Processes.dest Processes.user Processes.parent_process Processes.parent_process_name
+  Processes.process_name Processes.original_file_name Processes.process Processes.process_id
+  Processes.parent_process_id | `drop_dm_object_name(Processes)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `cmd_echo_pipe___escalation_filter`'

@@ -1,0 +1,17 @@
+description: The following analytic detects the addition of new IIS modules on a Windows
+  IIS server. It leverages the Windows Event log - Microsoft-IIS-Configuration/Operational,
+  specifically EventCode 29, to identify this activity. This behavior is significant
+  because IIS modules are rarely added to production servers, and unauthorized modules
+  could indicate malicious activity. If confirmed malicious, an attacker could use
+  these modules to execute arbitrary code, escalate privileges, or maintain persistence
+  within the environment, potentially compromising the server and sensitive data.
+required_fields:
+- _time
+- OpCode
+- EventCode
+- ComputerName
+- Message
+rule: sourcetype="IIS:Configuration:Operational" EventCode=29 | stats  count min(_time)
+  as firstTime max(_time) as lastTime by OpCode EventCode ComputerName Message | rename
+  ComputerName AS dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_iis_components_new_module_added_filter`

@@ -1,0 +1,24 @@
+description: The following analytic detects attempts to exploit the ConnectWise ScreenConnect
+  CVE-2024-1708 vulnerability using Windows SACL EventCode 4663. It identifies path
+  traversal attacks by monitoring file system events related to the ScreenConnect
+  service. This activity is significant as it allows unauthorized access to sensitive
+  files and directories, potentially leading to data exfiltration or arbitrary code
+  execution. If confirmed malicious, attackers could gain unauthorized access to critical
+  data or execute harmful code, compromising the integrity and security of the affected
+  system. Immediate remediation by updating to version 23.9.8 or above is recommended.
+required_fields:
+- ObjectName
+- ObjectType
+- ProcessName
+- AccessMask
+- process_id
+- EventCode
+- Computer
+- Caller_User_Name
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=4663  ProcessName=*\\ScreenConnect.Service.exe file_path IN ("*\\ScreenConnect\\App_Extensions\\*")
+  file_name IN ("*.aspx","*.ashx") | stats count min(_time) as firstTime max(_time)
+  as lastTime by  ObjectName ObjectType ProcessName AccessMask process_id EventCode
+  Computer Caller_User_Name | rename Computer as dest Caller_User_Name as user ProcessName
+  as process_name |  convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `connectwise_screenconnect_path_traversal_windows_sacl_filter`

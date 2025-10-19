@@ -1,0 +1,25 @@
+description: The following analytic detects the registration of a new Multi-Factor
+  Authentication (MFA) method for a user account in Azure Active Directory. It leverages
+  Azure AD audit logs to identify changes in MFA configurations. This activity is
+  significant because adding a new MFA method can indicate an attacker's attempt to
+  maintain persistence on a compromised account. If confirmed malicious, the attacker
+  could bypass existing security measures, solidify their access, and potentially
+  escalate privileges, access sensitive data, or make unauthorized changes. Immediate
+  verification and remediation are required to secure the affected account.
+required_fields:
+- _time
+- operationName
+- properties.targetResources{}.modifiedProperties{}.displayName
+- properties.targetResources{}.modifiedProperties{}.oldValue
+- properties.targetResources{}.modifiedProperties{}.newValue
+- user
+rule: sourcetype=azure:monitor:aad  operationName="Update user" | rename properties.*
+  as *  | eval propertyName = mvindex('targetResources{}.modifiedProperties{}.displayName',
+  0) | search propertyName = StrongAuthenticationMethod | eval oldvalue = mvindex('targetResources{}.modifiedProperties{}.oldValue',0)
+  | eval newvalue = mvindex('targetResources{}.modifiedProperties{}.newValue',0) |
+  rex field=newvalue max_match=0 "(?i)(?<new_method_type>\"MethodType\")" | rex field=oldvalue
+  max_match=0 "(?i)(?<old_method_type>\"MethodType\")" | eval count_new_method_type
+  = coalesce(mvcount(new_method_type), 0) | eval count_old_method_type = coalesce(mvcount(old_method_type),
+  0) | stats earliest(_time) as firstTime latest(_time) as lastTime values(propertyName)
+  by user newvalue oldvalue | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `azure_ad_new_mfa_method_registered_filter`

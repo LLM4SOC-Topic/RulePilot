@@ -1,0 +1,29 @@
+description: The following analytic detects path traversal command-line execution,
+  often used in malicious documents to execute code via msdt.exe for defense evasion.
+  It leverages Endpoint Detection and Response (EDR) data, focusing on specific patterns
+  in process paths. This activity is significant as it can indicate an attempt to
+  bypass security controls and execute unauthorized code. If confirmed malicious,
+  this behavior could lead to code execution, privilege escalation, or persistence
+  within the environment, potentially allowing attackers to deploy malware or leverage
+  other living-off-the-land binaries (LOLBins).
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Processes where  Processes.process="*\/..\/..\/..\/*" OR
+  Processes.process="*\\..\\..\\..\\*" OR Processes.process="*\/\/..\/\/..\/\/..\/\/*"
+  by Processes.dest Processes.user Processes.parent_process_name Processes.process_name
+  Processes.process Processes.original_file_name Processes.process_id Processes.parent_process_id
+  Processes.process_hash | `drop_dm_object_name("Processes")` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_command_and_scripting_interpreter_path_traversal_exec_filter`'

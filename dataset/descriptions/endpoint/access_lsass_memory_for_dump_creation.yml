@@ -1,0 +1,21 @@
+description: The following analytic detects attempts to dump the LSASS process memory,
+  a common technique in credential dumping attacks. It leverages Sysmon logs, specifically
+  EventCode 10, to identify suspicious call traces to dbgcore.dll and dbghelp.dll
+  associated with lsass.exe. This activity is significant as it often precedes the
+  theft of sensitive login credentials, posing a high risk of unauthorized access
+  to systems and data. If confirmed malicious, attackers could gain access to critical
+  credentials, enabling further compromise and lateral movement within the network.
+required_fields:
+- _time
+- EventCode
+- TargetImage
+- CallTrace
+- dest
+- TargetProcessId
+- SourceImage
+- SourceProcessId
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=10 TargetImage=*lsass.exe CallTrace=*dbgcore.dll*
+  OR CallTrace=*dbghelp.dll* | stats count min(_time) as firstTime max(_time) as lastTime
+  by dest, TargetImage, TargetProcessId, SourceImage, SourceProcessId  | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$)| convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `access_lsass_memory_for_dump_creation_filter`

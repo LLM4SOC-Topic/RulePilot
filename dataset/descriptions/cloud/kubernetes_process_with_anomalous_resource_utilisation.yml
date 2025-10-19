@@ -1,0 +1,26 @@
+description: The following analytic identifies high resource utilization anomalies
+  in Kubernetes processes. It leverages process metrics from an OTEL collector and
+  hostmetrics receiver, fetched via the Splunk Infrastructure Monitoring Add-on. The
+  detection uses a lookup table with average and standard deviation values to spot
+  anomalies. This activity is significant as high resource utilization can indicate
+  security threats like cryptojacking, unauthorized data exfiltration, or compromised
+  containers. If confirmed malicious, such anomalies can disrupt services, exhaust
+  resources, increase costs, and allow attackers to evade detection or maintain access.
+required_fields:
+- process.*
+- host.name
+- k8s.cluster.name
+- k8s.node.name
+- process.executable.name
+rule: '| mstats avg(process.*) as process.* where index=kubernetes_metrics by host.name
+  k8s.cluster.name k8s.node.name process.executable.name span=10s | eval key = ''k8s.cluster.name''
+  + ":" + ''host.name'' + ":" + ''process.executable.name'' | lookup k8s_process_resource_baseline
+  key | fillnull | eval anomalies = "" | foreach stdev_* [ eval anomalies =if( ''<<MATCHSTR>>''
+  > (''avg_<<MATCHSTR>>'' + 4 * ''stdev_<<MATCHSTR>>''), anomalies + "<<MATCHSTR>>
+  higher than average by " + tostring(round((''<<MATCHSTR>>'' - ''avg_<<MATCHSTR>>'')/''stdev_<<MATCHSTR>>''
+  ,2)) + " Standard Deviations. <<MATCHSTR>>=" + tostring(''<<MATCHSTR>>'') + " avg_<<MATCHSTR>>="
+  + tostring(''avg_<<MATCHSTR>>'') + " ''stdev_<<MATCHSTR>>''=" + tostring(''stdev_<<MATCHSTR>>'')
+  + ", " , anomalies) ] | eval anomalies = replace(anomalies, ",\s$", "") | where
+  anomalies!="" | stats count values(anomalies) as anomalies by host.name k8s.cluster.name
+  k8s.node.name process.executable.name | sort - count | where count > 5 | rename
+  host.name as host | `kubernetes_process_with_anomalous_resource_utilisation_filter`'

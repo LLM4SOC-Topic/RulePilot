@@ -1,0 +1,30 @@
+description: The following analytic identifies potential privilege escalation activities
+  within an organization's Active Directory (AD) environment. It detects this activity
+  by correlating multiple analytics from the Active Directory Privilege Escalation
+  analytic story within a specified time frame. This is significant for a SOC as it
+  helps identify coordinated attempts to gain elevated privileges, which could indicate
+  a serious security threat. If confirmed malicious, this activity could allow attackers
+  to gain unauthorized access to sensitive systems and data, leading to potential
+  data breaches and further compromise of the network.
+required_fields:
+- All_Risk.calculated_risk_score
+- All_Risk.annotations.mitre_attack.mitre_tactic_id
+- All_Risk.annotations.mitre_attack.mitre_technique_id
+- All_Risk.tag
+- All_Risk.analyticstories
+- All_Risk.risk_object_type
+- All_Risk.risk_object
+- All_Risk.annotations.mitre_attack.mitre_tactic
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` min(_time) as firstTime max(_time) as lastTime
+  sum(All_Risk.calculated_risk_score) as risk_score, count(All_Risk.calculated_risk_score)
+  as risk_event_count, values(All_Risk.annotations.mitre_attack.mitre_tactic_id) as
+  annotations.mitre_attack.mitre_tactic_id, dc(All_Risk.annotations.mitre_attack.mitre_tactic_id)
+  as mitre_tactic_id_count, values(All_Risk.annotations.mitre_attack.mitre_technique_id)
+  as annotations.mitre_attack.mitre_technique_id, dc(All_Risk.annotations.mitre_attack.mitre_technique_id)
+  as mitre_technique_id_count, values(All_Risk.tag) as tag, values(source) as source,
+  dc(source) as source_count from datamodel=Risk.All_Risk where All_Risk.analyticstories="Active
+  Directory Privilege Escalation" All_Risk.risk_object_type="system" by All_Risk.risk_object
+  All_Risk.risk_object_type All_Risk.annotations.mitre_attack.mitre_tactic | `drop_dm_object_name(All_Risk)`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | where source_count >= 4 | `active_directory_privilege_escalation_identified_filter`'

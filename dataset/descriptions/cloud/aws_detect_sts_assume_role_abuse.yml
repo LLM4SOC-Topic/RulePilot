@@ -1,0 +1,25 @@
+description: The following analytic identifies suspicious use of the AWS STS AssumeRole
+  action. It leverages AWS CloudTrail logs to detect instances where roles are assumed,
+  focusing on specific fields like source IP address, user ARN, and role names. This
+  activity is significant because attackers can use assumed roles to move laterally
+  within the AWS environment and escalate privileges. If confirmed malicious, this
+  could allow attackers to gain unauthorized access to sensitive resources, execute
+  code, or further entrench themselves within the environment, leading to potential
+  data breaches or service disruptions.
+required_fields:
+- _time
+- user_type
+- userIdentity.sessionContext.sessionIssuer.type
+- sourceIPAddress
+- userIdentity.arn
+- user_agent
+- user_access_key
+- status
+- action
+- requestParameters.roleName
+- esponseElements.role.roleName
+- esponseElements.role.createDate
+rule: sourcetype=aws:cloudtrail user_type=AssumedRole userIdentity.sessionContext.sessionIssuer.type=Role
+  | table sourceIPAddress userIdentity.arn user_agent user_access_key status action
+  requestParameters.roleName responseElements.role.roleName responseElements.role.createDate
+  | `aws_detect_sts_assume_role_abuse_filter`

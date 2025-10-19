@@ -1,0 +1,19 @@
+description: The following analytic detects the creation of scheduled tasks within
+  user-writable paths using Windows Security EventCode 4698. It identifies tasks registered
+  via schtasks.exe or TaskService that execute commands from directories like Public,
+  ProgramData, Temp, and AppData. This behavior is significant as it may indicate
+  an attempt to establish persistence or execute unauthorized commands. If confirmed
+  malicious, an attacker could maintain long-term access, escalate privileges, or
+  execute arbitrary code, posing a severe threat to system integrity and security.
+required_fields:
+- _time
+- dest
+- Task_Name
+- Description
+- Command
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=4698 TaskContent IN ("*\\users\\public\\*", "*\\programdata\\*", "*\\temp\\*",
+  "*\\Windows\\Tasks\\*", "*\\appdata\\*", "*\\perflogs\\*") | stats count min(_time)
+  as firstTime max(_time) as lastTime by Computer, TaskName, TaskContent |  rename
+  Computer as dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `winevent_scheduled_task_created_within_public_path_filter`

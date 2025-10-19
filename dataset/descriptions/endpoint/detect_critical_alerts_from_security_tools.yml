@@ -1,0 +1,36 @@
+description: The following analytics is to detect high and critical alerts from endpoint
+  security tools such as Microsoft Defender, Carbon Black, and Crowdstrike. This query
+  aggregates and summarizes critical severity alerts from the Alerts data model, providing
+  details such as the alert signature, application, description, source, destination,
+  and timestamps, while applying custom filters and formatting for enhanced analysis
+  in a SIEM environment.This capability allows security teams to efficiently allocate
+  resources and maintain a strong security posture, while also supporting compliance
+  with regulatory requirements by providing a clear record of critical security events.
+  We tested these detections with logs from Microsoft Defender, however this detection
+  should work for any security alerts that are ingested into the alerts data model.
+  **Note** - We are dynamically creating the risk_score field based on the severity
+  of the alert in the SPL and that supersedes the risk score set in the detection.
+required_fields:
+- Alerts.description
+- Alerts.mitre_technique_id
+- Alerts.severity
+- Alerts.type
+- Alerts.severity_id
+- Alerts.signature
+- Alerts.dest
+- Alerts.src
+- Alerts.user
+- Alerts.id
+- Alerts.vendor
+- sourcetype
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  values(Alerts.description) as description values(Alerts.mitre_technique_id) as annotations.mitre_attack.mitre_technique_id
+  values(Alerts.severity) as severity values(Alerts.type) as type values(Alerts.severity_id)
+  as severity_id values(Alerts.signature) as signature values(Alerts.signature_id)
+  as signature_id values(Alerts.dest) as dest from datamodel=Alerts where  Alerts.severity
+  IN ("high","critical") by Alerts.src Alerts.user Alerts.id Alerts.vendor sourcetype
+  | `drop_dm_object_name("Alerts")` | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | eval risk_score=case(severity="informational",
+  2, severity="low", 5, severity="medium", 10, severity="high", 50, severity="critical"
+  , 100) | `detect_critical_alerts_from_security_tools_filter`'

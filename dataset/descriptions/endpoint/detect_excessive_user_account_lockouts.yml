@@ -1,0 +1,18 @@
+description: The following analytic identifies user accounts experiencing an excessive
+  number of lockouts within a short timeframe. It leverages the 'Change' data model,
+  specifically focusing on events where the result indicates a lockout. This activity
+  is significant as it may indicate a brute-force attack or misconfiguration, both
+  of which require immediate attention. If confirmed malicious, this behavior could
+  lead to account compromise, unauthorized access, and potential lateral movement
+  within the network.
+required_fields:
+- _time
+- All_Changes.result
+- nodename
+- All_Changes.user
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Change.All_Changes where  All_Changes.result="*lock*" by All_Changes.user
+  All_Changes.result |`drop_dm_object_name("All_Changes")` |`drop_dm_object_name("Account_Management")`|
+  convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | search count > 5 | `detect_excessive_user_account_lockouts_filter`'

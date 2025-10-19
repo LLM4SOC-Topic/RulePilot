@@ -1,0 +1,19 @@
+description: The following analytic detects a sharp increase in the number of files
+  written to a specific host. It leverages the Endpoint.Filesystem data model, focusing
+  on 'created' actions and comparing current file write counts against historical
+  averages and standard deviations. This activity is significant as a sudden spike
+  in file writes can indicate malicious activities such as ransomware encryption or
+  data exfiltration. If confirmed malicious, this behavior could lead to significant
+  data loss, system compromise, or further propagation of malware within the network.
+required_fields:
+- _time
+- Filesystem.action
+- Filesystem.dest
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count FROM datamodel=Endpoint.Filesystem where
+  Filesystem.action=created by _time span=1h, Filesystem.dest | `drop_dm_object_name(Filesystem)`
+  | eventstats max(_time) as maxtime | stats count as num_data_samples max(eval(if(_time
+  >= relative_time(maxtime, "-1d@d"), count, null))) as "count" avg(eval(if(_time<relative_time(maxtime,
+  "-1d@d"), count,null))) as avg stdev(eval(if(_time<relative_time(maxtime, "-1d@d"),
+  count, null))) as stdev by "dest" | eval upperBound=(avg+stdev*4), isOutlier=if((count
+  > upperBound) AND num_data_samples >=20, 1, 0) | search isOutlier=1 | `spike_in_file_writes_filter`'

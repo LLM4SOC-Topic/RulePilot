@@ -1,0 +1,17 @@
+description: The following analytic detects suspicious preload hijacking via the  `preload`
+  file, which may indicate an attacker's attempt to intercept or manipulate library
+  loading processes. The `preload` file can be used to force the loading of specific
+  libraries before others, potentially allowing malicious code to execute or alter
+  application behavior. By monitoring for unusual or unauthorized modifications to
+  the `preload` file, this analytic helps identify attempts to hijack preload mechanisms,
+  enabling security teams to investigate and address potential threats to system integrity
+  and security.
+required_fields:
+- _time
+- name
+- nametype
+- OGID
+rule: sourcetype="linux:audit" type=PATH name="/etc/ld.so.preload*" | rename host
+  as dest | stats count min(_time) as firstTime max(_time) as lastTime by name nametype
+  OGID type dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| `linux_auditd_preload_hijack_via_preload_file_filter`

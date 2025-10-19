@@ -1,0 +1,28 @@
+description: The following analytic identifies failed authentication attempts against
+  an Azure AD tenant during the Multi-Factor Authentication (MFA) challenge, specifically
+  flagged by error code 500121. It leverages Azure AD SignInLogs to detect these events.
+  This activity is significant as it may indicate an adversary attempting to authenticate
+  using compromised credentials on an account with MFA enabled. If confirmed malicious,
+  this could suggest an ongoing effort to bypass MFA protections, potentially leading
+  to unauthorized access and further compromise of the affected account.
+required_fields:
+- _time
+- category
+- properties.status.errorCode
+- user
+- src_ip
+- properties.status.additionalDetails
+- properties.appDisplayName
+- properties.userAgent
+rule: sourcetype=azure:monitor:aad category=SignInLogs properties.status.errorCode=500121
+  | rename properties.* as *, authenticationDetails{}.* as * | eval time=strptime(authenticationStepDateTime,
+  "%Y-%m-%dT%H:%M:%S") | eval auth_detail=mvzip(strftime(time, "%Y-%m-%dT%H:%M:%S"),authenticationStepResultDetail,"
+  - "), auth_msg=mvappend('status.additionalDetails', authenticationStepResultDetail)
+  | eval auth_method=mvmap(authenticationMethod, if(isnull(mvfind('mfaDetail.authMethod',
+  authenticationMethod)), authenticationMethod, null())) | stats min(_time) as firstTime,
+  max(_time) as lastTime, values(user) as user, values(src_ip) as src_ip, values(mfaDetail.authMethod)
+  as mfa_method, values(auth_method) as auth_method, values(auth_detail) as auth_detail,
+  values(auth_msg) as auth_msg, values(appDisplayName) as appDisplayName, values(user_agent)
+  as user_agent by tenantId originalRequestId | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | search
+  NOT auth_msg="MFA successfully completed" | sort 0 - firstTime | `azure_ad_authentication_failed_during_mfa_challenge_filter`

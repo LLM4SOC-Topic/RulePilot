@@ -1,0 +1,19 @@
+description: The following analytic identifies new login attempts to routers. It leverages
+  authentication logs from the ES Assets and Identity Framework, focusing on assets
+  categorized as routers. The detection flags connections that have not been observed
+  in the past 30 days. This activity is significant because unauthorized access to
+  routers can lead to network disruptions or data interception. If confirmed malicious,
+  attackers could gain control over network traffic, potentially leading to data breaches
+  or further network compromise.
+required_fields:
+- _time
+- Authentication.dest_category
+- Authentication.dest
+- Authentication.user
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count earliest(_time) as earliest latest(_time)
+  as latest from datamodel=Authentication where Authentication.dest_category=router
+  by Authentication.dest Authentication.user| eval isOutlier=if(earliest >= relative_time(now(),
+  "-30d@d"), 1, 0) | where isOutlier=1| convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)|
+  convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `drop_dm_object_name("Authentication")`
+  | `detect_new_login_attempts_to_routers_filter`'

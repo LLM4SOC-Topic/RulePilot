@@ -1,0 +1,21 @@
+description: The following analytic detects the use of .NET classes in PowerShell
+  to download a URL payload directly into memory, a common fileless malware staging
+  technique. It leverages PowerShell Script Block Logging (EventCode=4104) to identify
+  suspicious PowerShell commands involving `system.net.webclient`, `system.net.webrequest`,
+  and `IO.MemoryStream`. This activity is significant as it indicates potential fileless
+  malware execution, which is harder to detect and can bypass traditional file-based
+  defenses. If confirmed malicious, this technique could allow attackers to execute
+  code in memory, evade detection, and maintain persistence in the environment.
+required_fields:
+- _time
+- EventCode
+- ActivityID
+- Computer
+- ScriptBlockText
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104  ScriptBlockText IN ("*system.net.webclient*","*system.net.webrequest*")
+  AND ScriptBlockText="*IO.MemoryStream*" | eval Path = case(isnotnull(Path),Path,true(),"unknown")
+  | stats count min(_time) as firstTime max(_time) as lastTime list(ScriptBlockText)
+  as command values(Path) as file_name values(UserID) as user by ActivityID, Computer,
+  EventCode | rename Computer as dest, EventCode as signature_id | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `powershell_webrequest_using_memory_stream_filter`

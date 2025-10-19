@@ -1,0 +1,19 @@
+description: The following analytic detects suspicious PowerShell script execution
+  involving compressed stream data processing, identified via EventCode 4104. It leverages
+  PowerShell Script Block Logging to flag scripts using `IO.Compression`, `IO.StreamReader`,
+  or decompression methods. This activity is significant as it often indicates obfuscated
+  PowerShell or embedded .NET/binary execution, which are common tactics for evading
+  detection. If confirmed malicious, this behavior could allow attackers to execute
+  hidden code, escalate privileges, or maintain persistence within the environment.
+required_fields:
+- _time
+- EventCode
+- ScriptBlockText
+- Computer
+- UserID
+- Score
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText = "*IO.Compression.*" OR ScriptBlockText = "*IO.StreamReader*"
+  OR ScriptBlockText = "*]::Decompress*" | stats count min(_time) as firstTime max(_time)
+  as lastTime by EventCode ScriptBlockText Computer UserID | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `powershell_processing_stream_of_data_filter`

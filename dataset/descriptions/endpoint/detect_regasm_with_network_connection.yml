@@ -1,0 +1,22 @@
+description: The following analytic detects the execution of regasm.exe establishing
+  a network connection to a public IP address, excluding private IP ranges. This detection
+  leverages Sysmon EventID 3 logs to identify such behavior. This activity is significant
+  as regasm.exe is a legitimate Microsoft-signed binary that can be exploited to bypass
+  application control mechanisms. If confirmed malicious, this behavior could indicate
+  an adversary's attempt to establish a remote Command and Control (C2) channel, potentially
+  leading to privilege escalation and further malicious actions within the environment.
+required_fields:
+- _time
+- EventID
+- dest_ip
+- process_name
+- dest
+- user
+- src_ip
+- dest_host
+- dest_ip
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventID=3 dest_ip!=10.0.0.0/8 dest_ip!=172.16.0.0/12
+  dest_ip!=192.168.0.0/16 process_name=regasm.exe  | stats count min(_time) as firstTime
+  max(_time) as lastTime by dest, user, process_name, src_ip, dest_ip | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `detect_regasm_with_network_connection_filter`

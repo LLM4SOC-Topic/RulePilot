@@ -1,0 +1,27 @@
+description: The following analytic detects suspicious DLL modules loaded by calc.exe
+  that are not located in the %systemroot%\system32 or %systemroot%\sysWoW64 directories.
+  This detection leverages Sysmon EventCode 7 to identify DLL side-loading, a technique
+  often used by Qakbot malware to execute malicious DLLs. This activity is significant
+  as it indicates potential malware execution through a trusted process, which can
+  bypass security controls. If confirmed malicious, this could allow attackers to
+  execute arbitrary code, maintain persistence, and escalate privileges within the
+  environment.
+required_fields:
+- _time
+- Image
+- ImageLoaded
+- OriginalFileName
+- Product
+- process_name
+- dest
+- EventCode
+- Signed
+- ProcessId
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=7 Image = "*\calc.exe" AND NOT
+  (Image IN ("*:\\windows\\system32\\*", "*:\\windows\\sysWow64\\*")) AND NOT(ImageLoaded
+  IN("*:\\windows\\system32\\*", "*:\\windows\\sysWow64\\*", "*:\\windows\\WinSXS\\*"))
+  | stats count min(_time) as firstTime max(_time) as lastTime by Image ImageLoaded
+  OriginalFileName Product process_name dest EventCode Signed ProcessId | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_dll_side_loading_in_calc_filter`

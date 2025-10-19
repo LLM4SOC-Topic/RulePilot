@@ -1,0 +1,23 @@
+description: 'The following analytic detects Kerberos service ticket requests using
+  RC4 encryption, leveraging Kerberos Event 4769. This method identifies potential
+  Golden Ticket attacks, where adversaries forge Kerberos Granting Tickets (TGT) using
+  the Krbtgt account NTLM password hash to gain unrestricted access to an Active Directory
+  environment. Monitoring for RC4 encryption usage is significant as it is rare in
+  modern networks, indicating possible malicious activity. If confirmed malicious,
+  attackers could move laterally and execute code on remote systems, compromising
+  the entire network. Note: This detection may be bypassed if attackers use the AES
+  key instead of the NTLM hash.'
+required_fields:
+- _time
+- EventCode
+- Ticket_Options
+- Ticket_Encryption_Type
+- dest
+- service
+- service_id
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=4769 ServiceName="*$" (TicketOptions=0x40810000 OR TicketOptions=0x40800000
+  OR TicketOptions=0x40810010) TicketEncryptionType=0x17 | stats count min(_time)
+  as firstTime max(_time) as lastTime by dest, service, service_id, TicketEncryptionType,
+  TicketOptions | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `kerberos_service_ticket_request_using_rc4_encryption_filter`

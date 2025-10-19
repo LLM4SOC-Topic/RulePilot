@@ -1,0 +1,23 @@
+description: The following analytic detects CrowdStrike alerts for privilege escalation
+  attempts by non-admin users. These alerts indicate unauthorized efforts by regular
+  users to gain elevated permissions, posing a significant security risk. Detecting
+  and addressing these attempts promptly helps prevent potential breaches and ensures
+  that user privileges remain properly managed, maintaining the integrity of the organization's
+  security protocols.
+required_fields:
+- _time
+- event.EndpointIp
+- event.EndpointName
+- event.UserName
+- event.IncidentDescription
+- event.IncidentType
+- event.NumbersOfAlerts
+- event.SeverityName
+rule: sourcetype="CrowdStrike:Event:Streams:JSON" tag=alert | rename event.EndpointIp
+  as src_ip, event.EndpointName as src_host, event.UserName as user, event.IncidentDescription
+  as description, event.IncidentType as type, event.NumbersOfAlerts as count_alerts,
+  event.SeverityName as severity | stats count min(_time) as firstTime max(_time)
+  as lastTime by src_ip, src_host, user, description, type, count_alerts, severity
+  | where LIKE(type,"%Privilege escalation%") AND NOT LIKE(user, "%adm%") AND NOT
+  LIKE(user, "%svc%") AND NOT LIKE(user, "%admin%") | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `crowdstrike_privilege_escalation_for_non_admin_user_filter`

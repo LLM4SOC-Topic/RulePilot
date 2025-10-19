@@ -1,0 +1,25 @@
+description: The following analytic detects suspicious raw access reads to the device
+  disk partition of a host machine. It leverages Sysmon EventCode 9 logs to identify
+  processes attempting to read or write to the boot sector, excluding legitimate system
+  processes. This activity is significant as it is commonly associated with destructive
+  actions by adversaries, such as wiping, encrypting, or overwriting the boot sector,
+  as seen in attacks involving malware like HermeticWiper. If confirmed malicious,
+  this behavior could lead to severe impacts, including system inoperability, data
+  loss, or compromised boot integrity.
+required_fields:
+- _time
+- dest
+- signature
+- signature_id
+- process_guid
+- process_name
+- process_path
+- Device
+- EventCode
+- Image
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=9 Device = \\Device\\HarddiskVolume*
+  NOT (Image IN("*\\Windows\\System32\\*", "*\\Windows\\SysWOW64\\*")) | stats count
+  min(_time) as firstTime max(_time) as lastTime by dest signature signature_id process_guid
+  process_name process_path Device | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_raw_access_to_disk_volume_partition_filter`

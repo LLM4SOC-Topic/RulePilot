@@ -1,0 +1,21 @@
+description: Enforcing network-access controls is one of the defensive mechanisms
+  used by cloud administrators to restrict access to a cloud instance. After the attacker
+  has gained control of the console by compromising an admin account, they can delete
+  a network ACL and gain access to the instance from anywhere. This search will query
+  the Change datamodel to detect users deleting network ACLs. Deprecated because it's
+  a duplicate
+required_fields:
+- _time
+- eventName
+- userIdentity.arn
+- errorMessage
+- errorCode
+- userAgent
+- src
+- userName
+- arn
+rule: sourcetype=aws:cloudtrail eventName=DeleteNetworkAcl|rename userIdentity.arn
+  as arn  | stats count min(_time) as firstTime max(_time) as lastTime values(errorMessage)
+  values(errorCode) values(userAgent) values(userIdentity.*) by src userName arn eventName
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `cloud_network_access_control_list_deleted_filter`

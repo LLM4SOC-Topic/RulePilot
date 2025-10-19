@@ -1,0 +1,32 @@
+description: The following analytic detects attempts to change the default file association
+  for files without an extension to open with Notepad.exe. It leverages data from
+  Endpoint Detection and Response (EDR) agents, focusing on specific command-line
+  patterns and registry modifications. This activity is significant as it can indicate
+  an attempt to manipulate file handling behavior, a technique observed in APT and
+  ransomware attacks like Prestige. If confirmed malicious, this could allow attackers
+  to execute arbitrary code by tricking users into opening files, potentially leading
+  to system compromise or data exfiltration.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime  from
+  datamodel=Endpoint.Processes where (Processes.process_name=reg.exe OR Processes.original_file_name=reg.exe)
+  AND Processes.process="* add *" AND Processes.process="* HKCR\\*" AND Processes.process="*\\shell\\open\\command*"
+  AND  Processes.process= *Notepad.exe* by  Processes.process_name Processes.original_file_name
+  Processes.process Processes.process_id Processes.process_guid Processes.parent_process_name
+  Processes.parent_process Processes.parent_process_guid Processes.dest Processes.user
+  | `drop_dm_object_name(Processes)` | rex field=process "Notepad\.exe (?<file_name_association>.*$)"
+  | rex field=file_name_association "\.(?<extension>[^\.]*$)" | where isnull(extension)
+  and isnotnull(file_name_association) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_change_default_file_association_for_no_file_ext_filter`'

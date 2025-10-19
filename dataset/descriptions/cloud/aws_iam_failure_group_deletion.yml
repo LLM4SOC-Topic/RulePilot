@@ -1,0 +1,20 @@
+description: The following analytic identifies failed attempts to delete AWS IAM groups.
+  It leverages AWS CloudTrail logs to detect events where the DeleteGroup action fails
+  due to errors like NoSuchEntityException, DeleteConflictException, or AccessDenied.
+  This activity is significant as it may indicate unauthorized attempts to modify
+  IAM group configurations, which could be a precursor to privilege escalation or
+  other malicious actions. If confirmed malicious, this could allow an attacker to
+  disrupt IAM policies, potentially leading to unauthorized access or denial of service
+  within the AWS environment.
+required_fields:
+- _time
+- eventName
+- userAgent
+- errorCode
+- requestParameters.groupName
+rule: sourcetype=aws:cloudtrail eventSource=iam.amazonaws.com eventName=DeleteGroup
+  errorCode IN (NoSuchEntityException,DeleteConflictException, AccessDenied) (userAgent!=*.amazonaws.com)
+  | stats count min(_time) as firstTime max(_time) as lastTime values(requestParameters.groupName)
+  as group_name by src eventName eventSource aws_account_id errorCode errorMessage
+  userAgent eventID awsRegion userIdentity.principalId user_arn | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `aws_iam_failure_group_deletion_filter`

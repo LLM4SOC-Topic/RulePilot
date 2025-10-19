@@ -1,0 +1,22 @@
+description: The following analytic detects processes loading the samlib.dll or samcli.dll
+  modules, which are often abused to access Security Account Manager (SAM) objects
+  or credentials on domain controllers. This detection leverages Sysmon EventCode
+  7 to identify these DLLs being loaded outside typical system directories. Monitoring
+  this activity is crucial as it may indicate attempts to gather sensitive identity
+  information. If confirmed malicious, this behavior could allow attackers to obtain
+  credentials, escalate privileges, or further infiltrate the network.
+required_fields:
+- _time
+- Image
+- ImageLoaded
+- dest
+- EventCode
+- Signed
+- ProcessId
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=7  (ImageLoaded = "*\\samlib.dll"
+  AND OriginalFileName = "samlib.dll") OR (ImageLoaded = "*\\samcli.dll" AND OriginalFileName
+  = "SAMCLI.DLL") AND NOT (Image IN("C:\\Windows\\*", "C:\\Program File*", "%systemroot%\\*"))
+  | stats count min(_time) as firstTime max(_time) as lastTime by Image ImageLoaded
+  process_name dest EventCode Signed ProcessId | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_gather_victim_identity_sam_info_filter`

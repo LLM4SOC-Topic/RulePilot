@@ -1,0 +1,32 @@
+description: The following analytic detects the execution of a DCRat "forkbomb" payload,
+  which spawns multiple cmd.exe processes that launch notepad.exe instances in quick
+  succession. This detection leverages Endpoint Detection and Response (EDR) data,
+  focusing on the rapid creation of cmd.exe and notepad.exe processes within a 30-second
+  window. This activity is significant as it indicates a potential DCRat infection,
+  a known Remote Access Trojan (RAT) with destructive capabilities. If confirmed malicious,
+  this behavior could lead to system instability, resource exhaustion, and potential
+  disruption of services.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` values(Processes.process) as process values(Processes.parent_process)
+  as parent_process values(Processes.parent_process_id) as parent_process_id values(Processes.process_id)
+  as process_id dc(Processes.parent_process_id) as parent_process_id_count dc(Processes.process_id)
+  as process_id_count min(_time) as firstTime max(_time) as lastTime from datamodel=Endpoint.Processes
+  where Processes.parent_process_name= "cmd.exe" (Processes.process_name = "notepad.exe"
+  OR Processes.original_file_name= "notepad.exe") Processes.parent_process = "*.bat*"
+  by  Processes.parent_process_name Processes.process_name Processes.original_file_name
+  Processes.parent_process Processes.dest Processes.user  _time span=30s | where parent_process_id_count>=
+  10 AND process_id_count >=10 | `drop_dm_object_name(Processes)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_command_shell_dcrat_forkbomb_payload_filter`'

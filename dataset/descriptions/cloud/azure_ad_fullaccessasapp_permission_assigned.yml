@@ -1,0 +1,17 @@
+description: The following analytic detects the assignment of the 'full_access_as_app'
+  permission to an application within Office 365 Exchange Online. This is identified
+  by the GUID 'dc890d15-9560-4a4c-9b7f-a736ec74ec40' and the ResourceAppId '00000002-0000-0ff1-ce00-000000000000'.
+  The detection leverages the azure_monitor_aad data source, focusing on AuditLogs
+  with the operation name 'Update application'. This activity is significant as it
+  grants broad control over Office 365 operations, including full access to all mailboxes
+  and the ability to send emails as any user. If malicious, this could lead to unauthorized
+  access and data exfiltration.
+required_fields:
+- _time
+rule: sourcetype=azure:monitor:aad category=AuditLogs operationName="Update application"  |
+  eval newvalue = mvindex('properties.targetResources{}.modifiedProperties{}.newValue',0)
+  | spath input=newvalue  | search "{}.ResourceAppId"="00000002-0000-0ff1-ce00-000000000000"  "{}.RequiredAppPermissions{}.EntitlementId"="dc890d15-9560-4a4c-9b7f-a736ec74ec40"
+  | eval Permissions = '{}.RequiredAppPermissions{}.EntitlementId' | stats count earliest(_time)
+  as firstTime latest(_time) as lastTime values(Permissions) by user, object, user_agent,
+  operationName | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `azure_ad_fullaccessasapp_permission_assigned_filter`

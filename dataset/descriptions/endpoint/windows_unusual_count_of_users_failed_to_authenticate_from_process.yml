@@ -1,0 +1,23 @@
+description: The following analytic identifies a source process failing to authenticate
+  multiple users, potentially indicating a Password Spraying attack. It leverages
+  Windows Event 4625, which logs failed logon attempts, and uses statistical analysis
+  to detect anomalies. This activity is significant as it may represent an adversary
+  attempting to gain initial access or elevate privileges within an Active Directory
+  environment. If confirmed malicious, the attacker could compromise multiple accounts,
+  leading to unauthorized access, data exfiltration, or further lateral movement within
+  the network.
+required_fields:
+- _time
+- EventCode
+- Logon_Type
+- ProcessName
+- SubjectUserName
+- TargetUserName
+- Computer
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security  EventCode=4625
+  Logon_Type=2 ProcessName!="-" | bucket span=2m _time | stats dc(TargetUserName)
+  AS unique_accounts values(TargetUserName) as user by _time, ProcessName, SubjectUserName,
+  Computer | eventstats avg(unique_accounts) as comp_avg , stdev(unique_accounts)
+  as comp_std by ProcessName, SubjectUserName, Computer | eval upperBound=(comp_avg+comp_std*3)
+  | eval isOutlier=if(unique_accounts > 10 and unique_accounts >= upperBound, 1, 0)
+  | search isOutlier=1 | `windows_unusual_count_of_users_failed_to_authenticate_from_process_filter`

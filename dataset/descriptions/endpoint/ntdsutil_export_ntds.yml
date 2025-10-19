@@ -1,0 +1,23 @@
+description: The following analytic detects the use of Ntdsutil to export the Active
+  Directory database (NTDS.dit). It leverages data from Endpoint Detection and Response
+  (EDR) agents, focusing on process names and command-line arguments. This activity
+  is significant because exporting NTDS.dit can be a precursor to offline password
+  cracking, posing a severe security risk. If confirmed malicious, an attacker could
+  gain access to sensitive credentials, potentially leading to unauthorized access
+  and privilege escalation within the network.
+required_fields:
+- _time
+- Processes.process_name
+- Processes.process
+- Processes.dest
+- Processes.user
+- Processes.parent_process
+- Processes.process_id
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where (Processes.process_name=ntdsutil.exe Processes.process=*ntds*
+  Processes.process=*create*) by Processes.dest Processes.user Processes.parent_process
+  Processes.process_name Processes.process Processes.process_id Processes.parent_process_id
+  | `drop_dm_object_name(Processes)` | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)|
+  convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `ntdsutil_export_ntds_filter`'

@@ -1,0 +1,8 @@
+description: This search gives you the hosts where a backup was attempted and then
+  failed.
+required_fields:
+- _time
+rule: sourcetype="netbackup_logs" | stats latest(_time) as latestTime by COMPUTERNAME,
+  MESSAGE | search MESSAGE="An error occurred, failed to backup." | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | rename COMPUTERNAME as dest, MESSAGE as signature | table latestTime,
+  dest, signature | `unsuccessful_netbackup_backups_filter`

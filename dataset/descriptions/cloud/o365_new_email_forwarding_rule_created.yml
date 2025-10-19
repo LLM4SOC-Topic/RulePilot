@@ -1,0 +1,22 @@
+description: The following analytic identifies the creation of new email forwarding
+  rules in an Office 365 environment. It detects events logged under New-InboxRule
+  and Set-InboxRule operations within the o365_management_activity data source, focusing
+  on parameters like ForwardTo, ForwardAsAttachmentTo, and RedirectTo. This activity
+  is significant as unauthorized email forwarding can lead to data exfiltration and
+  unauthorized access to sensitive information. If confirmed malicious, attackers
+  could intercept and redirect emails, potentially compromising confidential communications
+  and leading to data breaches.
+required_fields:
+- _time
+- Operation
+- Parameters{}.Name
+- Name
+- user
+- UserId
+rule: sourcetype=o365:management:activity (Operation=New-InboxRule OR Operation=set-InboxRule)
+  | eval match1=mvfind('Parameters{}.Name', "ForwardTo") | eval match2=mvfind('Parameters{}.Name',
+  "ForwardAsAttachmentTo") | eval match3=mvfind('Parameters{}.Name', "RedirectTo")
+  | where match1>= 0 OR match2>= 0 OR match3>= 0 | eval ForwardTo=coalesce(ForwardTo,
+  ForwardAsAttachmentTo, RedirectTo) | stats count min(_time) as firstTime max(_time)
+  as lastTime values(Name) as Name by user Operation ForwardTo | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `o365_new_email_forwarding_rule_created_filter`

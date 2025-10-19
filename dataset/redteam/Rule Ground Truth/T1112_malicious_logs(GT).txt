@@ -1,0 +1,545 @@
+Atomic Test #1 - Modify Registry of Current User Profile - cmd
+
+Log1
+09/03/2024 06:37:47 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=294626
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-02 22:37:47.316
+ProcessGuid: {6f6dba56-3e3b-66d6-ea72-2a0000001700}
+ProcessId: 7940
+Image: C:\Windows\System32\reg.exe
+FileVersion: 10.0.19041.1 (WinBuild.160101.0800)
+Description: Registry Console Tool
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: reg.exe
+CommandLine: reg  add HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced /t REG_DWORD /v HideFileExt /d 1 /f
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=C0DB341DEFA8EF40C03ED769A9001D600E0F4DAE,MD5=227F63E1D9008B36BDBCC4B397780BE4,SHA256=C0E25B1F9B22DE445298C1E96DDFCEAD265CA030FA6626F61A4A4786CC4A3B7D,IMPHASH=BE482BE427FE212CFEF2CDA0E61F19AC
+ParentProcessGuid: {6f6dba56-36d9-66d6-c265-2a0000001700}
+ParentProcessId: 488
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: "C:\Windows\system32\cmd.exe" 
+ParentUser: DESKTOP-43B3OH1\xcy
+折叠
+host = DESKTOP-43B3OH1source = E:\Download\15ttp_logs_2\T1112\T1112.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Atomic Test #2 - Modify Registry of Local Machine - cmd
+
+Log1
+09/03/2024 06:38:04 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=296607
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-02 22:38:04.780
+ProcessGuid: {6f6dba56-3e4c-66d6-1273-2a0000001700}
+ProcessId: 9388
+Image: C:\Windows\System32\reg.exe
+FileVersion: 10.0.19041.1 (WinBuild.160101.0800)
+Description: Registry Console Tool
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: reg.exe
+CommandLine: reg  add HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Run /t REG_EXPAND_SZ /v SecurityHealth /d #{new_executable} /f
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=C0DB341DEFA8EF40C03ED769A9001D600E0F4DAE,MD5=227F63E1D9008B36BDBCC4B397780BE4,SHA256=C0E25B1F9B22DE445298C1E96DDFCEAD265CA030FA6626F61A4A4786CC4A3B7D,IMPHASH=BE482BE427FE212CFEF2CDA0E61F19AC
+ParentProcessGuid: {6f6dba56-36d9-66d6-c265-2a0000001700}
+ParentProcessId: 488
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: "C:\Windows\system32\cmd.exe" 
+ParentUser: DESKTOP-43B3OH1\xcy
+折叠
+host = DESKTOP-43B3OH1source = E:\Download\15ttp_logs_2\T1112\T1112.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Atomic Test #3 - Modify registry to store logon credentials
+
+Log1
+09/03/2024 06:38:22 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=298479
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-02 22:38:22.552
+ProcessGuid: {6f6dba56-3e5e-66d6-3273-2a0000001700}
+ProcessId: 106864
+Image: C:\Windows\System32\reg.exe
+FileVersion: 10.0.19041.1 (WinBuild.160101.0800)
+Description: Registry Console Tool
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: reg.exe
+CommandLine: reg  add HKLM\SYSTEM\CurrentControlSet\Control\SecurityProviders\WDigest /v UseLogonCredential /t REG_DWORD /d 1 /f
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=C0DB341DEFA8EF40C03ED769A9001D600E0F4DAE,MD5=227F63E1D9008B36BDBCC4B397780BE4,SHA256=C0E25B1F9B22DE445298C1E96DDFCEAD265CA030FA6626F61A4A4786CC4A3B7D,IMPHASH=BE482BE427FE212CFEF2CDA0E61F19AC
+ParentProcessGuid: {6f6dba56-36d9-66d6-c265-2a0000001700}
+ParentProcessId: 488
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: "C:\Windows\system32\cmd.exe" 
+ParentUser: DESKTOP-43B3OH1\xcy
+折叠
+host = DESKTOP-43B3OH1source = E:\Download\15ttp_logs_2\T1112\T1112.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Atomic Test #4 - Use Powershell to Modify registry to store logon credentials
+
+Log1
+09/03/2024 06:38:22 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=298479
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-02 22:38:22.552
+ProcessGuid: {6f6dba56-3e5e-66d6-3273-2a0000001700}
+ProcessId: 106864
+Image: C:\Windows\System32\reg.exe
+FileVersion: 10.0.19041.1 (WinBuild.160101.0800)
+Description: Registry Console Tool
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: reg.exe
+CommandLine: reg  add HKLM\SYSTEM\CurrentControlSet\Control\SecurityProviders\WDigest /v UseLogonCredential /t REG_DWORD /d 1 /f
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=C0DB341DEFA8EF40C03ED769A9001D600E0F4DAE,MD5=227F63E1D9008B36BDBCC4B397780BE4,SHA256=C0E25B1F9B22DE445298C1E96DDFCEAD265CA030FA6626F61A4A4786CC4A3B7D,IMPHASH=BE482BE427FE212CFEF2CDA0E61F19AC
+ParentProcessGuid: {6f6dba56-36d9-66d6-c265-2a0000001700}
+ParentProcessId: 488
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: "C:\Windows\system32\cmd.exe" 
+ParentUser: DESKTOP-43B3OH1\xcy
+折叠
+host = DESKTOP-43B3OH1source = E:\Download\15ttp_logs_2\T1112\T1112.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Atomic Test #5 - Add domain to Trusted sites Zone
+
+Log1
+09/03/2024 06:39:22 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=12
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=304333
+Keywords=None
+TaskCategory=Registry object added or deleted (rule: RegistryEvent)
+OpCode=信息
+Message=Registry object added or deleted:
+RuleName: -
+EventType: DeleteKey
+UtcTime: 2024-09-02 22:39:22.842
+ProcessGuid: {6f6dba56-35e9-66d6-d863-2a0000001700}
+ProcessId: 2364
+Image: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+TargetObject: HKU\S-1-5-21-3772011394-3697533261-621912563-1001\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\ZoneMap\Domains\#{bad_domain}
+User: DESKTOP-43B3OH1\xcy
+折叠
+host = DESKTOP-43B3OH1source = E:\Download\15ttp_logs_2\T1112\T1112.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Log2
+09/03/2024 06:39:22 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=12
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=304332
+Keywords=None
+TaskCategory=Registry object added or deleted (rule: RegistryEvent)
+OpCode=信息
+Message=Registry object added or deleted:
+RuleName: -
+EventType: DeleteKey
+UtcTime: 2024-09-02 22:39:22.842
+ProcessGuid: {6f6dba56-35e9-66d6-d863-2a0000001700}
+ProcessId: 2364
+Image: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+TargetObject: HKU\S-1-5-21-3772011394-3697533261-621912563-1001\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\ZoneMap\Domains\#{bad_domain}\bad-subdomain
+User: DESKTOP-43B3OH1\xcy
+折叠
+host = DESKTOP-43B3OH1source = E:\Download\15ttp_logs_2\T1112\T1112.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Atomic Test #6 - Javascript in registry
+
+Log1
+09/03/2024 06:39:42 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=12
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=306513
+Keywords=None
+TaskCategory=Registry object added or deleted (rule: RegistryEvent)
+OpCode=信息
+Message=Registry object added or deleted:
+RuleName: -
+EventType: DeleteValue
+UtcTime: 2024-09-02 22:39:42.143
+ProcessGuid: {6f6dba56-35e9-66d6-d863-2a0000001700}
+ProcessId: 2364
+Image: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+TargetObject: HKU\S-1-5-21-3772011394-3697533261-621912563-1001\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\T1112
+User: DESKTOP-43B3OH1\xcy
+折叠
+host = DESKTOP-43B3OH1source = E:\Download\15ttp_logs_2\T1112\T1112.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Atomic Test #7 - Change Powershell Execution Policy to Bypass
+
+Log1
+09/03/2024 06:40:03 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=13
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=308723
+Keywords=None
+TaskCategory=Registry value set (rule: RegistryEvent)
+OpCode=信息
+Message=Registry value set:
+RuleName: -
+EventType: SetValue
+UtcTime: 2024-09-02 22:40:03.171
+ProcessGuid: {6f6dba56-35e9-66d6-d863-2a0000001700}
+ProcessId: 2364
+Image: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+TargetObject: HKLM\SOFTWARE\Microsoft\PowerShell\1\ShellIds\Microsoft.PowerShell\ExecutionPolicy
+Details: Bypass
+User: DESKTOP-43B3OH1\xcy
+折叠
+host = DESKTOP-43B3OH1source = E:\Download\15ttp_logs_2\T1112\T1112.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Atomic Test #8 - BlackByte Ransomware Registry Changes - CMD
+
+Log1
+09/03/2024 06:41:14 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=315941
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-02 22:41:14.769
+ProcessGuid: {6f6dba56-3f0a-66d6-7374-2a0000001700}
+ProcessId: 93132
+Image: C:\Windows\System32\reg.exe
+FileVersion: 10.0.19041.1 (WinBuild.160101.0800)
+Description: Registry Console Tool
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: reg.exe
+CommandLine: reg  add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System /v LocalAccountTokenFilterPolicy /t REG_DWORD /d 1 /f
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=C0DB341DEFA8EF40C03ED769A9001D600E0F4DAE,MD5=227F63E1D9008B36BDBCC4B397780BE4,SHA256=C0E25B1F9B22DE445298C1E96DDFCEAD265CA030FA6626F61A4A4786CC4A3B7D,IMPHASH=BE482BE427FE212CFEF2CDA0E61F19AC
+ParentProcessGuid: {6f6dba56-3f0a-66d6-7274-2a0000001700}
+ParentProcessId: 104008
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: cmd.exe  /c reg add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System /v LocalAccountTokenFilterPolicy /t REG_DWORD /d 1 /f
+ParentUser: DESKTOP-43B3OH1\xcy
+折叠
+host = DESKTOP-43B3OH1source = E:\Download\15ttp_logs_2\T1112\T1112.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Log2
+09/03/2024 06:41:14 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=315984
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-02 22:41:14.799
+ProcessGuid: {6f6dba56-3f0a-66d6-7574-2a0000001700}
+ProcessId: 1964
+Image: C:\Windows\System32\reg.exe
+FileVersion: 10.0.19041.1 (WinBuild.160101.0800)
+Description: Registry Console Tool
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: reg.exe
+CommandLine: reg  add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System /v EnableLinkedConnections /t REG_DWORD /d 1 /f
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=C0DB341DEFA8EF40C03ED769A9001D600E0F4DAE,MD5=227F63E1D9008B36BDBCC4B397780BE4,SHA256=C0E25B1F9B22DE445298C1E96DDFCEAD265CA030FA6626F61A4A4786CC4A3B7D,IMPHASH=BE482BE427FE212CFEF2CDA0E61F19AC
+ParentProcessGuid: {6f6dba56-3f0a-66d6-7474-2a0000001700}
+ParentProcessId: 9220
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: cmd.exe  /c reg add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System /v EnableLinkedConnections /t REG_DWORD /d 1 /f
+ParentUser: DESKTOP-43B3OH1\xcy
+折叠
+host = DESKTOP-43B3OH1source = E:\Download\15ttp_logs_2\T1112\T1112.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Log3
+09/03/2024 06:41:16 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=316026
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-02 22:41:16.177
+ProcessGuid: {6f6dba56-3f0c-66d6-7774-2a0000001700}
+ProcessId: 107544
+Image: C:\Windows\System32\reg.exe
+FileVersion: 10.0.19041.1 (WinBuild.160101.0800)
+Description: Registry Console Tool
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: reg.exe
+CommandLine: reg  add HKLM\SYSTEM\CurrentControlSet\Control\FileSystem /v LongPathsEnabled /t REG_DWORD /d 1 /f
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=C0DB341DEFA8EF40C03ED769A9001D600E0F4DAE,MD5=227F63E1D9008B36BDBCC4B397780BE4,SHA256=C0E25B1F9B22DE445298C1E96DDFCEAD265CA030FA6626F61A4A4786CC4A3B7D,IMPHASH=BE482BE427FE212CFEF2CDA0E61F19AC
+ParentProcessGuid: {6f6dba56-3f0c-66d6-7674-2a0000001700}
+ParentProcessId: 8840
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: cmd.exe  /c reg add HKLM\SYSTEM\CurrentControlSet\Control\FileSystem /v LongPathsEnabled /t REG_DWORD /d 1 /f
+ParentUser: DESKTOP-43B3OH1\xcy
+折叠
+host = DESKTOP-43B3OH1source = E:\Download\15ttp_logs_2\T1112\T1112.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Atomic Test #9 - BlackByte Ransomware Registry Changes - Powershell
+
+Log1
+09/03/2024 06:41:43 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=12
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=319122
+Keywords=None
+TaskCategory=Registry object added or deleted (rule: RegistryEvent)
+OpCode=信息
+Message=Registry object added or deleted:
+RuleName: -
+EventType: DeleteValue
+UtcTime: 2024-09-02 22:41:43.176
+ProcessGuid: {6f6dba56-35e9-66d6-d863-2a0000001700}
+ProcessId: 2364
+Image: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+TargetObject: HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\LocalAccountTokenFilterPolicy
+User: DESKTOP-43B3OH1\xcy
+折叠
+host = DESKTOP-43B3OH1source = E:\Download\15ttp_logs_2\T1112\T1112.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Log2
+09/03/2024 06:41:43 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=12
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=319126
+Keywords=None
+TaskCategory=Registry object added or deleted (rule: RegistryEvent)
+OpCode=信息
+Message=Registry object added or deleted:
+RuleName: -
+EventType: DeleteValue
+UtcTime: 2024-09-02 22:41:43.188
+ProcessGuid: {6f6dba56-35e9-66d6-d863-2a0000001700}
+ProcessId: 2364
+Image: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+TargetObject: HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\EnableLinkedConnections
+User: DESKTOP-43B3OH1\xcy
+折叠
+host = DESKTOP-43B3OH1source = E:\Download\15ttp_logs_2\T1112\T1112.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Log3
+09/03/2024 06:41:44 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=12
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=319132
+Keywords=None
+TaskCategory=Registry object added or deleted (rule: RegistryEvent)
+OpCode=信息
+Message=Registry object added or deleted:
+RuleName: -
+EventType: DeleteValue
+UtcTime: 2024-09-02 22:41:44.200
+ProcessGuid: {6f6dba56-35e9-66d6-d863-2a0000001700}
+ProcessId: 2364
+Image: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+TargetObject: HKLM\System\CurrentControlSet\Control\FileSystem\LongPathsEnabled
+User: DESKTOP-43B3OH1\xcy
+折叠
+host = DESKTOP-43B3OH1source = E:\Download\15ttp_logs_2\T1112\T1112.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Atomic Test #10 - Disable Windows Registry Tool
+
+Log1
+09/03/2024 06:41:58 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=320382
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-02 22:41:58.186
+ProcessGuid: {6f6dba56-3f36-66d6-c874-2a0000001700}
+ProcessId: 8048
+Image: C:\Windows\System32\reg.exe
+FileVersion: 10.0.19041.1 (WinBuild.160101.0800)
+Description: Registry Console Tool
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: reg.exe
+CommandLine: reg  add HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\policies\system /v DisableRegistryTools /t REG_DWORD /d 1 /f
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=C0DB341DEFA8EF40C03ED769A9001D600E0F4DAE,MD5=227F63E1D9008B36BDBCC4B397780BE4,SHA256=C0E25B1F9B22DE445298C1E96DDFCEAD265CA030FA6626F61A4A4786CC4A3B7D,IMPHASH=BE482BE427FE212CFEF2CDA0E61F19AC
+ParentProcessGuid: {6f6dba56-36d9-66d6-c265-2a0000001700}
+ParentProcessId: 488
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: "C:\Windows\system32\cmd.exe" 
+ParentUser: DESKTOP-43B3OH1\xcy
+折叠
+host = DESKTOP-43B3OH1source = E:\Download\15ttp_logs_2\T1112\T1112.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational

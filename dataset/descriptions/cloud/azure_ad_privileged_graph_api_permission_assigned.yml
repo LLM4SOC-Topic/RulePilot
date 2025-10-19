@@ -1,0 +1,25 @@
+description: The following analytic detects the assignment of high-risk Graph API
+  permissions in Azure AD, specifically Application.ReadWrite.All, AppRoleAssignment.ReadWrite.All,
+  and RoleManagement.ReadWrite.Directory. It uses azure_monitor_aad data to scan AuditLogs
+  for 'Update application' operations, identifying when these permissions are assigned.
+  This activity is significant as it grants broad control over Azure AD, including
+  application and directory settings. If confirmed malicious, it could lead to unauthorized
+  modifications and potential security breaches, compromising the integrity and security
+  of the Azure AD environment. Immediate investigation is required.
+required_fields:
+- _time
+- category
+- operationName
+- properties.targetResources{}.modifiedProperties{}.newValue
+- user
+- object
+- user_agent
+rule: sourcetype=azure:monitor:aad category=AuditLogs operationName="Update application"  |
+  eval newvalue = mvindex('properties.targetResources{}.modifiedProperties{}.newValue',0)
+  | spath input=newvalue  | search "{}.RequiredAppPermissions{}.EntitlementId"="1bfefb4e-e0b5-418b-a88f-73c46d2cc8e9"
+  OR "{}.RequiredAppPermissions{}.EntitlementId"="06b708a9-e830-4db3-a914-8e69da51d44f"
+  OR "{}.RequiredAppPermissions{}.EntitlementId"="9e3f62cf-ca93-4989-b6ce-bf83c28f9fe8"  |
+  eval Permissions = '{}.RequiredAppPermissions{}.EntitlementId' | stats count earliest(_time)
+  as firstTime latest(_time) as lastTime values(Permissions) by user, object, user_agent,
+  operationName | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)   | `azure_ad_privileged_graph_api_permission_assigned_filter`

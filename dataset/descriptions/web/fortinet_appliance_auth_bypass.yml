@@ -1,0 +1,21 @@
+description: The following analytic detects attempts to exploit CVE-2022-40684, a
+  Fortinet appliance authentication bypass vulnerability. It identifies REST API requests
+  to the /api/v2/ endpoint using various HTTP methods (GET, POST, PUT, DELETE) that
+  may indicate unauthorized modifications, such as adding SSH keys or creating new
+  users. This detection leverages the Web datamodel to monitor specific URL patterns
+  and HTTP methods. This activity is significant as it can lead to unauthorized access
+  and control over the appliance. If confirmed malicious, attackers could gain persistent
+  access, reroute network traffic, or capture sensitive information.
+required_fields:
+- Web.http_user_agent
+- Web.http_method
+- Web.url
+- Web.url_length
+- Web.src
+- Web.dest
+- sourcetype
+rule: '| tstats count min(_time) as firstTime max(_time) as lastTime from datamodel=Web
+  where Web.url IN ("*/api/v2/cmdb/system/admin*")  Web.http_method IN ("GET", "PUT")
+  by Web.http_user_agent, Web.http_method, Web.url, Web.url_length, Web.src, Web.dest,
+  sourcetype | `drop_dm_object_name("Web")` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `fortinet_appliance_auth_bypass_filter`'

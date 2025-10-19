@@ -1,0 +1,19 @@
+description: The following analytic detects the addition of a new federated domain
+  within an Azure Active Directory tenant. It leverages Azure AD AuditLogs to identify
+  successful "Set domain authentication" operations. This activity is significant
+  as it may indicate the use of the Azure AD identity federation backdoor technique,
+  allowing an adversary to establish persistence. If confirmed malicious, the attacker
+  could impersonate any user, bypassing password and MFA requirements, potentially
+  leading to unauthorized access and control over the Azure AD environment.
+required_fields:
+- _time
+- operationName
+- properties.result
+- src_ip
+- properties.targetResources{}.displayName
+- user
+rule: sourcetype=azure:monitor:aad  operationName="Set domain authentication" "properties.result"=success
+  | rename properties.* as * | rename targetResources{}.displayName as domain | stats
+  count min(_time) as firstTime max(_time) as lastTime by user, domain, result, operationName,
+  src_ip | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `azure_ad_new_federated_domain_added_filter`

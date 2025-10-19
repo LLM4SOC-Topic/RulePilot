@@ -1,0 +1,24 @@
+description: The following analytic detects a suspicious registry modification that
+  disables the Lock Computer feature in Windows. It leverages data from the Endpoint.Registry
+  data model, specifically monitoring changes to the registry path "*\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\DisableLockWorkstation"
+  with a value of "0x00000001". This activity is significant because it prevents users
+  from locking their screens, a tactic often used by malware, including ransomware,
+  to maintain control over compromised systems. If confirmed malicious, this could
+  allow attackers to sustain their presence and execute further malicious actions
+  without user interruption.
+required_fields:
+- _time
+- Registry.dest
+- Registry.registry_value_name
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.registry_value_data
+- Registry.process_guid
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry WHERE (Registry.registry_path= "*\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\DisableLockWorkstation"
+  Registry.registry_value_data = "0x00000001") BY Registry.dest Registry.user Registry.registry_path
+  Registry.registry_key_name Registry.registry_value_name Registry.registry_value_data
+  Registry.process_guid | `drop_dm_object_name(Registry)` | where isnotnull(registry_value_data)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_disable_lock_workstation_feature_through_registry_filter`'

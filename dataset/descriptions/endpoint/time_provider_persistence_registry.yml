@@ -1,0 +1,23 @@
+description: The following analytic detects suspicious modifications to the time provider
+  registry for persistence and autostart. It leverages data from the Endpoint.Registry
+  data model, focusing on changes to the "CurrentControlSet\\Services\\W32Time\\TimeProviders"
+  registry path. This activity is significant because such modifications are uncommon
+  and can indicate an attempt to establish persistence on a compromised host. If confirmed
+  malicious, this technique allows an attacker to maintain access and execute code
+  automatically upon system boot, potentially leading to further exploitation and
+  control over the affected system.
+required_fields:
+- _time
+- Registry.dest
+- Registry.registry_value_name
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.registry_value_data
+- Registry.process_guid
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry WHERE (Registry.registry_path="*\\CurrentControlSet\\Services\\W32Time\\TimeProviders*")
+  BY Registry.dest Registry.user Registry.registry_path Registry.registry_key_name
+  Registry.registry_value_name Registry.registry_value_data Registry.process_guid
+  | `drop_dm_object_name(Registry)` | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `time_provider_persistence_registry_filter`'

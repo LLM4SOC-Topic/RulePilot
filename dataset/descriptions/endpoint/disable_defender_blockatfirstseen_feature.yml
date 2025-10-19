@@ -1,0 +1,25 @@
+description: The following analytic detects the modification of the Windows registry
+  to disable the Windows Defender BlockAtFirstSeen feature. It leverages data from
+  the Endpoint.Registry data model, specifically monitoring changes to the registry
+  path associated with Windows Defender SpyNet and the DisableBlockAtFirstSeen value.
+  This activity is significant because disabling this feature can allow malicious
+  files to bypass initial detection by Windows Defender, increasing the risk of malware
+  infection. If confirmed malicious, this action could enable attackers to execute
+  malicious code undetected, leading to potential system compromise and data breaches.
+required_fields:
+- _time
+- Registry.dest
+- Registry.registry_value_name
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.registry_value_data
+- Registry.process_guid
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry WHERE (Registry.registry_path = "*\\Microsoft\\Windows
+  Defender\\SpyNet*" Registry.registry_value_name = DisableBlockAtFirstSeen Registry.registry_value_data
+  = 0x00000001) BY Registry.registry_path Registry.registry_key_name Registry.registry_value_name
+  Registry.registry_value_data Registry.process_guid Registry.user Registry.dest |
+  `drop_dm_object_name(Registry)` | where isnotnull(registry_value_data) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `disable_defender_blockatfirstseen_feature_filter`'

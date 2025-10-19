@@ -1,0 +1,49 @@
+{
+    "cases": [
+        {
+            "case": 1,
+            "kql": "Event\n| where TimeGenerated >= ago(1d)\n| where EventID == 4625\n| summarize CountToday = count() by EventID, Computer\n| join kind=leftouter (\n    Event\n    | where TimeGenerated between (ago(3d) .. ago(1d))\n    | where EventID == 4625\n    | summarize CountPrev7day = count() by EventID, Computer\n) on EventID, Computer",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" EventCode=4625\n| where _time >= relative_time(now(), \"-1d\")\n| stats count as CountToday by EventCode, host\n| join type=left EventCode host [\n    search index=\"main\" source=\"WinEventLog:Security\" EventCode=4625\n    | where _time >= relative_time(now(), \"-3d\") AND _time < relative_time(now(), \"-1d\")\n    | stats count as CountPrev7day by EventCode, host\n]"
+        },
+        {
+            "case": 2,
+            "kql": "Event | where TimeGenerated >= ago(1d) \n| where EventID == 4625 \n| summarize CountToday = count() by EventID, Computer \n| join kind=inner (   \n Event   \n | where TimeGenerated between (ago(3d) .. ago(1d))  \n | where EventID == 4625   \n | summarize CountPrev7day = count() by EventID, Computer )\n on EventID, Computer",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" EventCode=4625\n| where _time >= relative_time(now(), \"-1d\")\n| stats count as CountToday by EventCode, host\n| join type=inner EventCode host [\n    search index=\"main\" source=\"WinEventLog:Security\" EventCode=4625\n    | where _time >= relative_time(now(), \"-3d\") AND _time < relative_time(now(), \"-1d\")\n    | stats count as CountPrev7day by EventCode, host\n]"
+        },
+        {
+            "case": 3,
+            "kql": "Event\n| where TimeGenerated >= ago(1d)\n| where EventID == 4625\n| summarize CountToday = count() by EventID, Computer\n| join kind=leftouter (\n    SecurityEvent\n    | where TimeGenerated between (ago(3d) .. ago(1d))\n    | where EventID == 4625\n    | summarize CountPrev7day = count() by EventID, Computer\n) on $left.EventID == $right.EventID, Computer",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" EventCode=4625\n| where _time >= relative_time(now(), \"-1d\")\n| stats count as CountToday by EventCode, host\n| join type=left left=L right=R where L.EventCode=R.EventCode [\n    search index=\"main\" source=\"WinEventLog:Security\" EventCode=4625\n    | where _time >= relative_time(now(), \"-3d\") AND _time < relative_time(now(), \"-1d\")\n    | stats count as CountPrev7day by EventCode, host\n]"
+        },
+        {
+            "case": 4,
+            "kql": "Event\n| where TimeGenerated between(datetime(\"2025-02-18T05:30:00Z\") .. datetime(\"2025-02-18T06:00:00Z\"))\n| project TimeGenerated,EventID,Computer\n| join (\nEvent\n| where TimeGenerated between(datetime(\"2025-02-18T05:45:00Z\") .. datetime(\"2025-02-18T06:15:00Z\"))\n| project TimeGenerated,EventID,Computer\n)on TimeGenerated,EventID,Computer",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\"\n| where _time >= strptime(\"2025-02-18T05:30:00Z\", \"%Y-%m-%dT%H:%M:%SZ\") \n    AND _time <= strptime(\"2025-02-18T06:00:00Z\", \"%Y-%m-%dT%H:%M:%SZ\")\n| table _time EventCode host\n| join type=inner _time EventCode host [\n    search index=\"main\" source=\"WinEventLog:Security\"\n    | where _time >= strptime(\"2025-02-18T05:45:00Z\", \"%Y-%m-%dT%H:%M:%SZ\") \n        AND _time <= strptime(\"2025-02-18T06:15:00Z\", \"%Y-%m-%dT%H:%M:%SZ\")\n    | table _time EventCode host\n]"
+        },
+        {
+            "case": 5,
+            "kql": "Event\n| where TimeGenerated >= ago(1d)\n| where EventID == 4625\n| join kind=inner (\n    Event\n    | where TimeGenerated >= ago(3d)\n    | where EventID == 4625\n) on EventID, Computer",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" EventCode=4625\n| where _time >= relative_time(now(), \"-1d\")\n| join type=inner max=0 EventCode host [\n    search index=\"main\" source=\"WinEventLog:Security\" EventCode=4625\n    | where _time >= relative_time(now(), \"-3d\")\n]"
+        },
+        {
+            "case": 6,
+            "kql": "Event\n| where TimeGenerated >= ago(1d)\n| where EventID == 4688 \n| summarize CountToday = count() by EventID, Computer\n| join kind=leftouter (\n    Event\n    | where TimeGenerated between (ago(3d) .. ago(1d))\n    | where EventID == 4688\n    | summarize CountPrev7day = count() by EventID, Computer\n) on EventID, Computer",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" EventCode=4688\n| where _time >= relative_time(now(), \"-1d\")\n| stats count as CountToday by EventCode, host\n| join type=left EventCode host [\n    search index=\"main\" source=\"WinEventLog:Security\" EventCode=4688\n    | where _time >= relative_time(now(), \"-3d\") AND _time < relative_time(now(), \"-1d\")\n    | stats count as CountPrev7day by EventCode, host\n]"
+        },
+        {
+            "case": 7,
+            "kql": "Event\n| where TimeGenerated >= ago(1d)\n| where EventID == 1102 \n| summarize CountToday = count() by EventID, Computer\n| join kind=inner (\n    Event\n    | where TimeGenerated between (ago(3d) .. ago(1d))\n    | where EventID == 1102\n    | summarize CountPrev7day = count() by EventID, Computer\n) on EventID, Computer",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" EventCode=1102\n| where _time >= relative_time(now(), \"-1d\")\n| stats count as CountToday by EventCode, host\n| join type=inner EventCode host [\n    search index=\"main\" source=\"WinEventLog:Security\" EventCode=1102\n    | where _time >= relative_time(now(), \"-3d\") AND _time < relative_time(now(), \"-1d\")\n    | stats count as CountPrev7day by EventCode, host\n]"
+        },
+        {
+            "case": 9,
+            "kql": "Event\n| where TimeGenerated between(datetime(\"2025-02-18T06:00:00Z\") .. datetime(\"2025-02-18T06:30:00Z\"))\n| project TimeGenerated, EventID, Computer\n| join (\n    Event\n    | where TimeGenerated between(datetime(\"2025-02-18T06:15:00Z\") .. datetime(\"2025-02-18T06:45:00Z\"))\n    | project TimeGenerated, EventID, Computer\n) on TimeGenerated, EventID, Computer",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\"\n| where _time >= strptime(\"2025-02-18T06:00:00Z\", \"%Y-%m-%dT%H:%M:%SZ\") \n    AND _time <= strptime(\"2025-02-18T06:30:00Z\", \"%Y-%m-%dT%H:%M:%SZ\")\n| table _time EventCode host\n| join type=inner _time EventCode host [\n    search index=\"main\" source=\"WinEventLog:Security\"\n    | where _time >= strptime(\"2025-02-18T06:15:00Z\", \"%Y-%m-%dT%H:%M:%SZ\") \n        AND _time <= strptime(\"2025-02-18T06:45:00Z\", \"%Y-%m-%dT%H:%M:%SZ\")\n    | table _time EventCode host\n]"
+        },
+        {
+            "case": 10,
+            "kql": "Event\n| where TimeGenerated >= ago(1d)\n| where EventID == 4672  \n| join kind=inner (\n    Event\n    | where TimeGenerated >= ago(3d)\n    | where EventID == 4672\n) on EventID, Computer",
+            "spl": "index=\"main\" source=\"WinEventLog:Security\" EventCode=4672\n| where _time >= relative_time(now(), \"-1d\")\n| join type=inner max=0 EventCode host [\n    search index=\"main\" source=\"WinEventLog:Security\" EventCode=4672\n    | where _time >= relative_time(now(), \"-3d\")\n]"
+        }
+    ]
+}

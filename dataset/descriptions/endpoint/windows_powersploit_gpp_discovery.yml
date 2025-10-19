@@ -1,0 +1,20 @@
+description: The following analytic detects the execution of the Get-GPPPassword PowerShell
+  cmdlet, which is used to search for unsecured credentials in Group Policy Preferences
+  (GPP). This detection leverages PowerShell Script Block Logging to identify specific
+  script block text associated with this cmdlet. Monitoring this activity is crucial
+  as it can indicate an attempt to retrieve and decrypt stored credentials from SYSVOL,
+  potentially leading to unauthorized access. If confirmed malicious, this activity
+  could allow an attacker to escalate privileges or move laterally within the network
+  by exploiting exposed credentials.
+required_fields:
+- _time
+- EventCode
+- ScriptBlockText
+- Opcode
+- Computer
+- UserID
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104  (ScriptBlockText=Get-GPPPassword OR ScriptBlockText=Get-CachedGPPPassword)
+  | stats count min(_time) as firstTime max(_time) as lastTime by Opcode Computer
+  UserID EventCode ScriptBlockText | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_powersploit_gpp_discovery_filter`

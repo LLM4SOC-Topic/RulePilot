@@ -1,0 +1,30 @@
+description: The following analytic detects the deletion of a service from the Windows
+  Registry under CurrentControlSet\Services. It leverages data from the Endpoint.Registry
+  datamodel, specifically monitoring registry paths and actions related to service
+  deletion. This activity is significant as adversaries may delete services to evade
+  detection and hinder incident response efforts. If confirmed malicious, this action
+  could disrupt legitimate services, impair system functionality, and potentially
+  allow attackers to maintain a lower profile within the environment, complicating
+  detection and remediation efforts.
+required_fields:
+- _time
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.user
+- Registry.dest
+- Registry.registry_value_name
+- Processes.process_id
+- Processes.process_name
+- Processes.process
+- Processes.dest
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.process_guid
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry where Registry.registry_path= "*\\SYSTEM\\CurrentControlSet\\Services*"
+  AND (Registry.action = deleted OR (Registry.registry_value_name = DeleteFlag AND
+  Registry.registry_value_data = 0x00000001 AND Registry.action=modified)) by Registry.registry_key_name
+  Registry.user Registry.registry_path Registry.registry_value_data Registry.registry_value_name
+  Registry.action Registry.dest | `drop_dm_object_name(Registry)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_service_deletion_in_registry_filter`'

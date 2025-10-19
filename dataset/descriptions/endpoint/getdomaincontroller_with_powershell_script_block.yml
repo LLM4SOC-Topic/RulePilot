@@ -1,0 +1,19 @@
+description: The following analytic detects the execution of the `Get-DomainController`
+  commandlet using PowerShell Script Block Logging (EventCode=4104). This commandlet
+  is part of PowerView, a tool often used for domain enumeration. The detection leverages
+  script block text to identify this specific activity. Monitoring this behavior is
+  crucial as it may indicate an adversary or Red Team performing reconnaissance to
+  map out domain controllers. If confirmed malicious, this activity could lead to
+  further domain enumeration, potentially exposing sensitive information and aiding
+  in lateral movement within the network.
+required_fields:
+- _time
+- ScriptBlockText
+- Opcode
+- Computer
+- UserID
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 (ScriptBlockText = "*Get-DomainController*") | stats count min(_time)
+  as firstTime max(_time) as lastTime by Opcode Computer UserID EventCode ScriptBlockText
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `getdomaincontroller_with_powershell_script_block_filter`

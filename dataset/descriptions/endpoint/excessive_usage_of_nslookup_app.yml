@@ -1,0 +1,20 @@
+description: The following analytic detects excessive usage of the nslookup application,
+  which may indicate potential DNS exfiltration attempts. It leverages Sysmon EventCode
+  1 to monitor process executions, specifically focusing on nslookup.exe. The detection
+  identifies outliers by comparing the frequency of nslookup executions against a
+  calculated threshold. This activity is significant as it can reveal attempts by
+  malware or APT groups to exfiltrate data via DNS queries. If confirmed malicious,
+  this behavior could allow attackers to stealthily transfer sensitive information
+  out of the network, bypassing traditional data exfiltration defenses.
+required_fields:
+- _time
+- dest
+- process_name
+- EventCode
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode = 1 process_name = "nslookup.exe"
+  | bucket _time span=1m | stats count as numNsLookup by dest, _time | eventstats
+  avg(numNsLookup) as avgNsLookup, stdev(numNsLookup) as stdNsLookup, count as numSlots
+  by dest | eval upperThreshold=(avgNsLookup + stdNsLookup *3) | eval isOutlier=if(numNsLookup
+  > 20 and numNsLookup >= upperThreshold, 1, 0) | search isOutlier=1 | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `excessive_usage_of_nslookup_app_filter`

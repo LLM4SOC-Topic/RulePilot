@@ -1,0 +1,18 @@
+description: The following analytic detects a suspicious computer account name change
+  in Active Directory. It leverages Event ID 4781, which logs account name changes,
+  to identify instances where a computer account name is changed to one that does
+  not end with a `$`. This behavior is significant as it may indicate an attempt to
+  exploit CVE-2021-42278 and CVE-2021-42287, which can lead to domain controller impersonation
+  and privilege escalation. If confirmed malicious, this activity could allow an attacker
+  to gain elevated privileges and potentially control the domain.
+required_fields:
+- _time
+- EventCode
+- Computer
+- Caller_User_Name
+- OldTargetUserName
+- NewTargetUserName
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=4781 OldTargetUserName="*$" NewTargetUserName!="*$" | table _time, Computer,
+  Caller_User_Name, OldTargetUserName, NewTargetUserName | rename Computer as dest
+  | `suspicious_computer_account_name_change_filter`

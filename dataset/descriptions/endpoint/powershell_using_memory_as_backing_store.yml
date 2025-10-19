@@ -1,0 +1,19 @@
+description: The following analytic detects suspicious PowerShell script execution
+  using memory streams as a backing store, identified via EventCode 4104. It leverages
+  PowerShell Script Block Logging to capture scripts that create new objects with
+  memory streams, often used to decompress and execute payloads in memory. This activity
+  is significant as it indicates potential in-memory execution of malicious code,
+  bypassing traditional file-based detection. If confirmed malicious, this technique
+  could allow attackers to execute arbitrary code, maintain persistence, or escalate
+  privileges without leaving a trace on the disk.
+required_fields:
+- _time
+- EventCode
+- ScriptBlockText
+- Computer
+- UserID
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText = *New-Object* ScriptBlockText = *IO.MemoryStream*
+  | stats count min(_time) as firstTime max(_time) as lastTime by EventCode ScriptBlockText
+  Computer UserID | rename Computer as dest | rename UserID as user | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `powershell_using_memory_as_backing_store_filter`

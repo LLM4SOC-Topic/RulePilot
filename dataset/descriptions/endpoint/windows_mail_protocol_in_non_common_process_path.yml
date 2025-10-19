@@ -1,0 +1,28 @@
+description: The following analytic detects a Windows application establishing an
+  SMTP connection from a non-common installation path. It leverages Sysmon EventCode
+  3 to identify processes not typically associated with email clients (e.g., Thunderbird,
+  Outlook) making SMTP connections. This activity is significant as adversaries, including
+  malware like AgentTesla, use such connections for Command and Control (C2) communication
+  to exfiltrate stolen data. If confirmed malicious, this behavior could lead to unauthorized
+  data exfiltration, including sensitive information like desktop screenshots, browser
+  data, and system details, compromising the affected host.
+required_fields:
+- _time
+- Image
+- DestinationPort
+- DestinationPortName
+- DestinationHostname
+- SourceHostname
+- SourcePort
+- SourcePortName
+- Protocol
+- DestinationIp
+- dest
+- user
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=3 NOT(Image IN("*\\program files*",
+  "*\\thunderbird.exe","*\\outlook.exe")) (DestinationPortName="smtp" OR DestinationPort=25
+  OR DestinationPort=587) | stats count min(_time) as firstTime max(_time) as lastTime
+  by Image DestinationPort DestinationPortName DestinationHostname SourceHostname
+  SourcePort SourcePortName Protocol DestinationIp dest user | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_mail_protocol_in_non_common_process_path_filter`

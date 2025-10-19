@@ -1,0 +1,18 @@
+description: The following analytic identifies DNS queries to domains associated with
+  the 3CX supply chain attack. It leverages the Network_Resolution datamodel to detect
+  these suspicious domain indicators. This activity is significant because it can
+  indicate a potential compromise stemming from the 3CX supply chain attack, which
+  is known for distributing malicious software through trusted updates. If confirmed
+  malicious, this activity could allow attackers to establish a foothold in the network,
+  exfiltrate sensitive data, or further propagate malware, leading to extensive damage
+  and data breaches.
+required_fields:
+- DNS.src
+- DNS.query
+- _time
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` values(DNS.answer) as IPs min(_time) as firstTime
+  from datamodel=Network_Resolution by DNS.src, DNS.query | `drop_dm_object_name(DNS)`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | lookup 3cx_ioc_domains domain as query OUTPUT Description isIOC
+  | search isIOC=true | `3cx_supply_chain_attack_network_indicators_filter`'

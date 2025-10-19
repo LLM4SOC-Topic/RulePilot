@@ -1,0 +1,22 @@
+description: The following analytic detects when AWS S3 bucket versioning is suspended
+  by a user. It leverages AWS CloudTrail logs to identify `PutBucketVersioning` events
+  with the `VersioningConfiguration.Status` set to `Suspended`. This activity is significant
+  because disabling versioning can prevent recovery of deleted or modified data, which
+  is a common tactic in ransomware attacks. If confirmed malicious, this action could
+  lead to data loss and hinder recovery efforts, severely impacting data integrity
+  and availability.
+required_fields:
+- _time
+- eventName
+- user_arn
+- src_ip
+- aws_account_id
+- destinationLocationArn
+- sourceLocationArn
+- userAgent
+- userIdentity.principalId
+rule: sourcetype=aws:cloudtrail eventName= PutBucketVersioning "requestParameters.VersioningConfiguration.Status"=Suspended
+  |  stats count values(requestParameters.bucketName) as bucket_name values(resources{}.ARN)
+  as resource_arn by src_ip aws_account_id awsRegion eventName userAgent user_arn
+  userIdentity.principalId  errorCode | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| `aws_disable_bucket_versioning_filter`

@@ -1,0 +1,26 @@
+description: The following analytic identifies the creation of executables or scripts
+  in suspicious file paths on Windows systems. It leverages the Endpoint.Filesystem
+  data model to detect files with specific extensions (e.g., .exe, .dll, .ps1) created
+  in uncommon directories (e.g., \windows\fonts\, \users\public\). This activity is
+  significant as adversaries often use these paths to evade detection and maintain
+  persistence. If confirmed malicious, this behavior could allow attackers to execute
+  unauthorized code, escalate privileges, or persist within the environment, posing
+  a significant security threat.
+required_fields:
+- _time
+- Filesystem.file_path
+- Filesystem.file_create_time
+- Filesystem.process_id
+- Filesystem.file_name
+- Filesystem.user
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` values(Filesystem.file_path) as file_path count
+  min(_time) as firstTime max(_time) as lastTime from datamodel=Endpoint.Filesystem
+  where Filesystem.file_name IN ("*.exe", "*.dll", "*.sys", "*.com", "*.vbs", "*.vbe",
+  "*.js", "*.ps1", "*.bat", "*.cmd", "*.pif") AND Filesystem.file_path IN ("*\\windows\\fonts\\*",
+  "*\\windows\\temp\\*", "*\\users\\public\\*", "*\\windows\\debug\\*", "*\\Users\\Administrator\\Music\\*",
+  "*\\Windows\\servicing\\*", "*\\Users\\Default\\*", "*Recycle.bin*", "*\\Windows\\Media\\*",
+  "*\\Windows\\repair\\*", "*\\AppData\\Local\\Temp*", "*\\PerfLogs\\*", "*:\\temp\\*")
+  by Filesystem.file_create_time Filesystem.process_id Filesystem.file_name Filesystem.user
+  | `drop_dm_object_name(Filesystem)` | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `executables_or_script_creation_in_suspicious_path_filter`'

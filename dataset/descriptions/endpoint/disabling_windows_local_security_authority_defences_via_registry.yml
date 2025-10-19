@@ -1,0 +1,26 @@
+description: The following analytic identifies the deletion of registry keys that
+  disable Local Security Authority (LSA) protection and Microsoft Defender Device
+  Guard. It leverages data from Endpoint Detection and Response (EDR) agents, focusing
+  on registry actions and paths associated with LSA and Device Guard settings. This
+  activity is significant because disabling these defenses can leave a system vulnerable
+  to various attacks, including credential theft and unauthorized code execution.
+  If confirmed malicious, this action could allow attackers to bypass critical security
+  mechanisms, leading to potential system compromise and persistent access.
+required_fields:
+- _time
+- Registry.action
+- Registry.registry_path
+- Registry.dest
+- Registry.user
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` min(_time) as _time from datamodel=Endpoint.Registry
+  where Registry.registry_path IN ("*\\SYSTEM\\CurrentControlSet\\Control\\Lsa\\LsaCfgFlags",
+  "*\\SOFTWARE\\Policies\\Microsoft\\Windows\\DeviceGuard\\*", "*\\SYSTEM\\CurrentControlSet\\Control\\Lsa\\RunAsPPL")
+  Registry.action IN (deleted, unknown) by Registry.action Registry.registry_path
+  Registry.process_guid Registry.dest Registry.user| `drop_dm_object_name(Registry)`
+  | join type=outer process_guid [| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count FROM datamodel=Endpoint.Processes by Processes.user
+  Processes.process_name Processes.process Processes.dest Processes.parent_process_name
+  Processes.parent_process Processes.process_guid | `drop_dm_object_name(Processes)`]
+  | table _time action dest user parent_process_name parent_process process_name process
+  process_guid registry_path | `disabling_windows_local_security_authority_defences_via_registry_filter`'

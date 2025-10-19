@@ -1,0 +1,24 @@
+description: The following analytic identifies a suspicious process that is recursively
+  deleting executable files on a compromised host. It leverages Sysmon Event Codes
+  23 and 26 to detect this activity by monitoring for a high volume of deletions or
+  overwrites of files with extensions like .exe, .sys, and .dll. This behavior is
+  significant as it is commonly associated with destructive malware such as CaddyWiper,
+  DoubleZero, and SwiftSlicer, which aim to make file recovery impossible. If confirmed
+  malicious, this activity could lead to significant data loss and system instability,
+  severely impacting business operations.
+required_fields:
+- _time
+- Image
+- TargetFilename
+- dest
+- user
+- signature_id
+- process_name
+- process_guid
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode IN ("23","26") TargetFilename
+  IN ("*.exe", "*.sys", "*.dll") | bin _time span=2m | stats count, values(TargetFilename)
+  as deleted_files, min(_time) as firstTime, max(_time) as lastTime by user, dest,
+  signature, signature_id, Image, process_name, process_guid | rename Image as process
+  | where count >=100 | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_data_destruction_recursive_exec_files_deletion_filter`

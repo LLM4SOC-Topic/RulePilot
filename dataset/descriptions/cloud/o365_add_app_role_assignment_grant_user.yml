@@ -1,0 +1,21 @@
+description: The following analytic detects the addition of an application role assignment
+  grant to a user in Office 365. It leverages data from the `o365_management_activity`
+  dataset, specifically monitoring the "Add app role assignment grant to user" operation.
+  This activity is significant as it can indicate unauthorized privilege escalation
+  or the assignment of sensitive roles to users. If confirmed malicious, this could
+  allow an attacker to gain elevated permissions, potentially leading to unauthorized
+  access to critical resources and data within the Office 365 environment.
+required_fields:
+- _time
+- Workload
+- Operation
+- Actor{}.ID
+- Actor{}.Type
+- UserId
+- dest
+- ResultStatus
+rule: sourcetype=o365:management:activity Workload=AzureActiveDirectory Operation="Add
+  app role assignment grant to user." | stats count min(_time) as firstTime max(_time)
+  as lastTime values(Actor{}.ID) as Actor.ID values(Actor{}.Type) as Actor.Type values(ModifiedProperties{}.Name)
+  as modified_properties_name by user dest ResultStatus Operation | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `o365_add_app_role_assignment_grant_user_filter`

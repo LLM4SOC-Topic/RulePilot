@@ -1,0 +1,17 @@
+description: The following analytic detects a high volume of Kerberos service ticket
+  requests, specifically more than 30, from a single source within a 5-minute window.
+  It leverages Event ID 4769, which logs when a Kerberos service ticket is requested,
+  focusing on requests with computer names as the Service Name. This behavior is significant
+  as it may indicate malicious activities such as lateral movement, malware staging,
+  or reconnaissance. If confirmed malicious, an attacker could gain unauthorized access
+  to multiple endpoints, potentially compromising the entire network.
+required_fields:
+- _time
+- EventCode
+- ServiceName
+- TargetUserName
+- IpAddress
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=4769 ServiceName="*$" TargetUserName!="*$" | bucket span=5m _time | stats
+  dc(ServiceName) AS unique_targets values(ServiceName) as host_targets by _time,
+  IpAddress, TargetUserName | where unique_targets > 30 | `windows_large_number_of_computer_service_tickets_requested_filter`

@@ -1,0 +1,22 @@
+description: The following analytic detects a CrowdStrike alert with MEDIUM severity
+  indicates a potential threat that requires prompt attention. This alert level suggests
+  suspicious activity that may compromise security but is not immediately critical.
+  It typically involves detectable but non-imminent risks, such as unusual behavior
+  or attempted policy violations, which should be investigated further and mitigated
+  quickly to prevent escalation of attacks.
+required_fields:
+- _time
+- event.EndpointIp
+- event.EndpointName
+- event.UserName
+- event.IncidentDescription
+- event.IncidentType
+- event.NumbersOfAlerts
+- event.SeverityName
+rule: sourcetype="CrowdStrike:Event:Streams:JSON" | rename event.EndpointIp as src_ip,
+  event.EndpointName as src_host, event.UserName as user, event.IncidentDescription
+  as description, event.IncidentType as type, event.NumbersOfAlerts as count_alerts,
+  event.SeverityName as severity | stats count min(_time) as firstTime max(_time)
+  as lastTime by src_ip, src_host, user, description, type, count_alerts, severity
+  | where LIKE (severity, "%MEDIUM%") | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `crowdstrike_medium_severity_alert_filter`

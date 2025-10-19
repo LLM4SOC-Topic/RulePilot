@@ -1,0 +1,24 @@
+description: The following analytic detects suspicious image pulling in Kubernetes
+  environments. It identifies this activity by monitoring Kubernetes audit logs for
+  image pull requests that do not match a predefined list of allowed images. This
+  behavior is significant for a SOC as it may indicate an attacker attempting to deploy
+  malicious software or infiltrate the system. If confirmed malicious, the impact
+  could be severe, potentially leading to unauthorized access to sensitive systems
+  or data, and enabling further malicious activities within the cluster.
+required_fields:
+- verb
+- requestReceivedTimestamp
+- requestURI
+- responseStatus.code
+- sourceIPs{}
+- user.groups{}
+- user.username
+- userAgent
+- verb
+- responseStatus.reason
+- responseStatus.status
+rule: source="kubernetes" requestObject.message="Pulling image*" | search NOT objectRef.name
+  IN (*splunk*, *falco*) | fillnull | stats count by objectRef.name objectRef.namespace
+  objectRef.resource requestReceivedTimestamp requestURI responseStatus.code sourceIPs{}
+  stage user.groups{} user.uid user.username userAgent verb | rename sourceIPs{} as
+  src_ip, user.username as user | `kubernetes_suspicious_image_pulling_filter`

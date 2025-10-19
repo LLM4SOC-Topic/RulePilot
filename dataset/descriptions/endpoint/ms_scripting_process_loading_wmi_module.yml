@@ -1,0 +1,24 @@
+description: The following analytic detects the loading of WMI modules by Microsoft
+  scripting processes like wscript.exe or cscript.exe. It leverages Sysmon EventCode
+  7 to identify instances where these scripting engines load specific WMI-related
+  DLLs. This activity is significant because it can indicate the presence of malware,
+  such as the FIN7 implant, which uses JavaScript to execute WMI queries for gathering
+  host information to send to a C2 server. If confirmed malicious, this behavior could
+  allow attackers to collect sensitive system information and maintain persistence
+  within the environment.
+required_fields:
+- _time
+- Image
+- EventCode
+- process_name
+- ProcessId
+- ProcessGuid
+- dest
+- ImageLoaded
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode =7 Image IN ("*\\wscript.exe",
+  "*\\cscript.exe") ImageLoaded IN ("*\\fastprox.dll", "*\\wbemdisp.dll", "*\\wbemprox.dll",
+  "*\\wbemsvc.dll" , "*\\wmiutils.dll", "*\\wbemcomn.dll") | stats min(_time) as firstTime
+  max(_time) as lastTime count by Image EventCode process_name ProcessId ProcessGuid
+  Computer ImageLoaded | rename Computer as dest | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `ms_scripting_process_loading_wmi_module_filter`

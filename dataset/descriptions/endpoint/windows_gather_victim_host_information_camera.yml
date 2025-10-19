@@ -1,0 +1,19 @@
+description: The following analytic detects a PowerShell script that enumerates camera
+  devices on the targeted host. This detection leverages PowerShell Script Block Logging,
+  specifically looking for commands querying Win32_PnPEntity for camera-related information.
+  This activity is significant as it is commonly observed in DCRat malware, which
+  collects camera data to send to its command-and-control server. If confirmed malicious,
+  this behavior could indicate an attempt to gather sensitive visual information from
+  the host, potentially leading to privacy breaches or further exploitation.
+required_fields:
+- _time
+- ScriptBlockText
+- Computer
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText= "* Win32_PnPEntity *" ScriptBlockText= "*SELECT*"
+  ScriptBlockText= "*WHERE*" ScriptBlockText = "*PNPClass*" ScriptBlockText IN ("*Image*",
+  "*Camera*") | stats count min(_time) as firstTime max(_time) as lastTime by EventCode
+  ScriptBlockText Computer UserID | rename Computer as dest | rename UserID as user
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_gather_victim_host_information_camera_filter`

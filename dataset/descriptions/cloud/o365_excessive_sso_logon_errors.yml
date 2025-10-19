@@ -1,0 +1,24 @@
+description: The following analytic detects accounts experiencing a high number of
+  Single Sign-On (SSO) logon errors. It leverages data from the `o365_management_activity`
+  dataset, focusing on failed user login attempts with SSO errors. This activity is
+  significant as it may indicate brute-force attempts or the hijacking/reuse of SSO
+  tokens. If confirmed malicious, attackers could potentially gain unauthorized access
+  to user accounts, leading to data breaches, privilege escalation, or further lateral
+  movement within the organization.
+required_fields:
+- _time
+- user
+- src_ip
+- Workload
+- LogonError
+- ActorIpAddress
+- UserAgent
+- UserId
+- authentication_service
+- authentication_method
+- Operation
+rule: sourcetype=o365:management:activity Workload=AzureActiveDirectory LogonError=*Sso*
+  Operation=UserLoginFailed | stats count min(_time) as firstTime max(_time) as lastTime
+  values(user) as user by  src_ip signature user_agent authentication_service action|
+  where count >= 5 | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `o365_excessive_sso_logon_errors_filter`

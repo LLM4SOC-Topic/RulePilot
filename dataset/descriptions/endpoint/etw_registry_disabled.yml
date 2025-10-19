@@ -1,0 +1,25 @@
+description: The following analytic detects a registry modification that disables
+  the Event Tracing for Windows (ETW) feature. It leverages data from the Endpoint.Registry
+  data model, specifically monitoring changes to the ETWEnabled registry value under
+  the .NETFramework path. This activity is significant because disabling ETW can allow
+  attackers to evade Endpoint Detection and Response (EDR) tools and hide their execution
+  from audit logs. If confirmed malicious, this action could enable attackers to operate
+  undetected, potentially leading to further compromise and persistent access within
+  the environment.
+required_fields:
+- _time
+- Registry.dest
+- Registry.registry_value_name
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.registry_value_data
+- Registry.process_guid
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry WHERE (Registry.registry_path="*\\SOFTWARE\\Microsoft\\.NETFramework*"
+  Registry.registry_value_name = ETWEnabled Registry.registry_value_data=0x00000000)
+  BY Registry.dest Registry.user Registry.registry_path Registry.registry_key_name
+  Registry.registry_value_name Registry.registry_value_data Registry.process_guid
+  | `drop_dm_object_name(Registry)` | where isnotnull(registry_value_data) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `etw_registry_disabled_filter`'

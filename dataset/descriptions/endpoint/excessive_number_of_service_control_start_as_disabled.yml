@@ -1,0 +1,25 @@
+description: The following analytic detects an excessive number of `sc.exe` processes
+  launched with the command line argument `start= disabled` within a short period.
+  It leverages data from Endpoint Detection and Response (EDR) agents, focusing on
+  process names, command-line executions, and process GUIDs. This activity is significant
+  as it may indicate an attempt to disable critical services, potentially impairing
+  system defenses. If confirmed malicious, this behavior could allow an attacker to
+  disrupt security mechanisms, hinder incident response, and maintain control over
+  the compromised system.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` distinct_count(Processes.process) as distinct_cmdlines
+  values(Processes.process_id) as process_ids min(_time) as firstTime max(_time) as
+  lastTime FROM datamodel=Endpoint.Processes WHERE Processes.process_name = "sc.exe"
+  AND Processes.process="*start= disabled*" by Processes.dest Processes.user Processes.parent_process
+  Processes.process_name Processes.parent_process_id, _time span=30m | where distinct_cmdlines
+  >= 8 | `drop_dm_object_name(Processes)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `excessive_number_of_service_control_start_as_disabled_filter`'

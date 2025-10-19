@@ -1,0 +1,23 @@
+description: The following analytic detects the deletion of critical AWS Security
+  Services configurations, such as CloudWatch alarms, GuardDuty detectors, and Web
+  Application Firewall rules. It leverages Amazon Security Lake logs to identify specific
+  API calls like "DeleteLogStream" and "DeleteDetector." This activity is significant
+  because adversaries often use these actions to disable security monitoring and evade
+  detection. If confirmed malicious, this could allow attackers to operate undetected,
+  leading to potential data breaches, unauthorized access, and prolonged persistence
+  within the AWS environment.
+required_fields:
+- api.operation
+- actor.user.account_uid
+- actor.user.name
+- actor.user.uid
+- http_request.user_agent
+- src_endpoint.ip
+- cloud.region
+rule: sourcetype=aws:cloudtrail:lake api.operation IN ("DeleteLogStream","DeleteDetector","DeleteIPSet","DeleteWebACL","DeleteRule","DeleteRuleGroup","DeleteLoggingConfiguration","DeleteAlarms")
+  | fillnull | stats count min(_time) as firstTime max(_time) as lastTime by api.operation
+  actor.user.account_uid actor.user.uid http_request.user_agent src_endpoint.ip cloud.region
+  | rename actor.user.uid as user, src_endpoint.ip as src_ip, cloud.region as region,
+  http_request.user_agent as user_agent, actor.user.account_uid as aws_account_id
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `asl_aws_defense_evasion_impair_security_services_filter`

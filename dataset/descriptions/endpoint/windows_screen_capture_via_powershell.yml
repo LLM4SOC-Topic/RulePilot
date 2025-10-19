@@ -1,0 +1,19 @@
+description: The following analytic detects the execution of a PowerShell script designed
+  to capture screen images on a host. It leverages PowerShell Script Block Logging
+  to identify specific script block text patterns associated with screen capture activities.
+  This behavior is significant as it may indicate an attempt to exfiltrate sensitive
+  information by capturing desktop screenshots. If confirmed malicious, this activity
+  could allow an attacker to gather visual data from the compromised system, potentially
+  leading to data breaches or further exploitation.
+required_fields:
+- _time
+- ScriptBlockText
+- Computer
+- UserID
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText = "*[Drawing.Graphics]::FromImage(*" AND ScriptBlockText
+  = "*New-Object Drawing.Bitmap*" AND ScriptBlockText = "*.CopyFromScreen*" | stats
+  count min(_time) as firstTime max(_time) as lastTime by EventCode ScriptBlockText
+  Computer UserID | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_screen_capture_via_powershell_filter`

@@ -1,0 +1,24 @@
+description: The following analytic detects a suspicious process attempting to terminate
+  the Lsass.exe process. It leverages Sysmon EventCode 10 logs to identify processes
+  granted PROCESS_TERMINATE access to Lsass.exe. This activity is significant because
+  Lsass.exe is a critical process responsible for enforcing security policies and
+  handling user credentials. If confirmed malicious, this behavior could indicate
+  an attempt to perform credential dumping, privilege escalation, or evasion of security
+  policies, potentially leading to unauthorized access and persistence within the
+  environment.
+required_fields:
+- _time
+- EventCode
+- TargetImage
+- CallTrace
+- dest
+- TargetProcessId
+- SourceImage
+- SourceProcessId
+- GrantedAccess
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=10 TargetImage=*lsass.exe GrantedAccess
+  = 0x1 | stats count min(_time) as firstTime max(_time) as lastTime by SourceImage,
+  TargetImage, TargetProcessId, SourceProcessId, GrantedAccess CallTrace, dest | rename
+  dest as dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_terminating_lsass_process_filter`

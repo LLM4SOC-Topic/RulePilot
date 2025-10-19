@@ -1,0 +1,24 @@
+description: This analysis detects the use of debugger tools within a production environment.
+  While these tools are legitimate for file analysis and debugging, they are abused
+  by malware like PlugX and DarkGate for malicious DLL side-loading. The hunting query
+  aids Security Operations Centers (SOCs) in identifying potentially suspicious tool
+  executions, particularly for non-technical users in the production network.
+required_fields:
+- _time
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.process_name
+- Processes.process_id
+- Processes.process
+- Processes.dest
+- Processes.user
+- Processes.process_id
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where Processes.process_name = "x32dbg.exe" OR
+  Processes.process_name = "x64dbg.exe" OR Processes.process_name = "windbg.exe" by
+  Processes.dest Processes.user Processes.parent_process_name Processes.parent_process
+  Processes.process_name Processes.original_file_name Processes.process Processes.process_id
+  Processes.parent_process_id | `drop_dm_object_name(Processes)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_debugger_tool_execution_filter`'

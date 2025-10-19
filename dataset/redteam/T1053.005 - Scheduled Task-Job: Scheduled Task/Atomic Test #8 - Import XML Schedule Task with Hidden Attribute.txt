@@ -1,0 +1,10 @@
+Create an scheduled task that executes calc.exe after user login from XML that contains hidden setting attribute. This technique was seen several times in tricbot malware and also with the targetted attack campaigne the industroyer2.
+
+Inputs:
+Name	Description	Type	Default Value
+xml_path	path of vbs to use when creating masquerading files	path	PathToAtomicsFolder\T1053.005\src\T1053_05_SCTASK_HIDDEN_ATTRIB.xml
+Attack Commands: Run with powershell! Elevation Required (e.g. root or admin)
+$xml = [System.IO.File]::ReadAllText("#{xml_path}")
+Invoke-CimMethod -ClassName PS_ScheduledTask -NameSpace "Root\Microsoft\Windows\TaskScheduler" -MethodName "RegisterByXml" -Arguments @{ Force = $true; Xml =$xml; }
+Cleanup Commands:
+Unregister-ScheduledTask -TaskName "atomic red team" -confirm:$false >$null 2>&1

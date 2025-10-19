@@ -1,0 +1,18 @@
+description: The following analytic detects the loading of known vulnerable Windows
+  drivers, which may indicate potential persistence or privilege escalation attempts.
+  It leverages Sysmon EventCode 6 to identify driver loading events and cross-references
+  them with a list of vulnerable drivers. This activity is significant as attackers
+  often exploit vulnerable drivers to gain elevated privileges or maintain persistence
+  on a system. If confirmed malicious, this could allow attackers to execute arbitrary
+  code with high privileges, leading to further system compromise and potential data
+  exfiltration.
+required_fields:
+- _time
+- dest
+- ImageLoaded
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=6  | stats  min(_time) as firstTime
+  max(_time) as lastTime count by dest ImageLoaded | lookup loldrivers driver_name
+  AS ImageLoaded OUTPUT is_driver driver_description | search is_driver = TRUE | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_vulnerable_driver_loaded_filter`

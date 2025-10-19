@@ -1,0 +1,26 @@
+description: The following analytic identifies changes to the Directory Services Restore
+  Mode (DSRM) account behavior via registry modifications. It detects alterations
+  in the registry path "*\\System\\CurrentControlSet\\Control\\Lsa\\DSRMAdminLogonBehavior"
+  with specific values indicating potential misuse. This activity is significant because
+  the DSRM account, if misconfigured, can be exploited to persist within a domain,
+  similar to a local administrator account. If confirmed malicious, an attacker could
+  gain persistent administrative access to a Domain Controller, leading to potential
+  domain-wide compromise and unauthorized access to sensitive information.
+required_fields:
+- _time
+- Registry.registry_value_data
+- Registry.registry_path
+- Registry.dest
+- Registry.user
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` min(_time) as _time from datamodel=Endpoint.Registry
+  where Registry.registry_path= "*\\System\\CurrentControlSet\\Control\\Lsa\\DSRMAdminLogonBehavior"
+  Registry.registry_value_data IN ("*1","*2") by Registry.action Registry.registry_path
+  Registry.registry_value_data Registry.registry_value_type Registry.process_guid
+  Registry.dest Registry.user | `drop_dm_object_name(Registry)` | join type=outer
+  process_guid [| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count FROM datamodel=Endpoint.Processes by Processes.user
+  Processes.process_name Processes.process Processes.dest Processes.parent_process_name
+  Processes.parent_process Processes.process_guid | `drop_dm_object_name(Processes)`]
+  | table _time action dest user parent_process_name parent_process process_name process
+  process_guid registry_path registry_value_data registry_value_type | `windows_ad_dsrm_account_changes_filter`'

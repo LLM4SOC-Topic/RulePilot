@@ -1,0 +1,24 @@
+description: The following analytic identifies attempts by users to access Okta applications
+  that have not been assigned to them. It leverages Okta Identity Management logs,
+  specifically focusing on failed access attempts to unassigned applications. This
+  activity is significant for a SOC as it may indicate potential unauthorized access
+  attempts, which could lead to exposure of sensitive information or disruption of
+  services. If confirmed malicious, such activity could result in data breaches, non-compliance
+  with data protection laws, and overall compromise of the IT environment.
+required_fields:
+- _time
+- Authentication.app
+- Authentication.action
+- Authentication.user
+- Authentication.reason
+- Authentication.dest
+- Authentication.signature
+- Authentication.method
+- Authentication.src
+rule: '| tstats values(Authentication.app) as app values(Authentication.action) as
+  action values(Authentication.user) as user values(Authentication.reason) as reason
+  from datamodel=Authentication where Authentication.signature=app.generic.unauth_app_access_attempt
+  Authentication.action="failure" by _time Authentication.src Authentication.user
+  | `drop_dm_object_name("Authentication")` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | iplocation
+  src | `okta_unauthorized_access_to_application_filter`'

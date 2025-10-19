@@ -1,0 +1,21 @@
+description: The following analytic detects attempts to exploit the ConnectWise ScreenConnect
+  CVE-2024-1709 vulnerability, which allows attackers to bypass authentication via
+  an alternate path or channel. It leverages web request logs to identify access to
+  the SetupWizard.aspx page, indicating potential exploitation. This activity is significant
+  as it can lead to unauthorized administrative access and remote code execution.
+  If confirmed malicious, attackers could create administrative users and gain full
+  control over the affected system, posing severe security risks. Immediate remediation
+  by updating to version 23.9.8 or above is recommended.
+required_fields:
+- Web.src
+- Web.dest
+- Web.http_user_agent
+- Web.url
+- Web.status
+- Web.http_method
+rule: '| tstats count min(_time) as firstTime max(_time) as lastTime from datamodel=Web
+  where Web.url IN ("*/SetupWizard.aspx/*","*/SetupWizard/") Web.status=200 Web.http_method=POST
+  by Web.src, Web.dest, Web.http_user_agent, Web.url, Web.status, Web.http_method,
+  sourcetype, source | rex field=Web.url "/SetupWizard.aspx/(?<randomPath>.+)" | `drop_dm_object_name("Web")`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `connectwise_screenconnect_authentication_bypass_filter`'

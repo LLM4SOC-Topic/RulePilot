@@ -1,0 +1,36 @@
+description: The following analytic identifies the use of Windows InstallUtil.exe
+  making a remote network connection using the `/u` (uninstall) switch. This detection
+  leverages Endpoint Detection and Response (EDR) telemetry, focusing on process and
+  network activity data. This behavior is significant as it may indicate an attempt
+  to download and execute code while bypassing application control mechanisms. If
+  confirmed malicious, this activity could allow an attacker to execute arbitrary
+  code, potentially leading to system compromise, data exfiltration, or further lateral
+  movement within the network.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+- Ports.process_guid
+- Ports.dest
+- Ports.dest_port
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count FROM datamodel=Endpoint.Processes where (Processes.process_name=installutil.exe
+  OR Processes.original_file_name=InstallUtil.exe) Processes.process IN ("*/u*", "*uninstall*")
+  by _time span=1h  Processes.user Processes.process_id Processes.process_name Processes.dest
+  Processes.process_path Processes.process Processes.parent_process_name | `drop_dm_object_name(Processes)`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | join  process_id [| tstats summariesonly=`summariesonly_config`
+  allow_old_summaries=`oldsummaries_config` fillnull_value=`fillnull_config` count
+  FROM datamodel=Network_Traffic.All_Traffic where All_Traffic.dest_port != 0 by All_Traffic.process_id
+  All_Traffic.dest All_Traffic.dest_port | `drop_dm_object_name(All_Traffic)` | rename
+  dest as C2 ] | table _time user dest parent_process_name process_name process_path
+  process process_id dest_port C2 | `windows_installutil_uninstall_option_with_network_filter`'

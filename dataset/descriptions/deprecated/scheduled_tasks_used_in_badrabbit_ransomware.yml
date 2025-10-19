@@ -1,0 +1,13 @@
+description: This search looks for flags passed to schtasks.exe on the command-line
+  that indicate that task names related to the execution of Bad Rabbit ransomware
+  were created or deleted. Deprecated because we already have a similar detection
+required_fields:
+- _time
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  values(Processes.process) as process  from datamodel=Endpoint.Processes where Processes.process_name=schtasks.exe
+  (Processes.process= "*create*"  OR Processes.process= "*delete*") by Processes.parent_process
+  Processes.process_name Processes.user Processes.dest | `drop_dm_object_name("Processes")`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)|convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | search (process=*rhaegal* OR process=*drogon* OR *viserion_*) |
+  `scheduled_tasks_used_in_badrabbit_ransomware_filter`'

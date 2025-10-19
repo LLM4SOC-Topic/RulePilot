@@ -1,0 +1,20 @@
+description: The following analytic detects the use of PowerView commandlets to discover
+  Windows endpoints with Kerberos Constrained Delegation. It leverages PowerShell
+  Script Block Logging (EventCode=4104) to identify specific commandlets like `Get-DomainComputer`
+  or `Get-NetComputer` with the `-TrustedToAuth` parameter. This activity is significant
+  as it indicates potential reconnaissance efforts by adversaries or Red Teams to
+  map out privileged delegation settings in Active Directory. If confirmed malicious,
+  this could allow attackers to identify high-value targets for further exploitation,
+  potentially leading to privilege escalation or lateral movement within the network.
+required_fields:
+- _time
+- EventCode
+- ScriptBlockText
+- Computer
+- UserID
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 (ScriptBlockText = "*Get-DomainComputer*" OR ScriptBlockText = "*Get-NetComputer*")
+  AND (ScriptBlockText = "*-TrustedToAuth*") | stats count min(_time) as firstTime
+  max(_time) as lastTime by EventCode ScriptBlockText Computer UserID | rename Computer
+  as dest | rename UserID as user | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_powerview_constrained_delegation_discovery_filter`

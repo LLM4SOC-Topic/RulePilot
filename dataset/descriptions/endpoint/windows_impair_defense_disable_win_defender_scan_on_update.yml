@@ -1,0 +1,22 @@
+description: The following analytic detects modifications to the Windows registry
+  that disable the Windows Defender Scan On Update feature. It leverages data from
+  the Endpoint.Registry datamodel, specifically looking for changes to the "DisableScanOnUpdate"
+  registry setting with a value of "0x00000001". This activity is significant because
+  disabling automatic scans can leave systems vulnerable to malware and other threats.
+  If confirmed malicious, this action could allow attackers to bypass Windows Defender,
+  facilitating further compromise and persistence within the environment.
+required_fields:
+- _time
+- Registry.registry_key_name
+- Registry.registry_value_name
+- Registry.dest
+- Registry.user
+- Registry.registry_path
+- Registry.action
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry where Registry.registry_path= "*\\Windows Defender\\Signature
+  Updates\\DisableScanOnUpdate" Registry.registry_value_data="0x00000001" by Registry.registry_key_name
+  Registry.user Registry.registry_path Registry.registry_value_data Registry.action
+  Registry.dest | `drop_dm_object_name(Registry)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_impair_defense_disable_win_defender_scan_on_update_filter`'

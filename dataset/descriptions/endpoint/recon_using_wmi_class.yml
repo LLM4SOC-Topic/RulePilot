@@ -1,0 +1,23 @@
+description: The following analytic detects suspicious PowerShell activity via EventCode
+  4104, where WMI performs event queries to gather information on running processes
+  or services. This detection leverages PowerShell Script Block Logging to identify
+  specific WMI queries targeting system information classes like Win32_Bios and Win32_OperatingSystem.
+  This activity is significant as it often indicates reconnaissance efforts by an
+  adversary to profile the compromised machine. If confirmed malicious, the attacker
+  could gain detailed system information, aiding in further exploitation or lateral
+  movement within the network.
+required_fields:
+- _time
+- EventCode
+- ScriptBlockText
+- Computer
+- UserID
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 (ScriptBlockText= "*SELECT*" OR ScriptBlockText= "*Get-WmiObject*")
+  AND (ScriptBlockText= "*Win32_Bios*" OR ScriptBlockText= "*Win32_OperatingSystem*"
+  OR ScriptBlockText= "*Win32_Processor*" OR ScriptBlockText= "*Win32_ComputerSystem*"
+  OR ScriptBlockText= "*Win32_PnPEntity*" OR ScriptBlockText= "*Win32_ShadowCopy*"
+  OR ScriptBlockText= "*Win32_DiskDrive*" OR ScriptBlockText= "*Win32_PhysicalMemory*")
+  | stats count min(_time) as firstTime max(_time) as lastTime by EventCode ScriptBlockText
+  Computer UserID | rename Computer as dest | rename UserID as user| convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `recon_using_wmi_class_filter`

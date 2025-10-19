@@ -1,0 +1,19 @@
+description: The following analytic detects a source computer accessing Windows administrative
+  shares (C$, Admin$, IPC$) on 30 or more remote endpoints within a 5-minute window.
+  It leverages Event IDs 5140 and 5145 from file share events. This behavior is significant
+  as it may indicate an adversary enumerating network shares to locate sensitive files,
+  a common tactic used by threat actors. If confirmed malicious, this activity could
+  lead to unauthorized access to critical data, lateral movement, and potential compromise
+  of multiple systems within the network.
+required_fields:
+- _time
+- EventCode
+- ShareName
+- Computer
+- IpAddress
+- SubjectUserName
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=5140 OR EventCode=5145 (ShareName="\\\\*\\ADMIN$" OR ShareName="\\\\*\\IPC$"
+  OR ShareName="\\\\*\\C$") | bucket span=5m _time | stats dc(Computer) AS unique_targets
+  values(Computer) as host_targets values(ShareName) as shares by _time, IpAddress,
+  SubjectUserName, EventCode | where unique_targets > 30 | `windows_administrative_shares_accessed_on_multiple_hosts_filter`

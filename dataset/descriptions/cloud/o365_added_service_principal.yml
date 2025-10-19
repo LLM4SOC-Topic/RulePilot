@@ -1,0 +1,22 @@
+description: The following analytic detects the addition of new service principal
+  accounts in O365 tenants. It leverages data from the `o365_management_activity`
+  dataset, specifically monitoring for operations related to adding or creating service
+  principals. This activity is significant because attackers can exploit service principals
+  to gain unauthorized access and perform malicious actions within an organization's
+  environment. If confirmed malicious, this could allow attackers to interact with
+  APIs, access resources, and execute operations on behalf of the organization, potentially
+  leading to data breaches or further compromise.
+required_fields:
+- _time
+- Workload
+- signature
+- src_user
+- src_user_type
+- action
+- Operation
+- authentication_service
+rule: sourcetype=o365:management:activity Workload=AzureActiveDirectory Operation="*Add
+  service principal*" OR (Operation = "*principal*" AND action = "created") | stats
+  count values(ModifiedProperties{}.NewValue) as new_value by src_user src_user_type
+  action Operation authentication_service Workload | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `o365_added_service_principal_filter`

@@ -1,0 +1,28 @@
+description: The following analytic detects instances of DLLHost.exe running without
+  command line arguments while establishing a network connection. This behavior is
+  identified using Endpoint Detection and Response (EDR) telemetry, focusing on process
+  execution and network activity data. It is significant because DLLHost.exe typically
+  runs with specific arguments, and its absence can indicate malicious activity, such
+  as Cobalt Strike usage. If confirmed malicious, this activity could allow attackers
+  to execute code, move laterally, or exfiltrate data, posing a severe threat to the
+  network's security.
+required_fields:
+- _time
+- EventID
+- process_name
+- process_id
+- parent_process_name
+- dest_port
+- process_path
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Processes where Processes.process_name=dllhost.exe Processes.action!="blocked"
+  by host _time span=1h Processes.process_id Processes.process_name Processes.dest
+  Processes.process_path Processes.process Processes.parent_process_name Processes.parent_process
+  | `drop_dm_object_name(Processes)` | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | regex process="(?i)(dllhost\.exe.{0,4}$)"
+  | rename dest as src | join host process_id [| tstats summariesonly=`summariesonly_config`
+  allow_old_summaries=`oldsummaries_config` fillnull_value=`fillnull_config` count
+  latest(All_Traffic.dest) as dest latest(All_Traffic.dest_ip) as dest_ip latest(All_Traffic.dest_port)
+  as dest_port FROM datamodel=Network_Traffic.All_Traffic where All_Traffic.dest_port
+  != 0 by host All_Traffic.process_id | `drop_dm_object_name(All_Traffic)`] | `dllhost_with_no_command_line_arguments_with_network_filter`'

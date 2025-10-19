@@ -1,0 +1,22 @@
+description: The following analytic detects the loading of drivers from suspicious
+  paths, which is a technique often used by malicious software such as coin miners
+  (e.g., xmrig). It leverages Sysmon EventCode 6 to identify drivers loaded from non-standard
+  directories. This activity is significant because legitimate drivers typically reside
+  in specific system directories, and deviations may indicate malicious activity.
+  If confirmed malicious, this could allow an attacker to execute code at the kernel
+  level, potentially leading to privilege escalation, persistence, or further system
+  compromise.
+required_fields:
+- _time
+- dest
+- ImageLoaded
+- Hashes
+- IMPHASH
+- Signature
+- Signed
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=6 ImageLoaded = "*.sys" NOT
+  (ImageLoaded IN("*\\WINDOWS\\inf","*\\WINDOWS\\System32\\drivers\\*", "*\\WINDOWS\\System32\\DriverStore\\FileRepository\\*"))
+  |  stats  min(_time) as firstTime max(_time) as lastTime count by dest ImageLoaded
+  Hashes IMPHASH Signature Signed| rename ImageLoaded as file_name | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `suspicious_driver_loaded_path_filter`

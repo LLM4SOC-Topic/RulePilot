@@ -1,0 +1,21 @@
+description: The following analytic detects attempts to exploit the CVE-2023-42793
+  vulnerability in JetBrains TeamCity On-Premises. It identifies suspicious POST requests
+  to /app/rest/users/id:1/tokens/RPC2, leveraging the Web datamodel to monitor specific
+  URL patterns and HTTP methods. This activity is significant as it may indicate an
+  unauthenticated attacker attempting to gain administrative access via Remote Code
+  Execution (RCE). If confirmed malicious, this could allow the attacker to execute
+  arbitrary code, potentially compromising the entire TeamCity environment and leading
+  to further unauthorized access and data breaches.
+required_fields:
+- Web.http_user_agent
+- Web.status
+- Web.http_method
+- Web.url
+- Web.url_length
+- Web.src
+- Web.dest
+rule: '| tstats count min(_time) as firstTime max(_time) as lastTime from datamodel=Web
+  where Web.url IN ("/app/rest/users/id:1/tokens/RPC2*") Web.status=200 Web.http_method=POST
+  by Web.http_user_agent, Web.status Web.http_method, Web.url, Web.url_length, Web.src,
+  Web.dest, sourcetype | `drop_dm_object_name("Web")` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `jetbrains_teamcity_rce_attempt_filter`'

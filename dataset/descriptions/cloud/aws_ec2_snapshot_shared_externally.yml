@@ -1,0 +1,23 @@
+description: The following analytic detects when an EC2 snapshot is shared with an
+  external AWS account by analyzing AWS CloudTrail events. This detection method leverages
+  CloudTrail logs to identify modifications in snapshot permissions, specifically
+  when the snapshot is shared outside the originating AWS account. This activity is
+  significant as it may indicate an attempt to exfiltrate sensitive data stored in
+  the snapshot. If confirmed malicious, an attacker could gain unauthorized access
+  to the snapshot's data, potentially leading to data breaches or further exploitation
+  of the compromised information.
+required_fields:
+- _time
+- eventName
+- user_arn
+- src_ip
+- requestParameters.attributeType
+- aws_account_id
+- vendor_region
+- user_agent
+- userIdentity.principalId
+rule: sourcetype=aws:cloudtrail eventName=ModifySnapshotAttribute | rename requestParameters.createVolumePermission.add.items{}.userId
+  as requested_account_id | search requested_account_id != NULL | eval match=if(requested_account_id==aws_account_id,"Match","No
+  Match") | table _time user_arn src_ip requestParameters.attributeType requested_account_id
+  aws_account_id match vendor_region user_agent userIdentity.principalId | where match
+  = "No Match" | `aws_ec2_snapshot_shared_externally_filter`

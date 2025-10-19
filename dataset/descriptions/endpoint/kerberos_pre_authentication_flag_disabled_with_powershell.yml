@@ -1,0 +1,19 @@
+description: The following analytic detects the use of the `Set-ADAccountControl`
+  PowerShell cmdlet with parameters that disable Kerberos Pre-Authentication. It leverages
+  PowerShell Script Block Logging (EventCode=4104) to identify this specific command
+  execution. Disabling Kerberos Pre-Authentication is significant because it allows
+  adversaries to perform offline brute force attacks against user passwords using
+  the AS-REP Roasting technique. If confirmed malicious, this activity could enable
+  attackers to escalate privileges or maintain persistence within an Active Directory
+  environment, posing a severe security risk.
+required_fields:
+- _time
+- EventCode
+- ScriptBlockText
+- Computer
+- user_id
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 (ScriptBlockText = "*Set-ADAccountControl*" AND ScriptBlockText="*DoesNotRequirePreAuth:$true*")
+  | stats count min(_time) as firstTime max(_time) as lastTime by EventCode ScriptBlockText
+  Computer user_id | rename Computer as dest | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `kerberos_pre_authentication_flag_disabled_with_powershell_filter`

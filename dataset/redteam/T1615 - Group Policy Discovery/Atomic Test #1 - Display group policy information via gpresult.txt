@@ -1,0 +1,3 @@
+Display group policy information via gpresult
+Uses the built-in Windows utility gpresult to display the Resultant Set of Policy (RSoP) information for a remote user and computer The /z parameter displays all available information about Group Policy. More parameters can be found in the linked Microsoft documentation
+Turla has used the /z and /v parameters

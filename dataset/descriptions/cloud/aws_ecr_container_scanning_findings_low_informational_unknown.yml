@@ -1,0 +1,28 @@
+description: The following analytic identifies low, informational, or unknown severity
+  findings from AWS Elastic Container Registry (ECR) image scans. It leverages AWS
+  CloudTrail logs, specifically the DescribeImageScanFindings event, to detect these
+  findings. This activity is significant for a SOC as it helps in early identification
+  of potential vulnerabilities or misconfigurations in container images, which could
+  be exploited if left unaddressed. If confirmed malicious, these findings could lead
+  to unauthorized access, data breaches, or further exploitation within the containerized
+  environment.
+required_fields:
+- eventSource
+- eventName
+- responseElements.imageScanFindings.findings{}
+- awsRegion
+- requestParameters.imageId.imageDigest
+- requestParameters.repositoryName
+- user
+- userName
+- src_ip
+rule: sourcetype=aws:cloudtrail eventSource=ecr.amazonaws.com eventName=DescribeImageScanFindings
+  | spath path=responseElements.imageScanFindings.findings{} output=findings | mvexpand
+  findings | spath input=findings| search severity IN ("LOW", "INFORMATIONAL", "UNKNOWN")
+  | rename name as finding_name, description as finding_description, requestParameters.imageId.imageDigest
+  as imageDigest, requestParameters.repositoryName as repository, userIdentity.principalId
+  as user | eval finding = finding_name.", ".finding_description | eval phase="release"
+  | eval severity="low" | stats min(_time) as firstTime max(_time) as lastTime by
+  awsRegion, eventName, eventSource, imageDigest, repository, user, src_ip, finding,
+  phase, severity | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `aws_ecr_container_scanning_findings_low_informational_unknown_filter`

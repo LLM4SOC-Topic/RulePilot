@@ -1,0 +1,22 @@
+description: The following analytic identifies a local successful authentication event
+  on a Windows endpoint using the Kerberos package. It detects EventCode 4624 with
+  LogonType 3 and source address 127.0.0.1, indicating a login to the built-in local
+  Administrator account. This activity is significant as it may suggest a Kerberos
+  relay attack, a method attackers use to escalate privileges. If confirmed malicious,
+  this could allow an attacker to gain unauthorized access to sensitive systems, execute
+  arbitrary code, or create new accounts in Active Directory, leading to potential
+  system compromise.
+required_fields:
+- _time
+- dest
+- subject
+- action
+- Security_ID
+- user
+- TargetUserName
+- src_ip
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security  EventCode=4624
+  LogonType=3 AuthenticationPackageName=Kerberos action=success src=127.0.0.1 | stats
+  count min(_time) as firstTime max(_time) as lastTime by dest, subject, action, SubjectLogonId,
+  user, TargetUserName, src | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_kerberos_local_successful_logon_filter`

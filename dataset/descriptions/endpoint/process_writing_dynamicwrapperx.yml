@@ -1,0 +1,28 @@
+description: The following analytic detects a process writing the dynwrapx.dll file
+  to disk and registering it in the registry. It leverages data from the Endpoint
+  datamodel, specifically monitoring process and filesystem events. This activity
+  is significant because DynamicWrapperX is an ActiveX component often used in scripts
+  to call Windows API functions, and its presence in non-standard locations is highly
+  suspicious. If confirmed malicious, this could allow an attacker to execute arbitrary
+  code, escalate privileges, or maintain persistence within the environment. Immediate
+  investigation of parallel processes and registry modifications is recommended.
+required_fields:
+- _time
+- dest
+- process_name
+- process_guid
+- file_name
+- file_path
+- file_create_time user
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count FROM datamodel=Endpoint.Processes by _time
+  Processes.process_id Processes.process_name Processes.dest Processes.process_guid
+  Processes.user | `drop_dm_object_name(Processes)` | join process_guid [| tstats
+  summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config` fillnull_value=`fillnull_config`
+  count FROM datamodel=Endpoint.Filesystem where Filesystem.file_name="dynwrapx.dll"
+  by _time Filesystem.dest Filesystem.file_create_time Filesystem.file_name Filesystem.file_path
+  Filesystem.process_guid Filesystem.user | `drop_dm_object_name(Filesystem)` | fields
+  _time process_guid file_path file_name file_create_time user dest process_name]
+  | stats count min(_time) as firstTime max(_time) as lastTime by dest process_name
+  process_guid file_name file_path file_create_time user | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `process_writing_dynamicwrapperx_filter`'

@@ -1,0 +1,18 @@
+description: The following analytic detects the enabling of the SMB1 protocol via
+  `powershell.exe`. It leverages PowerShell script block logging (EventCode 4104)
+  to identify the execution of the `Enable-WindowsOptionalFeature` cmdlet with the
+  `SMB1Protocol` parameter. This activity is significant because enabling SMB1 can
+  facilitate lateral movement and file encryption by ransomware, such as RedDot. If
+  confirmed malicious, this action could allow an attacker to propagate through the
+  network, encrypt files, and potentially disrupt business operations.
+required_fields:
+- _time
+- EventCode
+- ScriptBlockText
+- Computer
+- UserID
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText = "*Enable-WindowsOptionalFeature*" ScriptBlockText
+  = "*SMB1Protocol*" | stats count min(_time) as firstTime max(_time) as lastTime
+  by EventCode ScriptBlockText Computer UserID | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `powershell_enable_smb1protocol_feature_filter`

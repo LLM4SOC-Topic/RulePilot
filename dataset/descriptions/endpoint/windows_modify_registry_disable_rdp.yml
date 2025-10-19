@@ -1,0 +1,24 @@
+description: This analytic is developed to detect suspicious registry modifications
+  that disable Remote Desktop Protocol (RDP) by altering the "fDenyTSConnections"
+  key. Changing this key's value to 1 prevents remote connections, which can disrupt
+  remote management and access. Such modifications could indicate an attempt to hinder
+  remote administration or isolate the system from remote intervention, potentially
+  signifying malicious activity.
+required_fields:
+- _time
+- Registry.registry_path
+- Registry.registry_key_name
+- Registry.registry_value_name
+- Registry.registry_key_name
+- Registry.user
+- Registry.dest
+- Registry.action
+- Registry.registry_value_data
+- Registry.process_guid
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry where Registry.registry_path= "*\\Control\\Terminal
+  Server\\fDenyTSConnections*" Registry.registry_value_data="0x00000001" by Registry.registry_key_name
+  Registry.user Registry.registry_path Registry.registry_value_data Registry.action
+  Registry.dest | `drop_dm_object_name(Registry)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_modify_registry_disable_rdp_filter`'

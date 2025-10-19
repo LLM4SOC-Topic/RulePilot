@@ -1,0 +1,24 @@
+description: The following analytic identifies an attempt to disable multi-factor
+  authentication (MFA) for an Okta user. It leverages OktaIM2 logs to detect when
+  the 'user.mfa.factor.deactivate' command is executed. This activity is significant
+  because disabling MFA can allow an adversary to maintain persistence within the
+  environment using a compromised valid account. If confirmed malicious, this action
+  could enable attackers to bypass additional security layers, potentially leading
+  to unauthorized access to sensitive information and prolonged undetected presence
+  in the network.
+required_fields:
+- _time
+- All_Changes.object_category
+- All_Changes.action
+- All_Changes.command
+- All_Changes.user
+- All_Changes.result
+- All_Changes.src
+- sourcetype
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count max(_time) as lastTime, min(_time) as firstTime
+  from datamodel=Change where sourcetype="OktaIM2:log" All_Changes.object_category=User
+  AND All_Changes.action=modified All_Changes.command=user.mfa.factor.deactivate by
+  All_Changes.user All_Changes.result All_Changes.command sourcetype All_Changes.src
+  | `drop_dm_object_name("All_Changes")` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `okta_multi_factor_authentication_disabled_filter`'

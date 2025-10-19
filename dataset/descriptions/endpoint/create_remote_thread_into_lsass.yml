@@ -1,0 +1,22 @@
+description: The following analytic detects the creation of a remote thread in the
+  Local Security Authority Subsystem Service (LSASS). This behavior is identified
+  using Sysmon EventID 8 logs, focusing on processes that create remote threads in
+  lsass.exe. This activity is significant because it is commonly associated with credential
+  dumping, a tactic used by adversaries to steal user authentication credentials.
+  If confirmed malicious, this could allow attackers to gain unauthorized access to
+  sensitive information, leading to potential compromise of the entire network. Analysts
+  should investigate to differentiate between legitimate tools and potential threats.
+required_fields:
+- _time
+- EventID
+- TargetImage
+- dest
+- EventCode
+- TargetImage
+- TargetProcessId
+- dest
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventID=8 TargetImage=*lsass.exe | stats
+  count min(_time) as firstTime max(_time) as lastTime by dest, EventCode, TargetImage,
+  TargetProcessId | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `create_remote_thread_into_lsass_filter`

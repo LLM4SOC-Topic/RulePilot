@@ -1,0 +1,16 @@
+description: The following analytic detects multiple failed multi-factor authentication
+  (MFA) requests for a single user within a Google Cloud Platform (GCP) tenant. It
+  triggers when 10 or more MFA prompts fail within a 5-minute window, using Google
+  Workspace login failure events. This behavior is significant as it may indicate
+  an adversary attempting to bypass MFA by bombarding the user with repeated authentication
+  requests. If confirmed malicious, this activity could lead to unauthorized access,
+  allowing attackers to compromise accounts and potentially escalate privileges within
+  the GCP environment.
+required_fields:
+- _time
+rule: sourcetype=gws:reports:login event.name=login_failure event.parameters{}.multiValue{}
+  IN ("backup_code", "google_authenticator", "google_prompt", "idv_any_phone", "idv_preregistered_phone",
+  "internal_two_factor", "knowledge_employee_id", "knowledge_preregistered_email",
+  "login_location", "knowledge_preregistered_phone", "offline_otp", "security_key",
+  "security_key_otp") | bucket span=5m _time | stats dc(_raw) AS mfa_prompts values(user)
+  AS user by src_ip, login_challenge_method,  _time | where mfa_prompts >= 10 | `gcp_multiple_failed_mfa_requests_for_user_filter`

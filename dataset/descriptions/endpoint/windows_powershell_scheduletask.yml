@@ -1,0 +1,20 @@
+description: The following analytic detects potential malicious activities involving
+  PowerShell's task scheduling cmdlets. It leverages PowerShell Script Block Logging
+  (EventCode 4104) to identify unusual or suspicious use of cmdlets like 'New-ScheduledTask'
+  and 'Set-ScheduledTask'. This activity is significant as attackers often use these
+  cmdlets for persistence and remote execution of malicious code. If confirmed malicious,
+  this could allow attackers to maintain access, deliver additional payloads, or execute
+  ransomware, leading to data theft or other severe impacts. Immediate investigation
+  and mitigation are crucial to prevent further compromise.
+required_fields:
+- _time
+- ScriptBlockText
+- Computer
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText IN ("*New-ScheduledTask*", "*New-ScheduledTaskAction*",
+  "*New-ScheduledTaskSettingsSet*", "*New-ScheduledTaskTrigger*", "*Register-ClusteredScheduledTask*",
+  "*Register-ScheduledTask*", "*Set-ClusteredScheduledTask*", "*Set-ScheduledTask*",
+  "*Start-ScheduledTask*", "*Enable-ScheduledTask*") | stats count min(_time) as firstTime
+  max(_time) as lastTime by EventCode ScriptBlockText Computer user_id | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_powershell_scheduletask_filter`

@@ -1,0 +1,20 @@
+description: The following analytic identifies instances where a new owner is assigned
+  to an application registration within an Azure AD and Office 365 tenant. It leverages
+  O365 audit logs, specifically events related to changes in owner assignments within
+  the AzureActiveDirectory workload. This activity is significant because assigning
+  a new owner to an application registration can grant significant control over the
+  application's configuration, permissions, and behavior. If confirmed malicious,
+  an attacker could modify the application's settings, permissions, and behavior,
+  leading to unauthorized data access, privilege escalation, or the introduction of
+  malicious behavior within the application's operations.
+required_fields:
+- time
+- Workload
+- Operation
+- ModifiedProperties{}.NewValue
+- user
+rule: sourcetype=o365:management:activity Workload=AzureActiveDirectory Operation="Add
+  owner to application." | eval app_id=mvindex('ModifiedProperties{}.NewValue', 0)
+  | eval app_displayName=mvindex('ModifiedProperties{}.NewValue', 1) | stats max(_time)
+  as lastTime values(ModifiedProperties{}.NewValue) by Operation, user, app_displayName,
+  object | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `o365_application_registration_owner_added_filter`

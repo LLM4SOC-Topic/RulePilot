@@ -1,0 +1,8 @@
+The cmdlet executes the function “Execute” from the Class “projFUD.PA”.
+The “Execute” Function then uses process hollowing technique to inject malicious code into legit processes such as aspnet_compiler.exe, aspnet_regbrowsers.exe, CasPol.exe, RegAsm.exe and MSBuild.exe.
+The API usage for the process hollowing is shown below
+
+This test uses PowerShell to create a Hollow from a PE on disk with explorer as the parent.
+Attack Commands: Run with powershell!
+Cleanup Commands:
+Stop-Process -Name "#{spawnto_process_name}" -ErrorAction Ignore

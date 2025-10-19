@@ -1,0 +1,9 @@
+description: This search provides information on Kubernetes RBAC authorizations by
+  accounts, this search can be modified by adding top to see both extremes of RBAC
+  by accounts occurrences
+required_fields:
+- _time
+rule: sourcetype="google:gcp:pubsub:message" data.labels.authorization.k8s.io/reason=ClusterRoleBinding
+  OR Clusterrole  | table src_ip src_user data.labels.authorization.k8s.io/decision
+  data.labels.authorization.k8s.io/reason | rare src_user data.labels.authorization.k8s.io/reason
+  |`kubernetes_gcp_detect_rbac_authorizations_by_account_filter`

@@ -1,0 +1,19 @@
+description: The following analytic detects the execution of the `Get-DomainUser`
+  or `Get-NetUser` PowerShell cmdlets with the `-SPN` parameter, indicating the use
+  of PowerView for SPN discovery. It leverages PowerShell Script Block Logging (EventCode=4104)
+  to identify these specific commands. This activity is significant as it suggests
+  an attempt to enumerate domain accounts associated with Service Principal Names
+  (SPNs), a common precursor to Kerberoasting attacks. If confirmed malicious, this
+  could allow an attacker to identify and target accounts for credential theft, potentially
+  leading to unauthorized access and privilege escalation within the network.
+required_fields:
+- _time
+- EventCode
+- Computer
+- ScriptBlockText
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 (ScriptBlockText =*Get-NetUser* OR ScriptBlockText=*Get-DomainUser*)
+  ScriptBlockText= *-SPN* | stats count min(_time) as firstTime max(_time) as lastTime
+  by EventCode ScriptBlockText Computer UserID | rename Computer as dest | rename
+  UserID as user | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| `windows_powerview_spn_discovery_filter`

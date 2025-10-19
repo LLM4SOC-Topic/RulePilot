@@ -1,0 +1,19 @@
+description: This search looks for AWS provisioning activities from previously unseen
+  regions. Region in this context is similar to a state in the United States. Provisioning
+  activities are defined broadly as any event that begins with "Run" or "Create."
+  This search is deprecated and have been translated to use the latest Change Datamodel.
+required_fields:
+- _time
+- eventName
+- sourceIPAddress
+rule: sourcetype=aws:cloudtrail (eventName=Run* OR eventName=Create*) | iplocation
+  sourceIPAddress | search Region=* [search sourcetype=aws:cloudtrail (eventName=Run*
+  OR eventName=Create*) | iplocation sourceIPAddress | search Region=* | stats earliest(_time)
+  as firstTime, latest(_time) as lastTime by sourceIPAddress, City, Region, Country
+  | inputlookup append=t previously_seen_provisioning_activity_src.csv | stats min(firstTime)
+  as firstTime max(lastTime) as lastTime by sourceIPAddress, City, Region, Country
+  | outputlookup previously_seen_provisioning_activity_src.csv | stats min(firstTime)
+  as firstTime max(lastTime) as lastTime by Region | eval newRegion=if(firstTime >=
+  relative_time(now(), "-70m@m"), 1, 0) | where newRegion=1 | table Region] | spath
+  output=user userIdentity.arn | rename sourceIPAddress as src_ip | table _time, user,
+  src_ip, Region, eventName, errorCode | `aws_cloud_provisioning_from_previously_unseen_region_filter`

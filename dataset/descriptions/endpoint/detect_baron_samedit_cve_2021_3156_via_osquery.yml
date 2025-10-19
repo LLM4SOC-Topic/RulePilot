@@ -1,0 +1,12 @@
+description: The following analytic detects the execution of the "sudoedit -s *" command,
+  which is associated with the Baron Samedit CVE-2021-3156 heap-based buffer overflow
+  vulnerability. This detection leverages the `osquery_process` data source to identify
+  instances where this specific command is run. This activity is significant because
+  it indicates an attempt to exploit a known vulnerability that allows privilege escalation.
+  If confirmed malicious, an attacker could gain full control of the system, execute
+  arbitrary code, or access sensitive data, leading to potential data breaches and
+  system disruptions.
+required_fields:
+- _time
+- columns.cmdline
+rule: eventtype="osquery-process" | search "columns.cmdline"="sudoedit -s \\*" | `detect_baron_samedit_cve_2021_3156_via_osquery_filter`

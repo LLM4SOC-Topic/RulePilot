@@ -1,0 +1,29 @@
+description: This analytic is developed to detect suspicious registry modifications
+  targeting BitLocker settings. The malware ShrinkLocker alters various registry keys
+  to change how BitLocker handles encryption, potentially bypassing TPM requirements,
+  enabling BitLocker without TPM, and enforcing specific startup key and PIN configurations.
+  Such modifications can weaken system security, making it easier for unauthorized
+  access and data breaches. Detecting these changes is crucial for maintaining robust
+  encryption and data protection.
+required_fields:
+- _time
+- Registry.registry_path
+- Registry.registry_key_name
+- Registry.registry_value_name
+- Registry.registry_key_name
+- Registry.user
+- Registry.dest
+- Registry.action
+- Registry.registry_value_data
+- Registry.process_guid
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry where (Registry.registry_path= "*\\Policies\\Microsoft\\FVE\\*"
+  Registry.registry_value_name IN("EnableBDEWithNoTPM", "EnableNonTPM", "UseAdvancedStartup")
+  Registry.registry_value_data = 0x00000001) OR (Registry.registry_path= "*\\Policies\\Microsoft\\FVE\\*"
+  Registry.registry_value_name IN("UsePIN", "UsePartialEncryptionKey", "UseTPM", "UseTPMKey",
+  "UseTPMKeyPIN", "UseTPMPIN") Registry.registry_value_data = 0x00000002) by Registry.registry_key_name
+  Registry.user Registry.registry_path Registry.registry_value_data Registry.action
+  Registry.dest Registry.registry_value_name | `drop_dm_object_name(Registry)` | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_modify_registry_configure_bitlocker_filter`'

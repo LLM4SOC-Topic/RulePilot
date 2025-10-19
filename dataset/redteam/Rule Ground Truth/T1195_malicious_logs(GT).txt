@@ -1,0 +1,44 @@
+Atomic Test #1 - Octopus Scanner Malware Open Source Supply Chain
+
+Log1
+09/04/2024 10:53:19 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=461200
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-04 02:53:19.636
+ProcessGuid: {6f6dba56-cb9f-66d7-d721-2d0000001700}
+ProcessId: 102908
+Image: C:\Windows\System32\schtasks.exe
+FileVersion: 10.0.19041.3636 (WinBuild.160101.0800)
+Description: Task Scheduler Configuration Tool
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: schtasks.exe
+CommandLine: schtasks  /create /tn ExplorerSync /tr "javaw -jar C:\Users\Xuche\AppData\Local\Temp\..\Microsoft\ExplorerSync.db" /sc MINUTE /f
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=FCE60EBC7EBCC8B09D5821338391D800E7B37591,MD5=D4DA03B7BB20B7E4F1B762A365D4DD4F,SHA256=9A80453518078BADF0679B0CF30F50A83163E5264A2665C6052CC27F168C50F2,IMPHASH=ECCE05491F2E8F279F4790BCB1318C05
+ParentProcessGuid: {6f6dba56-c9eb-66d7-e61e-2d0000001700}
+ParentProcessId: 109704
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: cmd
+ParentUser: DESKTOP-43B3OH1\xcy
+Collapse
+host = DESKTOP-43B3OH1source = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2\T1195\T1195.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+

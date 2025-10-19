@@ -1,0 +1,23 @@
+description: The following analytic detects attempts to exploit the Citrix Bleed vulnerability
+  (CVE-2023-4966), which can lead to the leaking of session tokens. It identifies
+  HTTP requests with a 200 status code targeting the /oauth/idp/.well-known/openid-configuration
+  URL endpoint. By parsing web traffic and filtering based on user agent details,
+  HTTP method, source and destination IPs, and sourcetype, it aims to identify potentially
+  malicious requests. This activity is significant for a SOC because successful exploitation
+  can allow attackers to impersonate legitimate users, bypass authentication, and
+  access sensitive data. If confirmed malicious, it could lead to unauthorized data
+  access, network propagation, and critical information exfiltration.
+required_fields:
+- Web.http_user_agent
+- Web.status
+- Web.http_method
+- Web.url
+- Web.url_length
+- Web.src
+- Web.dest
+- sourcetype
+rule: '| tstats count min(_time) as firstTime max(_time) as lastTime from datamodel=Web
+  where Web.url IN ("*/oauth/idp/.well-known/openid-configuration*")  Web.status=200
+  by Web.http_user_agent, Web.status Web.http_method, Web.url, Web.url_length, Web.src,
+  Web.dest, sourcetype | `drop_dm_object_name("Web")` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `citrix_adc_and_gateway_unauthorized_data_disclosure_filter`'

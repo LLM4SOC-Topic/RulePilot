@@ -1,0 +1,19 @@
+description: The following analytic detects the import of Windows PowerShell Applocker
+  cmdlets, specifically identifying the use of "Import-Module Applocker" and "Set-AppLockerPolicy"
+  with an XML policy. It leverages PowerShell Script Block Logging (EventCode 4104)
+  to capture and analyze script block text. This activity is significant as it may
+  indicate an attempt to enforce restrictive Applocker policies, potentially used
+  by malware like Azorult to disable antivirus products. If confirmed malicious, this
+  could allow an attacker to bypass security controls, leading to further system compromise
+  and persistence.
+required_fields:
+- _time
+- ScriptBlockText
+- Computer
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText="*Import-Module Applocker*" ScriptBlockText="*Set-AppLockerPolicy
+  *" ScriptBlockText="* -XMLPolicy *" | stats count min(_time) as firstTime max(_time)
+  as lastTime by EventCode ScriptBlockText Computer UserID | rename Computer as dest
+  | rename UserID as user | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_powershell_import_applocker_policy_filter`

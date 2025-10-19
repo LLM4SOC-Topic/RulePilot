@@ -1,0 +1,25 @@
+description: The following analytic detects modifications to the Windows registry
+  that disable SmartScreen protection. It leverages data from the Endpoint.Registry
+  data model, specifically monitoring changes to registry paths associated with SmartScreen
+  settings. This activity is significant because SmartScreen provides an early warning
+  system against phishing and malware. Disabling it can indicate malicious intent,
+  often seen in Remote Access Trojans (RATs) to evade detection while downloading
+  additional payloads. If confirmed malicious, this action could allow attackers to
+  bypass security measures, increasing the risk of successful phishing attacks and
+  malware infections.
+required_fields:
+- _time
+- Registry.dest
+- Registry.registry_value_name
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.registry_value_data
+- Registry.process_guid
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry WHERE Registry.registry_path IN ("*\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\SmartScreenEnabled",
+  "*\\Microsoft\\Windows\\System\\EnableSmartScreen") Registry.registry_value_data  IN
+  ("Off", "0") BY Registry.dest Registry.user Registry.registry_path Registry.registry_key_name
+  Registry.registry_value_name Registry.registry_value_data Registry.process_guid
+  | `drop_dm_object_name(Registry)` | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `disable_windows_smartscreen_protection_filter`'

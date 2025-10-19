@@ -1,0 +1,15 @@
+description: This search looks for PowerShell requesting privileges consistent with
+  credential dumping. Deprecated, looks like things changed from a logging perspective.
+required_fields:
+- _time
+- signature_id
+- Process_Name
+- Message
+- dest
+- Process_ID
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  signature_id=4703 Process_Name=*powershell.exe | rex field=Message "Enabled Privileges:\s+(?<privs>\w+)\s+Disabled
+  Privileges:" | where privs="SeDebugPrivilege" | stats count min(_time) as firstTime
+  max(_time) as lastTime by dest, Process_Name, privs, Process_ID, Message | rename
+  privs as "Enabled Privilege" | rename Process_Name as process |  convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$)| convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `detect_mimikatz_via_powershell_and_eventcode_4703_filter`

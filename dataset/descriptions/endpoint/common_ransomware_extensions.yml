@@ -1,0 +1,26 @@
+description: The following analytic detects modifications to files with extensions
+  commonly associated with ransomware. It leverages the Endpoint.Filesystem data model
+  to identify changes in file extensions that match known ransomware patterns. This
+  activity is significant because it suggests an attacker is attempting to encrypt
+  or alter files, potentially leading to severe data loss and operational disruption.
+  If confirmed malicious, this activity could result in the encryption of critical
+  data, rendering it inaccessible and causing significant damage to the organization's
+  data integrity and availability.
+required_fields:
+- _time
+- Filesystem.user
+- Filesystem.dest
+- Filesystem.file_path
+- Filesystem.file_name
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` min(_time) as firstTime max(_time) as lastTime
+  count latest(Filesystem.user) as user values(Filesystem.file_path) as file_path
+  from datamodel=Endpoint.Filesystem by Filesystem.file_name Filesystem.dest _time
+  span=1h | `drop_dm_object_name(Filesystem)` | rex field=file_name "(?<file_extension>\.[^\.]+)$"
+  | rex field=file_path "(?<true_file_path>([^\\\]*\\\)*).*" | stats min(firstTime)
+  as firstTime max(lastTime) as lastTime latest(user) as user dc(true_file_path) as
+  path_count dc(file_name) as file_count latest(file_name) as file_name latest(true_file_path)
+  as file_path by dest file_extension | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | lookup update=true ransomware_extensions_lookup
+  Extensions AS file_extension OUTPUT Name | search Name !=False | where path_count
+  > 1 OR file_count > 20 | `common_ransomware_extensions_filter`'

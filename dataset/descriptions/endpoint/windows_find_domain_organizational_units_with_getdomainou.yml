@@ -1,0 +1,19 @@
+description: The following analytic detects the execution of the `Get-DomainOU` cmdlet,
+  a part of the PowerView toolkit used for Windows domain enumeration. It leverages
+  PowerShell Script Block Logging (EventCode=4104) to identify this activity. Detecting
+  `Get-DomainOU` usage is significant as adversaries may use it to gather information
+  about organizational units within Active Directory, which can facilitate lateral
+  movement or privilege escalation. If confirmed malicious, this activity could allow
+  attackers to map the domain structure, aiding in further exploitation and persistence
+  within the network.
+required_fields:
+- _time
+- EventCode
+- Message
+- Computer
+- UserID
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText = "*Get-DomainOU*" | stats count min(_time) as firstTime
+  max(_time) as lastTime by EventCode ScriptBlockText Computer UserID | rename Computer
+  as dest, UserID as user | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_find_domain_organizational_units_with_getdomainou_filter`

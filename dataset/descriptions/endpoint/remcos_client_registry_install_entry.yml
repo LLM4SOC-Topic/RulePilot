@@ -1,0 +1,38 @@
+description: The following analytic detects the presence of a registry key associated
+  with the Remcos RAT agent on a host. It leverages data from the Endpoint.Processes
+  and Endpoint.Registry data models in Splunk, focusing on instances where the "license"
+  key is found in the "Software\Remcos" path. This behavior is significant as it indicates
+  potential compromise by the Remcos RAT, a remote access Trojan used for unauthorized
+  access and data exfiltration. If confirmed malicious, the attacker could gain control
+  over the system, steal sensitive information, or use the compromised host for further
+  attacks. Immediate investigation and remediation are required.
+required_fields:
+- _time
+- Processes.user
+- Processes.dest
+- Processes.process_id
+- Processes.process_name
+- Processes.process
+- Processes.process_path
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.process_guid
+- Registry.dest
+- Registry.registry_value_name
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.registry_value_data
+- Registry.process_guid
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) AS firstTime max(_time) AS lastTime
+  FROM datamodel=Endpoint.Processes BY _time span=1h Processes.user Processes.process_id
+  Processes.process_name Processes.process Processes.process_path Processes.dest Processes.parent_process_name
+  Processes.parent_process Processes.process_guid | `drop_dm_object_name(Processes)`
+  | join process_guid [ | tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count FROM datamodel=Endpoint.Registry WHERE (Registry.registry_key_name=*\\Software\\Remcos*)
+  BY _time span=1h Registry.registry_path Registry.registry_key_name Registry.registry_value_name
+  Registry.registry_value_data Registry.process_guid | `drop_dm_object_name(Registry)`]
+  | fields firstTime lastTime dest user parent_process_name parent_process process_name
+  process_path process registry_key_name registry_path registry_value_name registry_value_data
+  process_guid | where isnotnull(registry_value_data) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) |`remcos_client_registry_install_entry_filter`'

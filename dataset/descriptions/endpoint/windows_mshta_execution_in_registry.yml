@@ -1,0 +1,23 @@
+description: The following analytic detects the execution of mshta.exe via registry
+  entries to run malicious scripts. It leverages registry activity logs to identify
+  entries containing "mshta," "javascript," "vbscript," or "WScript.Shell." This behavior
+  is significant as it indicates potential fileless malware, such as Kovter, which
+  uses encoded scripts in the registry to persist and execute without files. If confirmed
+  malicious, this activity could allow attackers to maintain persistence, execute
+  arbitrary code, and evade traditional file-based detection methods, posing a significant
+  threat to system integrity and security.
+required_fields:
+- _time
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.dest
+- Registry.registry_value_data
+- Registry.action
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry where Registry.registry_value_data = "*mshta*"
+  OR Registry.registry_value_data IN ("*javascript:*", "*vbscript:*","*WScript.Shell*")
+  by Registry.registry_key_name Registry.registry_path Registry.registry_value_data
+  Registry.action Registry.dest Registry.user| `drop_dm_object_name(Registry)` | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `windows_mshta_execution_in_registry_filter`'

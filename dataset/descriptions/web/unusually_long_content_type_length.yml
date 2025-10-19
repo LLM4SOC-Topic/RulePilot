@@ -1,0 +1,22 @@
+description: The following analytic identifies unusually long strings in the Content-Type
+  HTTP header sent by the client to the server. It uses data from the Stream:HTTP
+  source, specifically evaluating the length of the `cs_content_type` field. This
+  activity is significant because excessively long Content-Type headers can indicate
+  attempts to exploit vulnerabilities or evade detection mechanisms. If confirmed
+  malicious, this behavior could allow attackers to execute code, manipulate data,
+  or bypass security controls, potentially leading to unauthorized access or data
+  breaches.
+required_fields:
+- _time
+- cs_content_type
+- endtime
+- src_ip
+- dest_ip
+- url
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Web by Web.src Web.dest Web.url Web.http_user_agent Web.http_content_type
+  | `drop_dm_object_name("Web")`  | eval http_content_type_length = len(http_content_type)  |
+  where http_content_type_length > 100 | table firstTime lastTime src dest http_content_type_length
+  http_content_type url http_user_agent | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)  |
+  convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)  | `unusually_long_content_type_length_filter`'

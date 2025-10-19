@@ -1,0 +1,23 @@
+description: The following analytic identifies suspicious Java classes often used
+  for remote command execution exploits in Java frameworks like Apache Struts. It
+  detects this activity by analyzing HTTP POST requests with specific content patterns
+  using Splunk's `stream_http` data source. This behavior is significant because it
+  may indicate an attempt to exploit vulnerabilities in web applications, potentially
+  leading to unauthorized remote code execution. If confirmed malicious, this activity
+  could allow attackers to execute arbitrary commands on the server, leading to data
+  breaches, system compromise, and further network infiltration.
+required_fields:
+- _time
+- http_method
+- http_content_length
+- src_ip
+- url
+- status
+- http_user_agent
+- src
+- dest
+rule: sourcetype=stream:http http_method=POST http_content_length>1 | regex form_data="(?i)java\.lang\.(?:runtime|processbuilder)"
+  | rename src_ip as src | stats count earliest(_time) as firstTime, latest(_time)
+  as lastTime, values(url) as uri, values(status) as status, values(http_user_agent)
+  as http_user_agent by src, dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `suspicious_java_classes_filter`

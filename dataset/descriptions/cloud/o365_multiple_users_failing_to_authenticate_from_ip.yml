@@ -1,0 +1,23 @@
+description: The following analytic identifies instances where more than 10 unique
+  user accounts fail to authenticate from a single IP address within a 5-minute window.
+  This detection leverages O365 audit logs, specifically Azure Active Directory login
+  failures (AzureActiveDirectoryStsLogon). Such activity is significant as it may
+  indicate brute-force attacks or password spraying attempts. If confirmed malicious,
+  this behavior suggests an external entity is attempting to breach security by targeting
+  multiple accounts, potentially leading to unauthorized access. Immediate action
+  is required to block or monitor the suspicious IP and notify affected users to enhance
+  their security measures.
+required_fields:
+- _time
+- Workload
+- Operation
+- record_type
+- user
+- LogonError
+- signature
+- UserAgent
+- ErrorNumber
+rule: sourcetype=o365:management:activity Workload=AzureActiveDirectory Operation=UserLoginFailed
+  ErrorNumber=50126 |  bucket span=5m _time |  stats dc(user) as unique_accounts values(user)
+  as user values(LogonError) as LogonError values(signature) as signature values(UserAgent)
+  as UserAgent by _time, src_ip |  where unique_accounts > 10 | `o365_multiple_users_failing_to_authenticate_from_ip_filter`

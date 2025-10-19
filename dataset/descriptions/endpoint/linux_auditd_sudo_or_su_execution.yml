@@ -1,0 +1,20 @@
+description: The following analytic detects the execution of the "sudo" or "su" command
+  on a Linux operating system. It leverages data from Linux Auditd, focusing on process
+  names and parent process names. This activity is significant because "sudo" and
+  "su" commands are commonly used by adversaries to elevate privileges, potentially
+  leading to unauthorized access or control over the system. If confirmed malicious,
+  this activity could allow attackers to execute commands with root privileges, leading
+  to severe security breaches, data exfiltration, or further system compromise.
+required_fields:
+- _time
+- proctitle
+rule: sourcetype="linux:audit" type=PROCTITLE | eval normalized_proctitle_delimiter
+  = if(type=="PROCTITLE" AND isnotnull(proctitle), if(match(proctitle,"^[0-9A-F]+$"),
+  replace(proctitle, "000", "020"),proctitle),null()) | eval normalized_proctitle_delimiter  =
+  if(type=="PROCTITLE" AND isnotnull(proctitle), if(match(normalized_proctitle_delimiter,"^[0-9A-F]+$"),
+  replace(normalized_proctitle_delimiter, "00", "20"),normalized_proctitle_delimiter),null())
+  | eval process_exec = if(match(normalized_proctitle_delimiter,"^[0-9A-F]+$"),urldecode(replace(normalized_proctitle_delimiter,"([0-9A-F]{2})","%\1")),normalized_proctitle_delimiter)
+  | rename host as dest | where LIKE(process_exec, "%sudo %") OR LIKE(process_exec,
+  "%su %") | stats count min(_time) as firstTime max(_time) as lastTime by process_exec
+  proctitle normalized_proctitle_delimiter dest | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| `linux_auditd_sudo_or_su_execution_filter`

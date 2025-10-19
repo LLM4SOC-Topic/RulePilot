@@ -1,0 +1,17 @@
+description: The following analytic identifies the modification of the SourceAnchor
+  (ImmutableId) attribute for an Azure Active Directory user. This detection leverages
+  Azure AD audit logs, specifically monitoring the "Update user" operation and changes
+  to the SourceAnchor attribute. This activity is significant as it is a step in setting
+  up an Azure AD identity federation backdoor, allowing an adversary to establish
+  persistence. If confirmed malicious, the attacker could impersonate any user, bypassing
+  password and MFA requirements, leading to unauthorized access and potential data
+  breaches.
+required_fields:
+- _time
+rule: sourcetype=azure:monitor:aad  operationName="Update user" properties.targetResources{}.modifiedProperties{}.displayName=SourceAnchor
+  | rename properties.* as * | rename initiatedBy.user.userPrincipalName as initiatedBy
+  | rename targetResources{}.modifiedProperties{}.newValue as modifiedProperties |
+  stats count min(_time) as firstTime max(_time) as lastTime values(user) as user
+  values(modifiedProperties) as modifiedProperties by initiatedBy, src_ip, result,
+  operationName | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `azure_ad_user_immutableid_attribute_updated_filter`

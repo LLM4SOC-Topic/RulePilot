@@ -1,0 +1,22 @@
+description: The following analytic identifies instances of Regsvcs.exe establishing
+  a network connection to a public IP address, excluding private IP ranges. This detection
+  leverages Sysmon EventID 3 logs to monitor network connections initiated by Regsvcs.exe.
+  This activity is significant as Regsvcs.exe, a legitimate Microsoft-signed binary,
+  can be exploited to bypass application control mechanisms and establish remote Command
+  and Control (C2) channels. If confirmed malicious, this behavior could allow an
+  attacker to escalate privileges, persist in the environment, and exfiltrate sensitive
+  data. Immediate investigation and remediation are recommended.
+required_fields:
+- _time
+- EventID
+- dest_ip
+- process_name
+- dest
+- user
+- src_ip
+- dest_host
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventID=3 dest_ip!=10.0.0.0/8 dest_ip!=172.16.0.0/12
+  dest_ip!=192.168.0.0/16 process_name=regsvcs.exe  | stats count min(_time) as firstTime
+  max(_time) as lastTime by dest, user, process_name, src_ip, dest_ip | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `detect_regsvcs_with_network_connection_filter`

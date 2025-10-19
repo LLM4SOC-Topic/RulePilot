@@ -1,0 +1,24 @@
+description: The following analytic detects a suspicious registry modification aimed
+  at disabling Windows hotkeys for native applications. It leverages data from the
+  Endpoint.Registry data model, focusing on specific registry paths and values indicative
+  of this behavior. This activity is significant as it can impair an analyst's ability
+  to use essential tools like Task Manager and Command Prompt, hindering incident
+  response efforts. If confirmed malicious, this technique can allow an attacker to
+  maintain persistence and evade detection, complicating the remediation process.
+required_fields:
+- _time
+- Registry.dest
+- Registry.registry_value_name
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.registry_value_data
+- Registry.process_guidr
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry WHERE (Registry.registry_path="*\\Windows NT\\CurrentVersion\\Image
+  File Execution Options\\*" AND Registry.registry_value_data= "HotKey Disabled" AND
+  Registry.registry_value_name = "Debugger") BY Registry.dest Registry.user Registry.registry_path
+  Registry.registry_key_name Registry.registry_value_name Registry.registry_value_data
+  Registry.process_guid | `drop_dm_object_name(Registry)` | where isnotnull(registry_value_data)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `disable_windows_app_hotkeys_filter`'

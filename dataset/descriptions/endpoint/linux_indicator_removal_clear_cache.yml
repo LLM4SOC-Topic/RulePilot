@@ -1,0 +1,24 @@
+description: The following analytic detects processes that clear or free page cache
+  on a Linux system. It leverages Endpoint Detection and Response (EDR) data, focusing
+  on specific command-line executions involving the kernel system request `drop_caches`.
+  This activity is significant as it may indicate an attempt to delete forensic evidence
+  or the presence of wiper malware like Awfulshred. If confirmed malicious, this behavior
+  could allow an attacker to cover their tracks, making it difficult to investigate
+  other malicious activities or system compromises.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where Processes.process_name IN ("dash", "sudo",
+  "bash")  AND Processes.process  IN("* echo 3 &gt; *", "* echo 2 &gt; *","* echo
+  1 &gt; *") AND Processes.process = "*/proc/sys/vm/drop_caches" by Processes.dest
+  Processes.user Processes.parent_process_name Processes.process_name Processes.process
+  Processes.process_id Processes.parent_process_id Processes.process_guid | `drop_dm_object_name(Processes)`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `linux_indicator_removal_clear_cache_filter`'

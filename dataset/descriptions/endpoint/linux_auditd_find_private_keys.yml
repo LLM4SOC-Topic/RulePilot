@@ -1,0 +1,24 @@
+description: The following analytic detects suspicious attempts to find private keys,
+  which may indicate an attacker's effort to access sensitive cryptographic information.
+  Private keys are crucial for securing encrypted communications and data, and unauthorized
+  access to them can lead to severe security breaches, including data decryption and
+  identity theft. By monitoring for unusual or unauthorized searches for private keys,
+  this analytic helps identify potential threats to cryptographic security, enabling
+  security teams to take swift action to protect the integrity and confidentiality
+  of encrypted information.
+required_fields:
+- _time
+- argc
+- process_exec
+rule: sourcetype="linux:audit" type=EXECVE | eval relevant_fields=if(type="EXECVE",
+  "", relevant_fields) | foreach a* [eval relevant_fields=if(type="EXECVE", mvappend(relevant_fields,
+  '<<FIELD>>'), relevant_fields)] | eval process_exec=if(type="EXECVE", mvjoin(relevant_fields,
+  " "), process_exec) | eval process_exec=if(type="EXECVE", trim(process_exec), process_exec)
+  | rename host as dest | where  (LIKE (process_exec, "%find%") OR LIKE (process_exec,
+  "%grep%")) AND (LIKE (process_exec, "%.pem%") OR LIKE (process_exec, "%.cer%") OR
+  LIKE (process_exec, "%.crt%") OR LIKE (process_exec, "%.pgp%") OR LIKE (process_exec,
+  "%.key%") OR LIKE (process_exec, "%.gpg%")OR LIKE (process_exec, "%.ppk%") OR LIKE
+  (process_exec, "%.p12%")OR LIKE (process_exec, "%.pfx%")OR LIKE (process_exec, "%.p7b%"))
+  | stats count min(_time) as firstTime max(_time) as lastTime by argc process_exec
+  dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$)| `linux_auditd_find_private_keys_filter`

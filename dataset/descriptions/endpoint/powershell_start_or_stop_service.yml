@@ -1,0 +1,17 @@
+description: The following analytic identifies the use of PowerShell's Start-Service
+  or Stop-Service cmdlets on an endpoint. It leverages PowerShell Script Block Logging
+  to detect these commands. This activity is significant because attackers can manipulate
+  services to disable or stop critical functions, causing system instability or disrupting
+  business operations. If confirmed malicious, this behavior could allow attackers
+  to disable security services, evade detection, or disrupt essential services, leading
+  to potential system downtime and compromised security.
+required_fields:
+- _time
+- EventCode
+- ScriptBlockText
+- Computer
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText IN ("*start-service*", "*stop-service*") | stats
+  count min(_time) as firstTime max(_time) as lastTime by Computer EventCode ScriptBlockText
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `powershell_start_or_stop_service_filter`

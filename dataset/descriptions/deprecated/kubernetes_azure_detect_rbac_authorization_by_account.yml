@@ -1,0 +1,10 @@
+description: This search provides information on Kubernetes RBAC authorizations by
+  accounts, this search can be modified by adding rare or top to see both extremes
+  of RBAC by accounts occurrences
+required_fields:
+- _time
+rule: sourcetype=mscs:storage:blob:json category=kube-audit | spath input=properties.log
+  | search annotations.authorization.k8s.io/reason=* | table sourceIPs{} user.username
+  userAgent annotations.authorization.k8s.io/reason |stats count by user.username
+  annotations.authorization.k8s.io/reason | rare user.username annotations.authorization.k8s.io/reason
+  |`kubernetes_azure_detect_rbac_authorization_by_account_filter`

@@ -1,0 +1,28 @@
+description: The following analytic detects the usage of the SharpHound binary by
+  identifying its original filename, `SharpHound.exe`, and the process name. This
+  detection leverages data from Endpoint Detection and Response (EDR) agents, focusing
+  on process metadata and command-line executions. SharpHound is a tool used for Active
+  Directory enumeration, often by attackers during the reconnaissance phase. If confirmed
+  malicious, this activity could allow an attacker to map out the network, identify
+  high-value targets, and plan further attacks, potentially leading to privilege escalation
+  and lateral movement within the environment.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.original_file_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_path
+- Processes.process_path
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Processes where (Processes.process_name=sharphound.exe OR
+  Processes.original_file_name=SharpHound.exe) by Processes.dest Processes.user Processes.parent_process_name
+  Processes.original_file_name Processes.process_name Processes.process Processes.process_id
+  Processes.parent_process_id | `drop_dm_object_name(Processes)` | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `detect_sharphound_usage_filter`'

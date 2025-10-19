@@ -1,0 +1,20 @@
+description: The following analytic detects the use of the `[Adsisearcher]` type accelerator
+  in PowerShell to query Active Directory for domain groups. It leverages PowerShell
+  Script Block Logging (EventCode=4104) to identify specific script blocks containing
+  `[adsisearcher]` and group-related queries. This activity is significant as it may
+  indicate an attempt by adversaries or Red Teams to enumerate domain groups for situational
+  awareness and Active Directory discovery. If confirmed malicious, this behavior
+  could lead to further reconnaissance, privilege escalation, or lateral movement
+  within the network.
+required_fields:
+- _time
+- EventCode
+- ScriptBlockText
+- Computer
+- UserID
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  (ScriptBlockText = "*[adsisearcher]*" AND ScriptBlockText = "*(objectcategory=group)*"
+  AND ScriptBlockText = "*findAll()*") | stats count min(_time) as firstTime max(_time)
+  as lastTime by EventCode ScriptBlockText Computer UserID | rename Computer as dest
+  |rename UserID as user | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) |
+  `domain_group_discovery_with_adsisearcher_filter`

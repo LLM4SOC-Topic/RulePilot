@@ -1,0 +1,22 @@
+description: The following analytic identifies instances where read permissions are
+  granted to mailbox folders within an Office 365 environment. It detects this activity
+  by monitoring the `o365_management_activity` data source for the `Set-MailboxFolderPermission`
+  and `Add-MailboxFolderPermission` operations. This behavior is significant as it
+  may indicate unauthorized access or changes to mailbox folder permissions, potentially
+  exposing sensitive email content. If confirmed malicious, an attacker could gain
+  unauthorized access to read email communications, leading to data breaches or information
+  leakage.
+required_fields:
+- _time
+- Operation
+- AccessRights
+- UserId
+- Identity
+- User
+rule: sourcetype=o365:management:activity Workload=Exchange (Operation="Set-MailboxFolderPermission"
+  OR Operation="Add-MailboxFolderPermission" ) | eval isReadRole=if(match(AccessRights,
+  "^(ReadItems|Author|NonEditingAuthor|Owner|PublishingAuthor|Reviewer)$"), "true",
+  "false") | search isReadRole="true" | rename UserId as user | stats count earliest(_time)
+  as firstTime latest(_time) as lastTime by Operation, user, Identity, AccessRights
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `o365_mailbox_folder_read_permission_granted_filter`

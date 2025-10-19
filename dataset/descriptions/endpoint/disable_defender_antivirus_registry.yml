@@ -1,0 +1,26 @@
+description: The following analytic detects the modification of Windows Defender registry
+  settings to disable antivirus and antispyware protections. It leverages data from
+  the Endpoint.Registry data model, specifically monitoring changes to registry paths
+  associated with Windows Defender policies. This activity is significant because
+  disabling antivirus protections is a common tactic used by adversaries to evade
+  detection and maintain persistence on compromised systems. If confirmed malicious,
+  this action could allow attackers to execute further malicious activities undetected,
+  leading to potential data breaches, system compromise, and further propagation of
+  malware within the network.
+required_fields:
+- _time
+- Registry.dest
+- Registry.registry_value_name
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.registry_value_data
+- Registry.process_guid
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry WHERE (Registry.registry_path = "*\\Policies\\Microsoft\\Windows
+  Defender*" Registry.registry_value_name IN ("DisableAntiSpyware","DisableAntiVirus")
+  Registry.registry_value_data = 0x00000001) BY Registry.registry_path Registry.registry_key_name
+  Registry.registry_value_name Registry.registry_value_data Registry.process_guid
+  Registry.user Registry.dest | `drop_dm_object_name(Registry)` | where isnotnull(registry_value_data)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `disable_defender_antivirus_registry_filter`'

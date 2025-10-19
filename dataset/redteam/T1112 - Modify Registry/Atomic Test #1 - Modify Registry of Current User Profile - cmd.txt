@@ -1,0 +1,2 @@
+Modify the registry of the currently logged in user using reg.exe via cmd console. Upon execution, the message "The operation completed successfully." will be displayed. Additionally, open Registry Editor to view the new entry in HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced.
+

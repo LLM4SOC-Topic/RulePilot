@@ -1,0 +1,26 @@
+description: The following analytic detects the use of `sc.exe` to delete a Windows
+  service. It leverages Endpoint Detection and Response (EDR) data, focusing on process
+  execution logs that capture command-line arguments. This activity is significant
+  because adversaries often delete services to disable security mechanisms or critical
+  system functions, aiding in evasion and persistence. If confirmed malicious, this
+  action could lead to the termination of essential security services, allowing attackers
+  to operate undetected and potentially escalate their privileges or maintain long-term
+  access to the compromised system.
+required_fields:
+- _time
+- Processes.process_name
+- Processes.process
+- Processes.parent_process_name
+- Processes.parent_process
+- Processes.process_id
+- Processes.parent_process_id
+- Processes.dest
+- Processes.user
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` values(Processes.process) as process min(_time)
+  as firstTime max(_time) as lastTime from datamodel=Endpoint.Processes where (Processes.process_name
+  = sc.exe OR Processes.original_file_name = sc.exe) Processes.process="* delete *"
+  by Processes.dest Processes.user Processes.parent_process_name Processes.process_name
+  Processes.original_file_name Processes.process Processes.process_id Processes.parent_process_id
+  | `drop_dm_object_name(Processes)` | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_service_stop_by_deletion_filter`'

@@ -1,0 +1,30 @@
+description: 'This detection monitors changes to the following Active Directory attributes:
+  "msDS-AllowedToDelegateTo", "msDS-AllowedToActOnBehalfOfOtherIdentity", "msDS-KeyCredentialLink",
+  "scriptPath", and "msTSInitialProgram".  Modifications to these attributes can indicate
+  potential malicious activity or privilege escalation attempts. Immediate investigation
+  is recommended upon alert.'
+required_fields:
+- _time
+- OperationType
+- ObjectDN
+- OpCorrelationID
+- src_user
+- AttributeLDAPDisplayName
+- AttributeValue
+- ObjectClass
+- SubjectLogonId
+- DSName
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=5136 AttributeLDAPDisplayName IN ("msDS-AllowedToDelegateTo","msDS-AllowedToActOnBehalfOfOtherIdentity","scriptPath","msTSInitialProgram")
+  OperationType=%%14674  ```Changes to the attribute "msDS-KeyCredentialLink" are
+  also worth moniroting, however tuning will need to be applied``` | table _time ObjectClass
+  ObjectDN OpCorrelationID src_user SubjectLogonId DSName AttributeValue AttributeLDAPDisplayName  |
+  rename SubjectLogonId as TargetLogonId, src_user as initiator, _time as eventTime  |
+  appendpipe [| map search="search eventtype=wineventlog_security OR Channel=security
+  OR source=XmlWinEventLog:Security EventCode=4624 TargetLogonId=$TargetLogonId$"]  |
+  stats min(eventTime) as _time values(initiator) as src_user, values(DSName) as targetDomain,
+  values(ObjectDN) as ObjectDN, values(ObjectClass) as ObjectClass, values(src_category)
+  as src_category, values(src_ip) as src_ip values(LogonType) as LogonType values(AttributeValue)
+  as AttributeValue values(AttributeLDAPDisplayName) as AttributeLDAPDisplayName by
+  TargetLogonId  | rex field=ObjectDN "^CN=(?P<cn>.*?),[A-Z]{2}\="  | eval dest=if(ObjectClass="computer",cn,null),
+  user=if(ObjectClass="user",cn,null) | fields - cn | `windows_ad_suspicious_attribute_modification_filter`

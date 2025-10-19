@@ -1,0 +1,24 @@
+description: The following analytic detects `StopLogging` events within AWS CloudTrail
+  logs, a critical action that adversaries may use to evade detection. By halting
+  the logging of their malicious activities, attackers aim to operate undetected within
+  a compromised AWS environment. This detection is achieved by monitoring for specific
+  CloudTrail log entries that indicate the cessation of logging activities. Identifying
+  such behavior is crucial for a Security Operations Center (SOC), as it signals an
+  attempt to undermine the integrity of logging mechanisms, potentially allowing malicious
+  activities to proceed without observation. The impact of this evasion tactic is
+  significant, as it can severely hamper incident response and forensic investigations
+  by obscuring the attacker's actions.
+required_fields:
+- api.operation
+- actor.user.account_uid
+- actor.user.name
+- actor.user.uid
+- http_request.user_agent
+- src_endpoint.ip
+- cloud.region
+rule: sourcetype=aws:cloudtrail:lake api.operation=StopLogging | fillnull | stats
+  count min(_time) as firstTime max(_time) as lastTime by api.operation actor.user.account_uid
+  actor.user.uid http_request.user_agent src_endpoint.ip cloud.region | rename actor.user.uid
+  as user, src_endpoint.ip as src_ip, cloud.region as region, http_request.user_agent
+  as user_agent, actor.user.account_uid as aws_account_id | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$)| convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `asl_aws_defense_evasion_stop_logging_cloudtrail_filter`

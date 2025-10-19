@@ -1,0 +1,20 @@
+description: The following analytic detects suspicious use of the `rmmod` utility
+  for kernel module removal, which may indicate an attacker attempt to unload critical
+  or security-related kernel modules. The `rmmod` command is used to remove modules
+  from the Linux kernel, and unauthorized use can be a tactic to disable security
+  features, conceal malicious activities, or disrupt system operations. By monitoring
+  for unusual or unauthorized `rmmod` activity, this analytic helps identify potential
+  tampering with kernel modules, enabling security teams to take proactive measures
+  to protect system integrity and security.
+required_fields:
+- _time
+- comm
+- exe
+- SYSCALL
+- UID
+- ppid
+- pid
+rule: sourcetype="linux:audit" type=SYSCALL comm=rmmod | rename host as dest  | stats
+  count min(_time) as firstTime max(_time) as lastTime by comm exe  SYSCALL UID ppid
+  pid success dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| `linux_auditd_kernel_module_using_rmmod_utility_filter`

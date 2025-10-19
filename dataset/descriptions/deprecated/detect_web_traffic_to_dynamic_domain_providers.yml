@@ -1,0 +1,15 @@
+description: This search looks for web connections to dynamic DNS providers.
+required_fields:
+- _time
+- Web.url
+- Web.status
+- Web.src
+- Web.dest
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count values(Web.url) as url min(_time) as firstTime
+  from datamodel=Web where Web.status=200 by Web.src Web.dest Web.status | `drop_dm_object_name("Web")`
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | lookup update=true dynamic_dns_providers_default
+  dynamic_dns_domains as url OUTPUTNEW isDynDNS_default | lookup update=true dynamic_dns_providers_local
+  dynamic_dns_domains as url OUTPUTNEW isDynDNS_local| eval isDynDNS = coalesce(isDynDNS_default,
+  isDynDNS_local)|fields - isDynDNS_default, isDynDNS_local| search isDynDNS=True
+  | `detect_web_traffic_to_dynamic_domain_providers_filter`'

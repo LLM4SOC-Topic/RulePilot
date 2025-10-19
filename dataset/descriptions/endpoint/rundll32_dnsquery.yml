@@ -1,0 +1,22 @@
+description: The following analytic detects a suspicious `rundll32.exe` process making
+  HTTP connections and performing DNS queries to web domains. It leverages Sysmon
+  EventCode 22 logs to identify these activities. This behavior is significant as
+  it is commonly associated with IcedID malware, where `rundll32.exe` checks internet
+  connectivity and communicates with C&C servers to download configurations and other
+  components. If confirmed malicious, this activity could allow attackers to establish
+  persistence, download additional payloads, and exfiltrate sensitive data, posing
+  a severe threat to the network.
+required_fields:
+- _time
+- Image
+- QueryName
+- QueryStatus
+- ProcessId
+- dest
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=22 process_name="rundll32.exe"
+  | stats count min(_time) as firstTime max(_time) as lastTime values(query) as query
+  values(answer) as answer values(QueryResults) as query_results values(QueryStatus)
+  as query_status by process_name process_guid Computer | rename Computer as dest
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `rundll32_dnsquery_filter`

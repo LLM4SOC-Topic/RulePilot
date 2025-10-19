@@ -1,0 +1,29 @@
+description: The following analytic detects potentially malicious registry modifications
+  characterized by MD5-like registry key names. It leverages the Endpoint data model
+  to identify registry entries under the SOFTWARE path with 32-character hexadecimal
+  names, a technique often used by NjRAT malware for fileless storage of keylogs and
+  .DLL plugins. This activity is significant as it can indicate the presence of NjRAT
+  or similar malware, which can lead to unauthorized data access and persistent threats
+  within the environment. If confirmed malicious, attackers could maintain persistence
+  and exfiltrate sensitive information.
+required_fields:
+- _time
+- Registry.registry_key_name
+- Registry.registry_path
+- Registry.user
+- Registry.dest
+- Registry.registry_value_name
+- Registry.action
+- Registry.registry_value_data
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config`  count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Registry where  Registry.registry_path = "*\\SOFTWARE\\*"
+  Registry.registry_value_data = "Binary Data" by Registry.dest Registry.user Registry.registry_path
+  Registry.registry_value_name Registry.registry_value_data Registry.registry_key_name
+  | `drop_dm_object_name(Registry)` | eval dropped_reg_path = split(registry_path,
+  "\\") | eval dropped_reg_path_split_count = mvcount(dropped_reg_path) | eval validation_result=
+  if(match(registry_value_name,"^[0-9a-fA-F]{32}$"),"md5","nonmd5") | where validation_result
+  = "md5" AND dropped_reg_path_split_count <= 5 | table dest user registry_path registry_value_name
+  registry_value_data registry_key_name reg_key_name dropped_reg_path_split_count
+  validation_result | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_modify_registry_with_md5_reg_key_name_filter`'

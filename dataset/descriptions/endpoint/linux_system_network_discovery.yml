@@ -1,0 +1,25 @@
+description: The following analytic identifies potential enumeration of local network
+  configuration on Linux systems. It detects this activity by monitoring processes
+  such as "arp," "ifconfig," "ip," "netstat," "firewall-cmd," "ufw," "iptables," "ss,"
+  and "route" within a 30-minute window. This behavior is significant as it often
+  indicates reconnaissance efforts by adversaries to gather network information for
+  subsequent attacks. If confirmed malicious, this activity could enable attackers
+  to map the network, identify vulnerabilities, and plan further exploitation or lateral
+  movement within the environment.
+required_fields:
+- _time
+- Processes.dest
+- Processes.user
+- Processes.parent_process_name
+- Processes.process_name
+- Processes.process
+- Processes.process_id
+- Processes.parent_process_id
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count values(Processes.process_name) as process_name_list
+  values(Processes.process) as process_list values(Processes.process_id) as process_id_list
+  values(Processes.parent_process_id) as parent_process_id_list values(Processes.process_guid)
+  as process_guid_list dc(Processes.process_name) as process_name_count from datamodel=Endpoint.Processes
+  where Processes.process_name IN ("arp", "ifconfig", "ip", "netstat", "firewall-cmd",
+  "ufw", "iptables", "ss", "route") by _time span=30m Processes.dest Processes.user
+  | where process_name_count >=4 | `drop_dm_object_name(Processes)`| `linux_system_network_discovery_filter`'

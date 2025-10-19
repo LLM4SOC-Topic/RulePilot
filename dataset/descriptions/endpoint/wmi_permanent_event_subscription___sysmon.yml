@@ -1,0 +1,21 @@
+description: The following analytic identifies the creation of WMI permanent event
+  subscriptions, which can be used to establish persistence or perform privilege escalation.
+  It leverages Sysmon data, specifically EventCodes 19, 20, and 21, to detect the
+  creation of WMI EventFilters, EventConsumers, and FilterToConsumerBindings. This
+  activity is significant as it may indicate an attacker setting up mechanisms to
+  execute code with elevated SYSTEM privileges when specific events occur. If confirmed
+  malicious, this could allow the attacker to maintain persistence, escalate privileges,
+  and execute arbitrary code, posing a severe threat to the environment.
+required_fields:
+- _time
+- EventCode
+- host
+- user
+- Operation
+- EventType
+- Query
+- Consumer
+- Filter
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=21 | rename host as dest | table
+  _time, dest, user, Operation, EventType, Query, Consumer, Filter | `wmi_permanent_event_subscription___sysmon_filter`

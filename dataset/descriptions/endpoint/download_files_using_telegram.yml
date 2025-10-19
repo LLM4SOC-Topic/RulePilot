@@ -1,0 +1,21 @@
+description: The following analytic detects suspicious file downloads by the Telegram
+  application on a Windows system. It leverages Sysmon EventCode 15 to identify instances
+  where Telegram.exe creates files with a Zone.Identifier, indicating a download.
+  This activity is significant as it may indicate an adversary using Telegram to download
+  malicious tools, such as network scanners, for further exploitation. If confirmed
+  malicious, this behavior could lead to network mapping, lateral movement, and potential
+  compromise of additional systems within the network.
+required_fields:
+- _time
+- dest
+- EventCode
+- Image
+- process_id
+- TargetFilename
+- Hash
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode= 15 process_name = "telegram.exe"
+  TargetFilename = "*:Zone.Identifier" |stats count min(_time) as firstTime max(_time)
+  as lastTime by dest EventCode process_name process_id TargetFilename Hash | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `download_files_using_telegram_filter`

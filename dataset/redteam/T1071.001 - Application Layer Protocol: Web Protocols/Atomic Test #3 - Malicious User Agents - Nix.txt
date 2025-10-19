@@ -1,0 +1,10 @@
+This test simulates an infected host beaconing to command and control.
+Supported Platforms: Linux, macOS
+Inputs:
+Name	Description	Type	Default Value
+domain	Default domain to simulate against	string	www.google.com
+Attack Commands: Run with sh!
+curl -s -A "HttpBrowser/1.0" -m3 #{domain}
+curl -s -A "Wget/1.9+cvs-stable (Red Hat modified)" -m3 #{domain}
+curl -s -A "Opera/8.81 (Windows NT 6.0; U; en)" -m3 #{domain}
+curl -s -A "*<|>*" -m3 #{domain}

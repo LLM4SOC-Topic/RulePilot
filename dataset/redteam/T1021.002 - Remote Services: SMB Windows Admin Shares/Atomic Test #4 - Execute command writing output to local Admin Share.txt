@@ -1,0 +1,12 @@
+Executes a command, writing the output to a local Admin Share. This technique is used by post-exploitation frameworks.
+
+Supported Platforms: Windows
+
+auto_generated_guid: d41aaab5-bdfe-431d-a3d5-c29e9136ff46
+
+Inputs:
+Name	Description	Type	Default Value
+output_file	Remote computer to receive the copy and execute the file	string	output.txt
+command_to_execute	Command to execute for output.	string	hostname
+Attack Commands: Run with command_prompt! Elevation Required (e.g. root or admin)
+cmd.exe /Q /c #{command_to_execute} 1> \\127.0.0.1\ADMIN$\#{output_file} 2>&1

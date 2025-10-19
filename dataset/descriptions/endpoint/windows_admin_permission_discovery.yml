@@ -1,0 +1,27 @@
+description: The following analytic identifies the creation of a suspicious file named
+  'win.dat' in the root directory (C:\). It leverages data from the Endpoint.Filesystem
+  datamodel to detect this activity. This behavior is significant as it is commonly
+  used by malware like NjRAT to check for administrative privileges on a compromised
+  host. If confirmed malicious, this activity could indicate that the malware has
+  administrative access, allowing it to perform high-privilege actions, potentially
+  leading to further system compromise and persistence.
+required_fields:
+- _time
+- Filesystem.file_path
+- Filesystem.file_create_time
+- Filesystem.process_id
+- Filesystem.file_name
+- Filesystem.user
+- Filesystem.dest
+- Filesystem.process_guid
+- Filesystem.file_path
+rule: '|tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Endpoint.Filesystem where Filesystem.file_name IN ("*.exe", "*.dll",
+  "*.sys", "*.com", "*.vbs", "*.vbe", "*.js", "*.bat", "*.cmd", "*.pif", "*.lnk",
+  "*.dat") by Filesystem.dest Filesystem.file_create_time Filesystem.process_id Filesystem.process_guid
+  Filesystem.file_name Filesystem.file_path Filesystem.user | `drop_dm_object_name(Filesystem)`
+  | eval dropped_file_path = split(file_path, "\\") | eval dropped_file_path_split_count
+  = mvcount(dropped_file_path) | eval root_drive = mvindex(dropped_file_path,0) |
+  where LIKE(root_drive, "C:") AND dropped_file_path_split_count = 2 | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_admin_permission_discovery_filter`'

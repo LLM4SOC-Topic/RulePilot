@@ -1,0 +1,17 @@
+description: The following analytic identifies when a user with sufficient access
+  to O365 Security & Compliance portal uses premium investigation features (Threat
+  Explorer) to directly view email. Adversaries may exploit privileged access with
+  this premium feature to enumerate or exfiltrate sensitive data.
+required_fields:
+- _time
+- Workload
+- Operation
+- MailboxId
+- InternetMessageId
+- UserId
+rule: sourcetype=o365:management:activity Workload=SecurityComplianceCenter Operation=AdminMailAccess
+  | stats values(Workload) as category, values(MailboxId) as user, values(Operation)
+  as signature, count, min(_time) as firstTime, max(_time) as lastTime by InternetMessageId,
+  UserId | rename InternetMessageId as signature_id, UserId as src_user | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `o365_email_access_by_security_administrator_filter`

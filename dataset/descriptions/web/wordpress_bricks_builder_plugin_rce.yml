@@ -1,0 +1,24 @@
+description: The following analytic identifies potential exploitation of the WordPress
+  Bricks Builder plugin RCE vulnerability. It detects HTTP POST requests to the URL
+  path "/wp-json/bricks/v1/render_element" with a status code of 200, leveraging the
+  Web datamodel. This activity is significant as it indicates an attempt to exploit
+  CVE-2024-25600, a known vulnerability that allows remote code execution. If confirmed
+  malicious, an attacker could execute arbitrary commands on the target server, leading
+  to potential full system compromise and unauthorized access to sensitive data.
+required_fields:
+- _time
+- Web.src
+- Web.dest
+- Web.http_user_agent
+- Web.url
+- Web.status
+- Web.http_method
+- sourcetype
+- source
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  from datamodel=Web where Web.url IN ("*/wp-json/bricks/v1/render_element") Web.status=200
+  Web.http_method=POST by Web.src, Web.dest, Web.http_user_agent, Web.url, Web.uri_path,
+  Web.status, Web.http_method, sourcetype, source | `drop_dm_object_name("Web")` |
+  convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `wordpress_bricks_builder_plugin_rce_filter`'

@@ -1,0 +1,20 @@
+description: The following analytic detects a potential deletion of firewall rules,
+  indicating a possible security breach or unauthorized access attempt. It identifies
+  actions where firewall rules are removed using commands like netsh advfirewall firewall
+  delete rule, which can expose the network to external threats by disabling critical
+  security measures. Monitoring these activities helps maintain network integrity
+  and prevent malicious attacks.
+required_fields:
+- _time
+- EventCode
+- EventType
+- TargetObject
+- Image
+- user
+- dest
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=12 TargetObject = "*\\System\\CurrentControlSet\\Services\\SharedAccess\\Parameters\\FirewallPolicy\\FirewallRules\\*"
+  EventType=DeleteValue |  rename Computer as dest |  rename User as user |  stats
+  count min(_time) as firstTime max(_time) as lastTime by EventCode EventType TargetObject
+  Image user dest | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_modify_registry_delete_firewall_rules_filter`

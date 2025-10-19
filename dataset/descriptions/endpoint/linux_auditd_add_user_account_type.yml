@@ -1,0 +1,19 @@
+description: The following analytic detects the suspicious add user account type.
+  This behavior is critical for a SOC to monitor because it may indicate attempts
+  to gain unauthorized access or maintain control over a system. Such actions could
+  be signs of malicious activity. If confirmed, this could lead to serious consequences,
+  including a compromised system, unauthorized access to sensitive data, or even a
+  wider breach affecting the entire network. Detecting and responding to these signs
+  early is essential to prevent potential security incidents.
+required_fields:
+- _time
+- exe
+- pid
+- hostname
+- res
+- UID
+- type
+rule: sourcetype="linux:audit" type=ADD_USER | rename hostname as dest| stats count
+  min(_time) as firstTime max(_time) as lastTime by exe pid dest res UID type | convert
+  timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$)| `linux_auditd_add_user_account_type_filter`

@@ -1,0 +1,19 @@
+description: The following analytic detects the creation of an lsass.exe process dump
+  using Windows Task Manager. It leverages Sysmon EventID 11 to identify file creation
+  events where the target filename matches *lsass*.dmp. This activity is significant
+  because creating an lsass dump can be a precursor to credential theft, as the dump
+  file contains sensitive information such as user passwords. If confirmed malicious,
+  an attacker could use the lsass dump to extract credentials and escalate privileges,
+  potentially compromising the entire network.
+required_fields:
+- _time
+- EventID
+- process_name
+- TargetFilename
+- dest
+- object_category
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventID=11 process_name=taskmgr.exe TargetFilename=*lsass*.dmp
+  | stats count min(_time) as firstTime max(_time) as lastTime by dest, object_category,
+  process_name, TargetFilename  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `creation_of_lsass_dump_with_taskmgr_filter`

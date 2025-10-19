@@ -1,0 +1,9 @@
+description: This search detects loading of unsigned images by LSASS. Deprecated because
+  too noisy.
+required_fields:
+- _time
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventID=7 Image=*lsass.exe Signed=false
+  | stats count min(_time) as firstTime max(_time) as lastTime by dest, Image, ImageLoaded,
+  Signed, SHA1 | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `unsigned_image_loaded_by_lsass_filter`

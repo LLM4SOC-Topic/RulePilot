@@ -1,0 +1,25 @@
+description: The following analytic detects unauthorized container uploads to AWS
+  Elastic Container Service (ECR) by monitoring AWS CloudTrail events. It identifies
+  instances where a new container is uploaded by a user not previously recognized
+  as authorized. This detection is crucial for a SOC as it can indicate a potential
+  compromise or misuse of AWS ECR, which could lead to unauthorized access to sensitive
+  data or the deployment of malicious containers. By identifying and investigating
+  these events, organizations can mitigate the risk of data breaches or other security
+  incidents resulting from unauthorized container uploads. The impact of such an attack
+  could be significant, compromising the integrity and security of the organization's
+  cloud environment.
+required_fields:
+- api.operation
+- actor.user.account_uid
+- actor.user.name
+- actor.user.uid
+- http_request.user_agent
+- src_endpoint.ip
+- cloud.region
+rule: sourcetype=aws:cloudtrail:lake api.operation=PutImage NOT actor.user.name IN
+  (admin) | stats count min(_time) as firstTime max(_time) as lastTime by api.operation
+  actor.user.account_uid actor.user.name actor.user.uid http_request.user_agent src_endpoint.ip
+  cloud.region | rename actor.user.name as user, src_endpoint.ip as src_ip, cloud.region
+  as region, http_request.user_agent as user_agent, actor.user.account_uid as aws_account_id
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `asl_aws_ecr_container_upload_unknown_user_filter`

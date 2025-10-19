@@ -1,0 +1,21 @@
+description: The following analytic detects the loading of `msi.dll` by a binary not
+  located in `system32`, `syswow64`, `winsxs`, or `windows` directories. This is identified
+  using Sysmon EventCode 7, which logs DLL loads, and filters out legitimate system
+  paths. This activity is significant as it may indicate exploitation of CVE-2021-41379
+  or DLL side-loading attacks, both of which can lead to unauthorized system modifications.
+  If confirmed malicious, this could allow an attacker to execute arbitrary code,
+  escalate privileges, or persist within the environment.
+required_fields:
+- _time
+- Image
+- ImageLoaded
+- process_name
+- dest
+- EventCode
+- ProcessId
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=7 ImageLoaded="*\\msi.dll" NOT
+  (Image IN ("*\\System32\\*","*\\syswow64\\*","*\\windows\\*", "*\\winsxs\\*")) |
+  stats count min(_time) as firstTime max(_time) as lastTime by Image ImageLoaded
+  process_name dest EventCode ProcessId | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `msi_module_loaded_by_non_system_binary_filter`

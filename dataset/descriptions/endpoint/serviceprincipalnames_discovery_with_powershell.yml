@@ -1,0 +1,19 @@
+description: The following analytic detects the use of `powershell.exe` to query the
+  domain for Service Principal Names (SPNs) using Script Block Logging EventCode 4104.
+  It identifies the use of the KerberosRequestorSecurityToken class within the script
+  block, which is equivalent to using setspn.exe. This activity is significant as
+  it often precedes kerberoasting or silver ticket attacks, which can lead to credential
+  theft. If confirmed malicious, attackers could leverage this information to escalate
+  privileges or persist within the environment.
+required_fields:
+- _time
+- ScriptBlockText
+- Opcode
+- Computer
+- UserID
+- EventCode
+rule: (source=WinEventLog:Microsoft-Windows-PowerShell/Operational OR source="XmlWinEventLog:Microsoft-Windows-PowerShell/Operational")
+  EventCode=4104 ScriptBlockText="*KerberosRequestorSecurityToken*" | stats count
+  min(_time) as firstTime max(_time) as lastTime by ScriptBlockText Opcode Computer
+  UserID EventCode | rename Computer as dest | rename UserID as user | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `serviceprincipalnames_discovery_with_powershell_filter`

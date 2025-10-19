@@ -1,0 +1,18 @@
+description: The following analytic identifies potential DLL search order hijacking
+  or DLL sideloading by detecting known Windows libraries loaded from non-standard
+  directories. It leverages Sysmon EventCode 7 to monitor DLL loads and cross-references
+  them with a lookup of known hijackable libraries. This activity is significant as
+  it may indicate an attempt to execute malicious code by exploiting DLL search order
+  vulnerabilities. If confirmed malicious, this could allow attackers to gain code
+  execution, escalate privileges, or maintain persistence within the environment.
+required_fields:
+- _time
+- dest
+- ImageLoaded
+- Module_Path
+rule: sourcetype=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational OR source=XmlWinEventLog:Microsoft-Windows-Sysmon/Operational
+  OR source=Syslog:Linux-Sysmon/Operational EventCode=7 NOT (process_path IN ("*\\system32\\*",
+  "*\\syswow64\\*","*\\winsxs\\*","*\\wbem\\*")) | lookup hijacklibs library AS loaded_file
+  OUTPUT islibrary | search islibrary = True | stats count min(_time) as firstTime
+  max(_time) as lastTime values(process_name) as process_name by _time dest loaded_file
+  | `windows_dll_search_order_hijacking_hunt_with_sysmon_filter`

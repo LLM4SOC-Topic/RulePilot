@@ -1,0 +1,24 @@
+description: The following analytic detects a modification in the Windows registry
+  that disables the Windows Defender Controlled Folder Access feature. It leverages
+  data from the Endpoint.Registry data model, specifically monitoring changes to the
+  EnableControlledFolderAccess registry setting. This activity is significant because
+  Controlled Folder Access is designed to protect critical folders from unauthorized
+  access, including ransomware attacks. If this activity is confirmed malicious, it
+  could allow attackers to bypass a key security feature, potentially leading to unauthorized
+  access or modification of sensitive files.
+required_fields:
+- _time
+- Registry.registry_key_name
+- Registry.registry_value_name
+- Registry.dest
+- Registry.user
+- Registry.registry_path
+- Registry.action
+rule: '| tstats summariesonly=`summariesonly_config` allow_old_summaries=`oldsummaries_config`
+  fillnull_value=`fillnull_config` count min(_time) as firstTime max(_time) as lastTime
+  FROM datamodel=Endpoint.Registry where Registry.registry_path= "*\\Windows Defender\\Windows
+  Defender Exploit Guard\\Controlled Folder Access\\EnableControlledFolderAccess"
+  Registry.registry_value_data="0x00000000" by Registry.registry_key_name Registry.user
+  Registry.registry_path Registry.registry_value_data Registry.action Registry.dest
+  | `drop_dm_object_name(Registry)` | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | `windows_impair_defense_disable_controlled_folder_access_filter`'

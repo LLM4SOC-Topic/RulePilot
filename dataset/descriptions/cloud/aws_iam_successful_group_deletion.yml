@@ -1,0 +1,20 @@
+description: The following analytic identifies the successful deletion of an IAM group
+  in AWS. It leverages CloudTrail logs to detect `DeleteGroup` events with a success
+  status. This activity is significant as it could indicate potential changes in user
+  permissions or access controls, which may be a precursor to further unauthorized
+  actions. If confirmed malicious, an attacker could disrupt access management, potentially
+  leading to privilege escalation or unauthorized access to sensitive resources. Analysts
+  should review related IAM events, such as recent user additions or new group creations,
+  to assess the broader context.
+required_fields:
+- _time
+- eventName
+- userAgent
+- errorCode
+- requestParameters.groupName
+rule: sourcetype=aws:cloudtrail eventSource=iam.amazonaws.com eventName=DeleteGroup
+  errorCode=success (userAgent!=*.amazonaws.com) | stats count min(_time) as firstTime
+  max(_time) as lastTime values(requestParameters.groupName) as group_deleted by src
+  eventName eventSource errorCode user_agent awsRegion userIdentity.principalId user_arn
+  | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `aws_iam_successful_group_deletion_filter`

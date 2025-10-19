@@ -1,0 +1,23 @@
+description: The following analytic detects the creation of a new Group Policy Object
+  (GPO) by leveraging Event IDs 5136 and 5137. This detection uses directory service
+  change events to identify when a new GPO is created. Monitoring GPO creation is
+  crucial as adversaries can exploit GPOs to escalate privileges or deploy malware
+  across an Active Directory network. If confirmed malicious, this activity could
+  allow attackers to control system configurations, deploy ransomware, or propagate
+  malware, leading to widespread compromise and significant operational disruption.
+required_fields:
+- _time
+- EventCode
+- AttributeValue
+- AttributeLDAPDisplayName
+- ObjectClass
+- SubjectUserSid
+- ObjectDN
+- ObjectGUID
+- Computer
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  EventCode=5137 OR (EventCode=5136 AttributeValue!="New Group Policy Object" AND
+  (AttributeLDAPDisplayName=displayName OR AttributeLDAPDisplayName=gPCFileSysPath)
+  ) ObjectClass=groupPolicyContainer | stats values(AttributeValue) as details values(SubjectUserSid)
+  as User values(ObjectDN) as ObjectDN by ObjectGUID Computer | eval GPO_Name = mvindex(details,
+  0) | eval GPO_Path = mvindex(details, 1) | fields - details | `windows_group_policy_object_created_filter`

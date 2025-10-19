@@ -1,0 +1,25 @@
+description: The following analytic identifies failed authentication attempts to the
+  AWS Console during the Multi-Factor Authentication (MFA) challenge. It leverages
+  AWS CloudTrail logs, specifically the `additionalEventData` field, to detect when
+  MFA was used but the login attempt still failed. This activity is significant as
+  it may indicate an adversary attempting to access an account with compromised credentials
+  but being thwarted by MFA. If confirmed malicious, this could suggest an ongoing
+  attempt to breach the account, potentially leading to unauthorized access and further
+  attacks if MFA is bypassed.
+required_fields:
+- src
+- eventName
+- eventSource
+- aws_account_id
+- errorCode
+- errorMessage
+- userAgent
+- eventID
+- awsRegion
+- user_name
+- userIdentity.arn
+rule: sourcetype=aws:cloudtrail eventName= ConsoleLogin errorMessage="Failed authentication"
+  additionalEventData.MFAUsed = "Yes" | stats count min(_time) as firstTime max(_time)
+  as lastTime by src eventName eventSource aws_account_id errorCode errorMessage userAgent
+  eventID awsRegion user_name userIdentity.arn | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$)| `aws_console_login_failed_during_mfa_challenge_filter`

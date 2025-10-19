@@ -1,0 +1,24 @@
+description: The following analytic detects the registration of a new Multi-Factor
+  Authentication (MFA) method for an AWS account. It leverages AWS CloudTrail logs
+  to identify the `CreateVirtualMFADevice` event. This activity is significant because
+  adversaries who gain unauthorized access to an AWS account may register a new MFA
+  method to maintain persistence. If confirmed malicious, this could allow attackers
+  to secure their access, making it difficult to detect and remove their presence,
+  potentially leading to further unauthorized activities and data breaches.
+required_fields:
+- src_ip
+- eventName
+- eventSource
+- requestParameters.virtualMFADeviceName
+- errorCode
+- userIdentity.principalId
+- userAgent
+- awsRegion
+- user_name
+- userIdentity.arn
+- _time
+rule: sourcetype=aws:cloudtrail eventName=CreateVirtualMFADevice | stats count values(requestParameters.virtualMFADeviceName)
+  as virtualMFADeviceName min(_time) as firstTime max(_time) as lastTime by eventSource
+  aws_account_id errorCode userAgent eventID awsRegion userIdentity.principalId user_arn
+  src_ip | convert timeformat="%Y-%m-%dT%H:%M:%S" ctime($field$) | convert timeformat="%Y-%m-%dT%H:%M:%S"
+  ctime($field$) | `aws_new_mfa_method_registered_for_user_filter`

