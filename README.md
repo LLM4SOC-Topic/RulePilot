@@ -1,6 +1,6 @@
 # RulePilot - AI-Powered Security Rule Generation
 
-**Paper:** ICSE'26(https://github.com/LLM4SOC-Topic/RulePilot/blob/main/Rule_Gen_ICSE.pdf)
+**Paper:** [ICSE'26](https://github.com/LLM4SOC-Topic/RulePilot/blob/main/Rule_Gen_ICSE.pdf)
 
 ## 🚀 Features
 - **Multi-Platform Support**: Generate rules for Splunk and Microsoft Sentinel.
